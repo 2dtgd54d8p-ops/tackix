@@ -22,10 +22,12 @@ export default defineConfig({
   ],
   vite: {
     optimizeDeps: {
-      // @keystatic/astro 内部 import 'astro:env/server'（Astro 虚拟模块），
-      // 不能被 Vite 的 esbuild 预构建器提前处理，否则 dev 启动会报
-      // "Could not resolve 'astro:env/server'"，导致 /keystatic 后台加载失败。
-      exclude: ['@keystatic/core', '@keystatic/astro'],
+      // 只排除 @keystatic/astro：它内部 import 'astro:env/server'（Astro 虚拟模块），
+      // 会被 Vite 的 esbuild 预构建器误扫描而报 "Could not resolve 'astro:env/server'"。
+      // 注意：@keystatic/core 绝不能排除——它的 CJS 依赖（如 lodash）需要 Vite 做
+      // CJS→ESM 互操作，否则客户端会报 "does not provide an export named 'default'"，
+      // 导致 /keystatic 后台 React 挂载失败、页面空白。
+      exclude: ['@keystatic/astro'],
     },
   },
 });
