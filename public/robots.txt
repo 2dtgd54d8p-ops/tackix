@@ -1,0 +1,4 @@
+User-agent: *
+Disallow: /keystatic
+Disallow: /api/keystatic
+Allow: /

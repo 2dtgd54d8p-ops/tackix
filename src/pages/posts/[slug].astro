@@ -1,0 +1,32 @@
+---
+import { createReader } from '@keystatic/core/reader';
+import { marked } from 'marked';
+import keystaticConfig from '../../../keystatic.config';
+import Base from '../../layouts/Base.astro';
+
+export async function getStaticPaths() {
+  const reader = createReader(process.cwd(), keystaticConfig);
+  const slugs = await reader.collections.posts.list();
+  const entries = await Promise.all(
+    slugs.map(async (slug) => {
+      const post = await reader.collections.posts.read(slug);
+      // 未发布（published === false）的文章不生成静态页
+      return post && post.published !== false
+        ? { params: { slug }, props: { post } }
+        : null;
+    })
+  );
+  return entries.filter(Boolean);
+}
+
+const { post } = Astro.props;
+const html = marked(post.body ?? '');
+---
+
+<Base title={post.title}>
+  <article class="prose">
+    <h1>{post.title}</h1>
+    {post.publishedAt && <p class="post-meta">{post.publishedAt}</p>}
+    <div set:html={html} />
+  </article>
+</Base>

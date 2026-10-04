@@ -1,0 +1,18 @@
+name = "tackix"
+pages_build_output_dir = "dist"
+compatibility_date = "2024-09-23"
+# Keystatic 的 reader 用到 node:path / node:fs，Pages Functions 运行时需开启 nodejs_compat
+compatibility_flags = ["nodejs_compat"]
+
+# ============================================================
+# Keystatic OAuth 会话依赖一个名为 SESSION 的 KV 命名空间。
+# 两种配置方式（二选一，建议都做）：
+#   1) 本地 `wrangler pages dev ./dist`：把下面的 id 换成你本地 KV 的 ID
+#      （`npx wrangler kv namespace create SESSION` 创建后取 id）
+#   2) Cloudflare Pages 控制台 → Settings → Functions → KV namespace bindings
+#      新增绑定：Variable name = SESSION，绑定你的 KV 命名空间
+# 若线上不配置，GitHub 登录的 OAuth 会话无法保持，后台会报错。
+# ============================================================
+[[kv_namespaces]]
+binding = "SESSION"
+id = "REPLACE_WITH_YOUR_KV_NAMESPACE_ID"

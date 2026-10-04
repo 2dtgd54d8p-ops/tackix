@@ -1,0 +1,2 @@
+# Keystatic 会把文章写到 src/content/posts/<slug>/index.yaml
+# 此文件仅用于保留目录结构
