@@ -60,6 +60,27 @@
 
 ---
 
+## 进阶：把 ghp_ 令牌换成 Fine-grained PAT（长期稳定运行）
+
+`KEYSTATIC_GITHUB_TOKEN` 是给 **Cloudflare 拉取仓库文章内容**用的（只读即可），与 GitHub App 的 OAuth（登录后台写文章）是两回事，别混淆。首次部署可用你给的 `ghp_...`，但它 7 天过期且权限是整库 `repo` 全权限，长期不稳妥。建议部署后立即换成 **Fine-grained PAT**（限定 `tackix` 仓库 + Contents 只读 + 可设长期有效）。
+
+### 1. 创建 Fine-grained PAT（≈2 分钟）
+1. github.com → 头像 → **Settings** → **Developer settings** → **Personal access tokens** → **Fine-grained tokens** → **Generate new token**。
+2. Token name：`tackix-readonly`（随意）；Expiration：选 **No expiration**（或 1 year）。
+3. Resource owner：选 **`2dtgd54d8p-ops`**（必须选你的账号才能选到仓库）。
+4. Repository access：**Only select repositories** → 勾选 **`tackix`**。
+5. Permissions → Repository permissions → **Contents** → **Read-only**（其余全部 No access）。
+6. 底部 **Generate token** → 复制 `github_pat_...` 开头那串（只显示一次）。
+
+### 2. 更新 Cloudflare 环境变量
+1. Cloudflare → tackix Pages → **Settings** → **Environment variables** → 找到 `KEYSTATIC_GITHUB_TOKEN` → **Edit** → 粘贴新 `github_pat_...` → Save。
+2. 回到 **Deployments** → 最新部署 **⋯ → Redeploy**（改了变量需重新部署让 Functions 加载新值）。**Production 和 Preview 都要改**（若两边都配了）。
+
+### 3. 撤销旧的 ghp_ 令牌（建议）
+github.com → **Settings** → **Developer settings** → **Personal access tokens** → **Tokens (classic)** → 找到旧 `ghp_...` → **Revoke**。撤销不影响已建好的仓库与 App；之后若需本地 `git push` 再临时建 fine-grained 即可。
+
+---
+
 ## 注意事项
 - ⏰ 你给的 `ghp_...` 令牌约 **10/10 过期**；过期后 `KEYSTATIC_GITHUB_TOKEN` 失效，站点读不到 GitHub 内容。建议部署后换成专用 **Fine-grained PAT**（仅对 `tackix` 给 `Contents:read`），长期可用。
 - `.env.example` 只是模板，Cloudflare **必须单独填真实环境变量**（构建时读真实环境变量，不读 `.env.example`）。
