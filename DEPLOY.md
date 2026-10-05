@@ -28,6 +28,9 @@
    - Build command = `npm run build`
    - Output directory = `dist`
    - Node.js version = **22**
+   - ⚠️ **不要设置任何「Deploy command / 部署命令」**（保持为空）。Pages 连 Git 后会自动部署 `dist/`。
+     若误填了 `npx wrangler deploy`，会报 `It looks like you've run a Workers-specific command in a Pages project` 并部署失败。
+   - ⚠️ 仓库**已移除 `wrangler.toml`**（它会被 Cloudflare 误当成 Workers 部署而触发上面的错误）。Pages Git 集成不需要它。
 3. **环境变量**（**Production 和 Preview 都要加**；机密项选 Secret 类型）：
 
 | 变量 | 值 | 类型 |
@@ -49,6 +52,7 @@
    - Variable name = `SESSION`
    - 绑定一个 KV 命名空间（没有就先 **Create a namespace** 再选）。
    - ⚠️ 不绑 `SESSION`，Keystatic 后台 OAuth 必失败。
+   - 同页 **Compatibility flags** → 勾选 **`nodejs_compat`**（Keystatic 的 reader 用到 `node:path`/`node:fs`，运行时需此标志；原先写在 `wrangler.toml` 里，移除后改在控制台开）。
 5. 返回部署页 **Save and Deploy**。
 
 ---
