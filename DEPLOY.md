@@ -1,0 +1,67 @@
+# 部署到 Cloudflare Pages —— Cheat Sheet
+
+本文件仅作部署对照，代码已就绪（`main` 分支），你只需完成账号侧操作。
+
+## 前置（已完成 ✅）
+- 仓库 `2dtgd54d8p-ops/tackix` 已就绪（`main` 分支，含 Astro + Keystatic + Cloudflare 配置，`npm run build` 已验证通过）。
+- GitHub App `tackix-cms-app` 已创建：
+  - **slug** = `tackix-cms-app`（非机密，已写入 `.env.example`）
+  - **client_id** = `Iv23litB8zAFrfDlYNDT`（非机密，已写入 `.env.example`）
+  - 回调 `https://tackix.pages.dev/api/keystatic/github/oauth/callback`、权限 `Contents:write` + `Metadata:read` 均已配好。
+- 你最早手动建的旧 App（`Iv23livuZEcbeP0HnRk8`）可删除，本项目用新建的 `tackix-cms-app`。
+
+---
+
+## 步骤 A：GitHub App 补一个 Client Secret 并安装（≈1 分钟）
+
+1. 打开 `https://github.com/settings/apps/tackix-cms-app`
+2. 左侧 **Client secrets** → **Generate a new client secret** → 复制 `ghs_...` 那串（只显示一次）。
+3. 安装到仓库：打开 `https://github.com/apps/tackix-cms-app/installations/new` → 选 `tackix` → **Install**。
+
+---
+
+## 步骤 B：Cloudflare Pages 连接部署（≈3 分钟）
+
+1. Cloudflare 控制台 → **Workers & Pages** → **Create** → **Pages** → **Connect to Git** → 授权 GitHub → 选仓库 **`tackix`** → **Begin setup**。
+2. Build 配置：
+   - Framework preset = **Astro**
+   - Build command = `npm run build`
+   - Output directory = `dist`
+   - Node.js version = **22**
+3. **环境变量**（**Production 和 Preview 都要加**；机密项选 Secret 类型）：
+
+| 变量 | 值 | 类型 |
+|---|---|---|
+| `PUBLIC_GITHUB_OWNER` | `2dtgd54d8p-ops` | 明文 (build) |
+| `PUBLIC_GITHUB_REPO` | `tackix` | 明文 (build) |
+| `PUBLIC_KEYSTATIC_GITHUB_APP_SLUG` | `tackix-cms-app` | 明文 (build) |
+| `PUBLIC_SITE_URL` | `https://tackix.pages.dev` | 明文 (build) |
+| `KEYSTATIC_GITHUB_CLIENT_ID` | `Iv23litB8zAFrfDlYNDT` | secret |
+| `KEYSTATIC_GITHUB_CLIENT_SECRET` | 步骤 A 生成的 `ghs_...` | secret |
+| `KEYSTATIC_SECRET` | 自行生成（见下方命令） | secret |
+| `KEYSTATIC_GITHUB_TOKEN` | 你的 `ghp_...` 令牌 或专用 Fine-grained PAT | secret |
+
+   `KEYSTATIC_SECRET` 生成命令（本地终端跑一次，复制输出）：
+   ```bash
+   python3 -c "import secrets; print(secrets.token_urlsafe(32))"
+   ```
+4. **Settings → Functions → KV namespace bindings** → **Add binding**：
+   - Variable name = `SESSION`
+   - 绑定一个 KV 命名空间（没有就先 **Create a namespace** 再选）。
+   - ⚠️ 不绑 `SESSION`，Keystatic 后台 OAuth 必失败。
+5. 返回部署页 **Save and Deploy**。
+
+---
+
+## 验证
+- 部署完成后访问 `https://tackix.pages.dev` → 应看到含示例文章「Hello Tackix」的站点。
+- 访问 `https://tackix.pages.dev/keystatic` → 用 GitHub 登录 → 可写文章并回写仓库。
+- 若 `/keystatic` 登录报回调错误：确认 GitHub App 的 Callback URL 与上方一致，且 App 已 Install 到 `tackix`。
+
+---
+
+## 注意事项
+- ⏰ 你给的 `ghp_...` 令牌约 **10/10 过期**；过期后 `KEYSTATIC_GITHUB_TOKEN` 失效，站点读不到 GitHub 内容。建议部署后换成专用 **Fine-grained PAT**（仅对 `tackix` 给 `Contents:read`），长期可用。
+- `.env.example` 只是模板，Cloudflare **必须单独填真实环境变量**（构建时读真实环境变量，不读 `.env.example`）。
+- 公开站点（文章列表/详情）上线**不依赖** slug/secret；只有 `/keystatic` 后台登录写回仓库才需要它们。可先部署看站点，后台后补也行。
+- `public/robots.txt` 已屏蔽 `/keystatic` 被搜索引擎收录；`public/_headers` 已设相应头。
