@@ -4,12 +4,22 @@ import keystaticConfig from '../../keystatic.config';
 import Base from '../layouts/Base.astro';
 
 const reader = createReader(process.cwd(), keystaticConfig);
-const slugs = await reader.collections.posts.list();
+let slugs = [];
+try {
+  slugs = await reader.collections.posts.list();
+} catch (e) {
+  console.warn('[build] 读取文章列表失败（检查 KEYSTATIC_GITHUB_TOKEN 是否有效）：', e);
+}
 
 const posts = (await Promise.all(
   slugs.map(async (slug) => {
-    const post = await reader.collections.posts.read(slug);
-    return post ? { slug, ...post } : null;
+    try {
+      const post = await reader.collections.posts.read(slug);
+      return post ? { slug, ...post } : null;
+    } catch (e) {
+      console.warn('[build] 读取文章失败：', slug, e);
+      return null;
+    }
   })
 )).filter((p) => p && p.published !== false); // 仅展示已发布
 

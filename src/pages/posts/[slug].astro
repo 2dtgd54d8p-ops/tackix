@@ -6,14 +6,24 @@ import Base from '../../layouts/Base.astro';
 
 export async function getStaticPaths() {
   const reader = createReader(process.cwd(), keystaticConfig);
-  const slugs = await reader.collections.posts.list();
+  let slugs = [];
+  try {
+    slugs = await reader.collections.posts.list();
+  } catch (e) {
+    console.warn('[build] 读取文章列表失败（检查 KEYSTATIC_GITHUB_TOKEN 是否有效）：', e);
+  }
   const entries = await Promise.all(
     slugs.map(async (slug) => {
-      const post = await reader.collections.posts.read(slug);
-      // 未发布（published === false）的文章不生成静态页
-      return post && post.published !== false
-        ? { params: { slug }, props: { post } }
-        : null;
+      try {
+        const post = await reader.collections.posts.read(slug);
+        // 未发布（published === false）的文章不生成静态页
+        return post && post.published !== false
+          ? { params: { slug }, props: { post } }
+          : null;
+      } catch (e) {
+        console.warn('[build] 读取文章失败：', slug, e);
+        return null;
+      }
     })
   );
   return entries.filter(Boolean);
