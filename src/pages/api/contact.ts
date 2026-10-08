@@ -10,20 +10,58 @@ const json = (data: unknown, status = 200) =>
     headers: { 'Content-Type': 'application/json' },
   });
 
+type Row = { name: string; email: string; message: string };
+
+/**
+ * 可选：邮件通知（Resend）。
+ * 只有配置了 RESEND_API_KEY + CONTACT_NOTIFY_TO 才会发；没配置就静默跳过，
+ * 保证「留言入库」这个主流程永远不受邮件服务影响。
+ */
+async function notifyByEmail(env: any, row: Row) {
+  const apiKey = env?.RESEND_API_KEY;
+  const to = env?.CONTACT_NOTIFY_TO;
+  if (!apiKey || !to) return { sent: false, reason: '未配置 RESEND_API_KEY / CONTACT_NOTIFY_TO' };
+
+  const time = new Date().toLocaleString('zh-CN', { timeZone: 'Asia/Shanghai' });
+  try {
+    const res = await fetch('https://api.resend.com/emails', {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${apiKey}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        from: env?.RESEND_FROM || 'onboarding@resend.dev',
+        to: [to],
+        subject: `[tackix] 新留言：${row.name}`,
+        text: `姓名：${row.name}\n邮箱：${row.email}\n时间：${time}\n\n${row.message}`,
+      }),
+    });
+    if (!res.ok) {
+      return { sent: false, reason: `Resend ${res.status}: ${(await res.text()).slice(0, 200)}` };
+    }
+    return { sent: true };
+  } catch (e) {
+    return { sent: false, reason: (e as Error)?.message ?? '发信异常' };
+  }
+}
+
 export const POST: APIRoute = async ({ request, locals }) => {
   try {
     const body = await request.json();
-    const name = String(body?.name ?? '').trim();
-    const email = String(body?.email ?? '').trim();
-    const message = String(body?.message ?? '').trim();
+    const row: Row = {
+      name: String(body?.name ?? '').trim(),
+      email: String(body?.email ?? '').trim(),
+      message: String(body?.message ?? '').trim(),
+    };
 
-    if (!name || !email || !message) {
+    if (!row.name || !row.email || !row.message) {
       return json({ ok: false, error: '姓名、邮箱、留言均为必填' }, 400);
     }
-    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(row.email)) {
       return json({ ok: false, error: '邮箱格式不正确' }, 400);
     }
-    if (message.length > 2000) {
+    if (row.message.length > 2000) {
       return json({ ok: false, error: '留言过长（最多 2000 字）' }, 400);
     }
 
@@ -39,10 +77,13 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
     await db
       .prepare('INSERT INTO submissions (name, email, message, created_at) VALUES (?, ?, ?, ?)')
-      .bind(name, email, message, new Date().toISOString())
+      .bind(row.name, row.email, row.message, new Date().toISOString())
       .run();
 
-    return json({ ok: true }, 200);
+    // 入库成功之后再尝试发信；发信失败不影响提交结果
+    const notify = await notifyByEmail(env, row);
+
+    return json({ ok: true, notify }, 200);
   } catch (e) {
     return json({ ok: false, error: (e as Error)?.message ?? '服务端错误' }, 500);
   }
