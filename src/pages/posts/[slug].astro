@@ -3,6 +3,7 @@ import { createReader } from '@keystatic/core/reader';
 import { marked } from 'marked';
 import keystaticConfig from '../../../keystatic.config';
 import Base from '../../layouts/Base.astro';
+import Comments from '../../components/Comments.astro';
 
 export async function getStaticPaths() {
   const reader = createReader(process.cwd(), keystaticConfig);
@@ -62,6 +63,7 @@ const html = marked(post.body ?? '');
       )
     }
   </article>
+  <Comments />
 </Base>
 
 <style>
