@@ -1,0 +1,45 @@
+# 自动部署到 Cloudflare Pages
+name: Deploy to Cloudflare Pages
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: pages-deploy
+  cancel-in-progress: true
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build
+        run: npm run build
+        env:
+          PUBLIC_GITHUB_OWNER: 2dtgd54d8p-ops
+          PUBLIC_GITHUB_REPO: tackix
+          PUBLIC_KEYSTATIC_GITHUB_APP_SLUG: tackix-cms-app
+          PUBLIC_SITE_URL: https://tackix.pages.dev
+
+      - name: Deploy to Cloudflare Pages
+        uses: cloudflare/wrangler-action@v3
+        with:
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          accountId: b4f68b37b18c0891a0df46f3bf4d07f1
+          command: pages deploy dist --project-name=tackix
