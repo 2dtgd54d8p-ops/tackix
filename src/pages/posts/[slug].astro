@@ -37,6 +37,59 @@ const html = marked(post.body ?? '');
   <article class="prose">
     <h1>{post.title}</h1>
     {post.publishedAt && <p class="post-meta">{post.publishedAt}</p>}
+    {
+      post.category && post.category !== 'uncategorized' && (
+        <span class="badge">{post.category}</span>
+      )
+    }
+    {
+      post.cover && (
+        <img
+          class="cover"
+          src={post.cover.startsWith('/') ? post.cover : `/uploads/${post.cover}`}
+          alt={post.title}
+        />
+      )
+    }
     <div set:html={html} />
+    {
+      Array.isArray(post.tags) && post.tags.length > 0 && (
+        <div class="tags">
+          {post.tags.map((t) => (
+            <span class="tag">{t}</span>
+          ))}
+        </div>
+      )
+    }
   </article>
 </Base>
+
+<style>
+  .cover {
+    width: 100%;
+    border-radius: 8px;
+    margin: 12px 0 20px;
+  }
+  .badge {
+    display: inline-block;
+    font-size: 12px;
+    padding: 2px 8px;
+    border-radius: 999px;
+    background: #eef2f7;
+    color: #185fa5;
+    margin-bottom: 12px;
+  }
+  .tags {
+    margin-top: 24px;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+  .tag {
+    font-size: 12px;
+    padding: 2px 8px;
+    border: 1px solid #e5e7eb;
+    border-radius: 6px;
+    color: #6b7280;
+  }
+</style>
