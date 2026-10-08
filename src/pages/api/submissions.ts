@@ -49,11 +49,13 @@ function safeEqual(a: string, b: string): boolean {
 export const GET: APIRoute = async ({ request, locals }) => {
   const env = (locals as any)?.runtime?.env ?? (locals as any)?.env;
 
-  const expected = env?.ADMIN_TOKEN;
+  // trim 容错：Cloudflare 控制台粘贴的值末尾偶发不可见空格/换行，
+  // 会让「看似一样」的口令因长度不等而校验失败。
+  const expected = String(env?.ADMIN_TOKEN ?? '').trim();
   if (!expected) {
     return json({ ok: false, error: '服务端未配置 ADMIN_TOKEN，接口已关闭。' }, 503);
   }
-  if (!safeEqual(readToken(request), String(expected))) {
+  if (!safeEqual(readToken(request), expected)) {
     return json({ ok: false, error: '口令不正确' }, 401);
   }
 
@@ -83,11 +85,13 @@ export const GET: APIRoute = async ({ request, locals }) => {
 export const DELETE: APIRoute = async ({ request, locals }) => {
   const env = (locals as any)?.runtime?.env ?? (locals as any)?.env;
 
-  const expected = env?.ADMIN_TOKEN;
+  // trim 容错：Cloudflare 控制台粘贴的值末尾偶发不可见空格/换行，
+  // 会让「看似一样」的口令因长度不等而校验失败。
+  const expected = String(env?.ADMIN_TOKEN ?? '').trim();
   if (!expected) {
     return json({ ok: false, error: '服务端未配置 ADMIN_TOKEN，接口已关闭。' }, 503);
   }
-  if (!safeEqual(readToken(request), String(expected))) {
+  if (!safeEqual(readToken(request), expected)) {
     return json({ ok: false, error: '口令不正确' }, 401);
   }
 
