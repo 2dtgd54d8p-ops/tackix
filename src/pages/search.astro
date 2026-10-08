@@ -1,0 +1,38 @@
+---
+import Base from '../layouts/Base.astro';
+---
+
+<Base title="搜索">
+  <section>
+    <h1>搜索</h1>
+    <p class="hint">输入关键词检索站内文章（索引由 Pagefind 在构建时生成）。</p>
+    <link rel="stylesheet" href="/pagefind/pagefind-ui.css" />
+    <div id="search"></div>
+  </section>
+</Base>
+
+<script is:inline src="/pagefind/pagefind-ui.js"></script>
+<script is:inline>
+  window.addEventListener('DOMContentLoaded', function () {
+    if (window.PagefindUI) {
+      new window.PagefindUI({
+        element: '#search',
+        showSubResults: true,
+        translations: {
+          placeholder: '搜索文章…',
+          zero_results: '没有找到与 [SEARCH_TERM] 相关的内容',
+        },
+      });
+    }
+  });
+</script>
+
+<style>
+  .hint {
+    color: #6b7280;
+    font-size: 14px;
+  }
+  #search {
+    margin-top: 16px;
+  }
+</style>
