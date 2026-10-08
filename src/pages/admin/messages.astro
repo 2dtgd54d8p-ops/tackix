@@ -1,0 +1,243 @@
+---
+import Base from '../../layouts/Base.astro';
+
+// 留言后台：页面本身是静态的，数据全部走 /api/submissions（服务端鉴权）。
+// 不在导航里露出，且声明 noindex，避免被搜索引擎收录。
+---
+
+<Base title="留言管理">
+  <meta name="robots" content="noindex, nofollow" slot="head" />
+
+  <!-- data-pagefind-ignore：Pagefind 不读 robots meta，需显式排除，避免后台页进搜索索引 -->
+  <section class="admin" data-pagefind-ignore>
+    <h1>留言管理</h1>
+
+    <div id="gate" class="gate">
+      <p class="hint">请输入访问口令（对应 Cloudflare 环境变量 <code>ADMIN_TOKEN</code>）。</p>
+      <form id="gate-form" class="gate-form">
+        <input id="gate-token" type="password" placeholder="ADMIN_TOKEN" autocomplete="off" />
+        <button type="submit">进入</button>
+      </form>
+      <p id="gate-error" class="status err" role="alert"></p>
+    </div>
+
+    <div id="panel" class="panel" hidden>
+      <div class="toolbar">
+        <span id="summary" class="summary"></span>
+        <button id="refresh" type="button" class="ghost">刷新</button>
+        <button id="logout" type="button" class="ghost">退出</button>
+      </div>
+      <p id="list-status" class="status" role="status" aria-live="polite"></p>
+      <div id="list" class="list"></div>
+    </div>
+  </section>
+</Base>
+
+<script is:inline>
+  (function () {
+    var STORE = 'tackix_admin_token';
+    var gate = document.getElementById('gate');
+    var panel = document.getElementById('panel');
+    var gateForm = document.getElementById('gate-form');
+    var gateInput = document.getElementById('gate-token');
+    var gateError = document.getElementById('gate-error');
+    var listEl = document.getElementById('list');
+    var listStatus = document.getElementById('list-status');
+    var summary = document.getElementById('summary');
+
+    var token = '';
+
+    function getTokenFromUrl() {
+      try {
+        return new URLSearchParams(location.search).get('token') || '';
+      } catch (e) {
+        return '';
+      }
+    }
+
+    function esc(s) {
+      return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) {
+        return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c];
+      });
+    }
+
+    function fmt(iso) {
+      if (!iso) return '';
+      var d = new Date(iso);
+      if (isNaN(d.getTime())) return String(iso);
+      var p = function (n) { return n < 10 ? '0' + n : '' + n; };
+      return d.getFullYear() + '-' + p(d.getMonth() + 1) + '-' + p(d.getDate()) +
+        ' ' + p(d.getHours()) + ':' + p(d.getMinutes());
+    }
+
+    function showPanel() {
+      gate.hidden = true;
+      panel.hidden = false;
+      load();
+    }
+
+    function showGate(err) {
+      panel.hidden = true;
+      gate.hidden = false;
+      gateError.textContent = err || '';
+      if (!err) gateInput.focus();
+    }
+
+    async function load() {
+      listStatus.textContent = '加载中…';
+      listStatus.className = 'status';
+      try {
+        var res = await fetch('/api/submissions?limit=100', {
+          headers: { 'x-admin-token': token },
+          cache: 'no-store',
+        });
+        var data = await res.json().catch(function () { return {}; });
+
+        if (res.status === 401) {
+          showGate('口令不正确，请重试。');
+          return;
+        }
+        if (!res.ok || !data.ok) {
+          listStatus.textContent = '加载失败：' + (data.error || res.status);
+          listStatus.className = 'status err';
+          return;
+        }
+
+        var items = data.items || [];
+        summary.textContent = '共 ' + (data.total ?? items.length) + ' 条，当前显示 ' + items.length + ' 条';
+
+        if (!items.length) {
+          listEl.innerHTML = '<p class="empty">还没有收到留言。</p>';
+          listStatus.textContent = '';
+          return;
+        }
+
+        listEl.innerHTML = items
+          .map(function (it) {
+            return (
+              '<div class="card">' +
+              '<div class="card-head">' +
+              '<span class="who">' + esc(it.name) + '</span>' +
+              '<a class="mail" href="mailto:' + esc(it.email) + '">' + esc(it.email) + '</a>' +
+              '<span class="time">' + esc(fmt(it.created_at)) + '</span>' +
+              '<button type="button" class="del" data-id="' + esc(it.id) + '">删除</button>' +
+              '</div>' +
+              '<div class="msg">' + esc(it.message).replace(/\n/g, '<br />') + '</div>' +
+              '</div>'
+            );
+          })
+          .join('');
+        listStatus.textContent = '';
+      } catch (e) {
+        listStatus.textContent = '加载失败：' + (e && e.message ? e.message : e);
+        listStatus.className = 'status err';
+      }
+    }
+
+    async function remove(id, btn) {
+      if (!confirm('确认删除 #' + id + '？此操作不可撤销。')) return;
+      btn.disabled = true;
+      try {
+        var res = await fetch('/api/submissions?id=' + encodeURIComponent(id), {
+          method: 'DELETE',
+          headers: { 'x-admin-token': token },
+        });
+        var data = await res.json().catch(function () { return {}; });
+        if (!res.ok || !data.ok) {
+          alert('删除失败：' + (data.error || res.status));
+          btn.disabled = false;
+          return;
+        }
+        load();
+      } catch (e) {
+        alert('删除失败：' + (e && e.message ? e.message : e));
+        btn.disabled = false;
+      }
+    }
+
+    gateForm.addEventListener('submit', function (e) {
+      e.preventDefault();
+      var v = gateInput.value.trim();
+      if (!v) {
+        gateError.textContent = '请输入口令。';
+        return;
+      }
+      token = v;
+      try { localStorage.setItem(STORE, v); } catch (err) {}
+      showPanel();
+    });
+
+    document.getElementById('refresh').addEventListener('click', load);
+
+    document.getElementById('logout').addEventListener('click', function () {
+      token = '';
+      try { localStorage.removeItem(STORE); } catch (err) {}
+      gateInput.value = '';
+      showGate('');
+    });
+
+    listEl.addEventListener('click', function (e) {
+      var t = e.target;
+      if (t && t.classList && t.classList.contains('del')) {
+        remove(t.getAttribute('data-id'), t);
+      }
+    });
+
+    // 优先 URL ?token=，其次 localStorage
+    var fromUrl = getTokenFromUrl();
+    var saved = '';
+    try { saved = localStorage.getItem(STORE) || ''; } catch (err) {}
+    token = fromUrl || saved;
+    if (token) {
+      showPanel();
+    } else {
+      showGate('');
+    }
+  })();
+</script>
+
+<style>
+  .hint { color: #6b7280; font-size: 14px; }
+  .status { font-size: 14px; min-height: 20px; margin: 0; }
+  .status.err { color: #c0392b; }
+  code { background: #f3f4f6; padding: 1px 5px; border-radius: 4px; font-size: 13px; }
+
+  .gate-form { display: flex; gap: 10px; margin-top: 14px; }
+  .gate-form input {
+    font: inherit; padding: 8px 10px; border: 1px solid #e5e7eb;
+    border-radius: 6px; background: #fff; color: #1f2328; min-width: 260px;
+  }
+  .gate-form button, .toolbar button {
+    font: inherit; padding: 8px 16px; border: 0; border-radius: 6px;
+    background: #185fa5; color: #fff; cursor: pointer;
+  }
+  .toolbar button.ghost {
+    background: #fff; color: #374151; border: 1px solid #e5e7eb;
+  }
+  .toolbar {
+    display: flex; align-items: center; gap: 10px;
+    margin: 18px 0 10px; padding-bottom: 10px; border-bottom: 1px solid #e5e7eb;
+  }
+  .summary { color: #6b7280; font-size: 13px; margin-right: auto; }
+
+  .list { display: flex; flex-direction: column; gap: 12px; }
+  .empty { color: #6b7280; padding: 32px 0; text-align: center; }
+  .card {
+    border: 1px solid #e5e7eb; border-radius: 8px;
+    padding: 14px 16px; background: #fff;
+  }
+  .card-head {
+    display: flex; align-items: center; gap: 12px;
+    flex-wrap: wrap; font-size: 13px;
+  }
+  .who { font-weight: 600; color: #1f2328; }
+  .mail { color: #185fa5; }
+  .time { color: #6b7280; margin-right: auto; }
+  .del {
+    font: inherit; font-size: 12px; padding: 4px 10px;
+    border: 1px solid #e5e7eb; border-radius: 5px;
+    background: #fff; color: #c0392b; cursor: pointer;
+  }
+  .del:hover { background: #fef2f2; }
+  .msg { margin-top: 8px; color: #1f2328; white-space: normal; word-break: break-word; }
+</style>
