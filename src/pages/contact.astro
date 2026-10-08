@@ -1,0 +1,116 @@
+---
+import Base from '../layouts/Base.astro';
+---
+
+<Base title="联系我">
+  <section>
+    <h1>联系我</h1>
+    <p class="hint">填写下面的表单，留言会直接存进本站的 Cloudflare D1 数据库。</p>
+
+    <form id="contact-form" class="contact-form" novalidate>
+      <label>
+        <span>姓名</span>
+        <input name="name" type="text" required maxlength="60" autocomplete="name" />
+      </label>
+      <label>
+        <span>邮箱</span>
+        <input name="email" type="email" required maxlength="120" autocomplete="email" />
+      </label>
+      <label>
+        <span>留言</span>
+        <textarea name="message" required rows="5" maxlength="2000"></textarea>
+      </label>
+      <button type="submit">提交</button>
+      <p id="contact-status" class="status" role="status" aria-live="polite"></p>
+    </form>
+  </section>
+</Base>
+
+<script is:inline>
+  (function () {
+    const form = document.getElementById('contact-form');
+    const status = document.getElementById('contact-status');
+    if (!form) return;
+
+    form.addEventListener('submit', async function (e) {
+      e.preventDefault();
+      status.textContent = '提交中…';
+      status.className = 'status';
+
+      const data = Object.fromEntries(new FormData(form).entries());
+      try {
+        const res = await fetch('/api/contact', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(data),
+        });
+        const json = await res.json();
+        if (res.ok && json.ok) {
+          status.textContent = '提交成功，谢谢你的留言！';
+          status.className = 'status ok';
+          form.reset();
+        } else {
+          status.textContent = '提交失败：' + (json.error || '未知错误');
+          status.className = 'status err';
+        }
+      } catch (err) {
+        status.textContent = '提交失败：' + (err && err.message ? err.message : err);
+        status.className = 'status err';
+      }
+    });
+  })();
+</script>
+
+<style>
+  .hint {
+    color: #6b7280;
+    font-size: 14px;
+  }
+  .contact-form {
+    margin-top: 20px;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    max-width: 520px;
+  }
+  .contact-form label {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    font-size: 14px;
+    color: #1f2328;
+  }
+  .contact-form input,
+  .contact-form textarea {
+    font: inherit;
+    padding: 8px 10px;
+    border: 1px solid #e5e7eb;
+    border-radius: 6px;
+    background: #fff;
+    color: #1f2328;
+  }
+  .contact-form button {
+    align-self: flex-start;
+    font: inherit;
+    padding: 8px 18px;
+    border: 0;
+    border-radius: 6px;
+    background: #185fa5;
+    color: #fff;
+    cursor: pointer;
+  }
+  .contact-form button:hover {
+    background: #134a80;
+  }
+  .status {
+    font-size: 14px;
+    min-height: 20px;
+    margin: 0;
+  }
+  .status.ok {
+    color: #157f3d;
+  }
+  .status.err {
+    color: #c0392b;
+  }
+</style>
