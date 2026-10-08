@@ -39,12 +39,42 @@ export default config({
       path: 'src/content/posts/*',
       schema: {
         title: fields.slug({ name: { label: '标题' } }),
-        excerpt: fields.text({ label: '摘要' }),
+        excerpt: fields.text({ label: '摘要', multiline: true }),
         publishedAt: fields.date({ label: '发布日期' }),
         // 草稿开关：false 的文章不会被构建进站点（见 index.astro / [slug].astro 的过滤）
         published: fields.checkbox({ label: '已发布', defaultValue: true }),
-        // 用多行文本存 Markdown，避免依赖 @astrojs/markdoc（其最新版要求 Astro 7）
-        body: fields.text({ label: '正文 (Markdown)', multiline: true }),
+        featured: fields.checkbox({ label: '首页置顶', defaultValue: false }),
+        category: fields.select({
+          label: '分类',
+          options: [
+            { label: '未分类', value: 'uncategorized' },
+            { label: '技术', value: 'tech' },
+            { label: '产品', value: 'product' },
+            { label: '随笔', value: 'notes' },
+          ],
+          defaultValue: 'uncategorized',
+        }),
+        tags: fields.multiselect({
+          label: '标签',
+          options: [
+            { label: 'Astro', value: 'astro' },
+            { label: 'Cloudflare', value: 'cloudflare' },
+            { label: 'Keystatic', value: 'keystatic' },
+            { label: '教程', value: 'tutorial' },
+          ],
+        }),
+        // 图片会经 GitHub App 提交到仓库 public/uploads/，构建时由静态资源直接产出
+        cover: fields.image({
+          label: '封面图',
+          directory: 'public/uploads',
+          publicPath: '/uploads/',
+        }),
+        // 富文本编辑器（ProseMirror）：编辑体验带工具栏，但序列化后仍是 Markdown 字符串，
+        // 写进 YAML 的依旧是 body 字符串 —— 因此前端 marked() 无需改动，
+        // 且仓库里现有文章的 body（普通 Markdown 字符串）完全兼容，零迁移。
+        // 注意：不要用 fields.document（已废弃且存结构化数组），也不要用
+        // fields.markdoc（存 Markdoc AST 对象，需要换渲染器）。
+        body: fields.mdx.inline({ label: '正文' }),
       },
     }),
   },
