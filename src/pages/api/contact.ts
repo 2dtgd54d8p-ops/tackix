@@ -46,6 +46,58 @@ async function notifyByEmail(env: any, row: Row) {
   }
 }
 
+/**
+ * 可选：群机器人通知（企业微信 / 飞书 / 钉钉）。
+ * 只需要一个 webhook URL，自动按域名识别平台、构造对应 payload：
+ *   - 企业微信 qyapi.weixin.qq.com     -> { msgtype:'text', text:{content} }
+ *   - 飞书   *.feishu.cn / larksuite  -> { msg_type:'text', content:{text} }
+ *   - 钉钉   oapi.dingtalk.com         -> { msgtype:'text', text:{content} }
+ * 各平台机器人安全设置里建议用「自定义关键词：tackix」，否则可能被拦截。
+ * 未配置 NOTIFY_WEBHOOK_URL 时静默跳过。消息永远带 [tackix] 前缀便于关键词匹配。
+ */
+async function notifyWebhook(env: any, row: Row) {
+  const url = env?.NOTIFY_WEBHOOK_URL;
+  if (!url) return { sent: false, reason: '未配置 NOTIFY_WEBHOOK_URL' };
+
+  const time = new Date().toLocaleString('zh-CN', { timeZone: 'Asia/Shanghai' });
+  const text =
+    `[tackix] 新留言\n` +
+    `姓名：${row.name}\n邮箱：${row.email}\n时间：${time}\n\n${row.message}`;
+
+  let payload: any;
+  let host = '';
+  try {
+    host = new URL(url).host;
+  } catch {
+    return { sent: false, reason: 'NOTIFY_WEBHOOK_URL 不是合法 URL' };
+  }
+  if (host.includes('qyapi.weixin.qq.com')) {
+    payload = { msgtype: 'text', text: { content: text } };
+  } else if (host.includes('feishu') || host.includes('larksuite')) {
+    payload = { msg_type: 'text', content: { text } };
+  } else if (host.includes('dingtalk')) {
+    payload = { msgtype: 'text', text: { content: text } };
+  } else {
+    // 默认按飞书格式尝试（最常见）
+    payload = { msg_type: 'text', content: { text } };
+  }
+
+  try {
+    const res = await fetch(url, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+    });
+    const respText = await res.text();
+    if (!res.ok) {
+      return { sent: false, reason: `Webhook ${res.status}: ${respText.slice(0, 200)}` };
+    }
+    return { sent: true, platform: host, detail: respText.slice(0, 100) };
+  } catch (e) {
+    return { sent: false, reason: (e as Error)?.message ?? '请求异常' };
+  }
+}
+
 export const POST: APIRoute = async ({ request, locals }) => {
   try {
     const body = await request.json();
@@ -80,8 +132,17 @@ export const POST: APIRoute = async ({ request, locals }) => {
       .bind(row.name, row.email, row.message, new Date().toISOString())
       .run();
 
-    // 入库成功之后再尝试发信；发信失败不影响提交结果
-    const notify = await notifyByEmail(env, row);
+    // 入库成功之后再尝试通知；任意渠道失败都不影响提交结果
+    const notify: Record<string, unknown> = {};
+    if (env?.NOTIFY_WEBHOOK_URL) {
+      notify.webhook = await notifyWebhook(env, row);
+    }
+    if (env?.RESEND_API_KEY && env?.CONTACT_NOTIFY_TO) {
+      notify.email = await notifyByEmail(env, row);
+    }
+    if (!env?.NOTIFY_WEBHOOK_URL && !(env?.RESEND_API_KEY && env?.CONTACT_NOTIFY_TO)) {
+      notify.note = '未配置任何通知渠道（NOTIFY_WEBHOOK_URL 或 RESEND_*）';
+    }
 
     return json({ ok: true, notify }, 200);
   } catch (e) {
