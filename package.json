@@ -6,6 +6,7 @@
   "scripts": {
     "dev": "KEYSTATIC_USE_LOCAL=1 astro dev",
     "build": "astro build",
+    "postbuild": "pagefind --site dist",
     "preview": "astro preview",
     "astro": "astro",
     "cf:dev": "wrangler pages dev ./dist"
@@ -23,6 +24,7 @@
   "devDependencies": {
     "@types/react": "^18.3.0",
     "@types/react-dom": "^18.3.0",
+    "pagefind": "^1.5.2",
     "typescript": "^5.6.0",
     "wrangler": "^3.0.0"
   }
