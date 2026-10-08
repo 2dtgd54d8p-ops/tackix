@@ -14,6 +14,7 @@ const siteTitle = '独立站平台';
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <meta name="description" content={description ?? siteTitle} />
     <title>{title ? `${title} · ${siteTitle}` : siteTitle}</title>
+    <slot name="head" />
   </head>
   <body>
     <header class="site-header">
