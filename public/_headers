@@ -5,3 +5,10 @@
 # 管理后台禁止被搜索引擎收录
 /keystatic*
   X-Robots-Tag: noindex
+
+# 全局基础安全响应头（仅补充缺失防护，不影响站点功能）
+/*
+  X-Content-Type-Options: nosniff
+  Referrer-Policy: strict-origin-when-cross-origin
+  X-Frame-Options: DENY
+  Permissions-Policy: camera=(), microphone=(), geolocation=()
