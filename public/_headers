@@ -6,6 +6,11 @@
 /keystatic*
   X-Robots-Tag: noindex
 
+# 留言后台：不在导航露出，禁止收录，且不允许被 iframe 套入
+/admin/*
+  X-Robots-Tag: noindex, nofollow
+  Cache-Control: no-store
+
 # 全局基础安全响应头（仅补充缺失防护，不影响站点功能）
 /*
   X-Content-Type-Options: nosniff
