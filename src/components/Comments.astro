@@ -1,0 +1,42 @@
+---
+// Giscus 评论：基于 GitHub Discussions，零后端。
+// 依赖：仓库已开启 Discussions，并已安装 giscus App（https://github.com/apps/giscus）。
+// 首次有人发评论时，giscus 会为该页面自动创建一个 Discussion。
+const repo = '2dtgd54d8p-ops/tackix';
+const repoId = 'R_kgDOU6z_og';
+const category = 'General';
+const categoryId = 'DIC_kwDOU6z_os4DHTq8';
+---
+
+<section class="comments">
+  <h2 class="comments-title">评论</h2>
+  <script
+    src="https://giscus.app/client.js"
+    data-repo={repo}
+    data-repo-id={repoId}
+    data-category={category}
+    data-category-id={categoryId}
+    data-mapping="pathname"
+    data-strict="0"
+    data-reactions-enabled="1"
+    data-emit-metadata="0"
+    data-input-position="bottom"
+    data-theme="preferred_color_scheme"
+    data-lang="zh-CN"
+    data-loading="lazy"
+    crossorigin="anonymous"
+    async
+  ></script>
+</section>
+
+<style>
+  .comments {
+    margin-top: 40px;
+    padding-top: 24px;
+    border-top: 1px solid #e5e7eb;
+  }
+  .comments-title {
+    font-size: 18px;
+    margin: 0 0 16px;
+  }
+</style>
