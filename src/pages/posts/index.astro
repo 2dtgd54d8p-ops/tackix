@@ -1,0 +1,53 @@
+---
+import { createReader } from '@keystatic/core/reader';
+import keystaticConfig from '../../../keystatic.config';
+import Base from '../../layouts/Base.astro';
+
+const reader = createReader(process.cwd(), keystaticConfig);
+let slugs = [];
+try {
+  slugs = await reader.collections.posts.list();
+} catch (e) {
+  console.warn('[build] 读取文章列表失败：', e);
+}
+
+const posts = (
+  await Promise.all(
+    slugs.map(async (slug) => {
+      try {
+        const post = await reader.collections.posts.read(slug);
+        return post && post.published !== false ? { slug, ...post } : null;
+      } catch (e) {
+        return null;
+      }
+    })
+  )
+).filter(Boolean);
+
+posts.sort((a, b) => String(b.publishedAt ?? '').localeCompare(String(a.publishedAt ?? '')));
+---
+
+<Base title="文章">
+  <section>
+    <h1>全部文章</h1>
+    {
+      posts.length === 0 ? (
+        <p class="empty">还没有文章。</p>
+      ) : (
+        <ul class="post-list">
+          {posts.map((post) => (
+            <li>
+              <h2>
+                <a href={`/posts/${post.slug}`}>{post.title}</a>
+              </h2>
+              <div class="post-meta">
+                {post.publishedAt && <span>{post.publishedAt}</span>}
+                {post.excerpt && <span> · {post.excerpt}</span>}
+              </div>
+            </li>
+          ))}
+        </ul>
+      )
+    }
+  </section>
+</Base>
