@@ -133,7 +133,14 @@ export const POST: APIRoute = async ({ request, locals }) => {
       .run();
 
     // 入库成功之后再尝试通知；任意渠道失败都不影响提交结果
-    const notify: Record<string, unknown> = {};
+    const notify: Record<string, unknown> = {
+      // 诊断：直接暴露每个变量是否真的到达了运行时（便于排查环境变量未注入）
+      diag: {
+        hasWebhook: !!env?.NOTIFY_WEBHOOK_URL,
+        hasResendKey: !!env?.RESEND_API_KEY,
+        hasResendTo: !!env?.CONTACT_NOTIFY_TO,
+      },
+    };
     if (env?.NOTIFY_WEBHOOK_URL) {
       notify.webhook = await notifyWebhook(env, row);
     }
