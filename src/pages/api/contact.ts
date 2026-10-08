@@ -118,7 +118,17 @@ export const POST: APIRoute = async ({ request, locals }) => {
     }
 
     // Cloudflare runtime：locals.runtime.env 里挂着 Pages Functions 的绑定
-    const env = (locals as any)?.runtime?.env ?? (locals as any)?.env;
+    const rawEnv = (locals as any)?.runtime?.env ?? (locals as any)?.env;
+    // 统一 trim 字符串型环境变量：Cloudflare 控制台粘贴的值末尾偶发不可见空格/换行，
+    // 会导致 Key 校验失败或 Webhook URL 非法，这里做一层容错。
+    const env = rawEnv
+      ? new Proxy(rawEnv, {
+          get: (target, key) => {
+            const v = (target as any)[key];
+            return typeof v === 'string' ? v.trim() : v;
+          },
+        })
+      : rawEnv;
     const db = env?.DB;
     if (!db) {
       return json(
