@@ -27,6 +27,14 @@ const CATEGORY_OPTIONS = [
   { label: '随笔', value: 'notes' },
 ];
 
+// 文章标签下拉的可选项。与后台「标签管理」singleton 保持一致。
+const TAG_OPTIONS = [
+  { label: 'Astro', value: 'astro' },
+  { label: 'Cloudflare', value: 'cloudflare' },
+  { label: 'Keystatic', value: 'keystatic' },
+  { label: '教程', value: 'tutorial' },
+];
+
 const storage = useLocal
   ? ({ kind: 'local' } as const)
   : ({
@@ -118,14 +126,11 @@ export default config({
           ],
           defaultValue: 'uncategorized',
         }),
+        // ⚠️ 同 category：Keystatic select/multiselect 的 options 只支持静态数组，
+        // 新增/删除标签要同时改下方 TAG_OPTIONS 和后台「标签管理」singleton。
         tags: fields.multiselect({
           label: '标签',
-          options: [
-            { label: 'Astro', value: 'astro' },
-            { label: 'Cloudflare', value: 'cloudflare' },
-            { label: 'Keystatic', value: 'keystatic' },
-            { label: '教程', value: 'tutorial' },
-          ],
+          options: TAG_OPTIONS,
         }),
         // 图片会经 GitHub App 提交到仓库 public/uploads/，构建时由静态资源直接产出
         cover: fields.image({
@@ -151,6 +156,8 @@ export default config({
         description: fields.text({ label: '站点描述', multiline: true }),
         // 首页 Hero 区那句主标语，留空则回落到默认文案
         tagline: fields.text({ label: '首页标语' }),
+        // 全站页脚署名（留空则只显示站点标题）
+        footer: fields.text({ label: '页脚文字' }),
       },
     },
     // 分类管理：分类从此处可增删改，不再写死在代码里。
@@ -180,6 +187,25 @@ export default config({
             },
           },
           { label: '分类项' }
+        ),
+      },
+    },
+    // 标签管理：与分类同构，但支持一篇多选（tags 是 multiselect）。
+    tags: {
+      label: '标签管理',
+      schema: {
+        items: fields.array(
+          {
+            label: '标签',
+            schema: {
+              label: fields.text({ label: '显示名称', description: '前台显示的文字，如「教程」' }),
+              value: fields.text({
+                label: '标识',
+                description: '英文唯一标识，写入文章 frontmatter，如 tutorial',
+              }),
+            },
+          },
+          { label: '标签项' }
         ),
       },
     },
