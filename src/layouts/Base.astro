@@ -46,6 +46,7 @@ const footerText = site.footer ? `Powered by ${site.footer}` : `Powered by ${sit
         --muted: #6b7280;
         --accent: #185fa5;
         --border: #e5e7eb;
+        --content-width: 1080px; /* 全站内容最大宽度，Hero 内文与之对齐 */
       }
       * { box-sizing: border-box; }
       body {
@@ -54,6 +55,7 @@ const footerText = site.footer ? `Powered by ${site.footer}` : `Powered by ${sit
         background: var(--bg);
         color: var(--fg);
         line-height: 1.6;
+        overflow-x: hidden; /* 防止 Hero 满屏出血在带滚动条的浏览器产生横向滚动 */
       }
       a { color: var(--accent); text-decoration: none; }
       a:hover { text-decoration: underline; }
@@ -64,7 +66,7 @@ const footerText = site.footer ? `Powered by ${site.footer}` : `Powered by ${sit
       }
       .brand { font-weight: 600; font-size: 18px; color: var(--fg); }
       nav a { margin-left: 18px; color: var(--muted); font-size: 14px; }
-      .container { max-width: 760px; margin: 0 auto; padding: 32px 24px; }
+      .container { max-width: var(--content-width); margin: 0 auto; padding: 32px 24px; }
       .site-footer {
         text-align: center; color: var(--muted); font-size: 13px;
         padding: 24px; border-top: 1px solid var(--border);
