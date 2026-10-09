@@ -2,6 +2,7 @@
 import { createReader } from '@keystatic/core/reader';
 import keystaticConfig from '../../keystatic.config';
 import Base from '../layouts/Base.astro';
+import { loadSiteData, buildFilterOptions } from '../lib/site-data';
 
 const reader = createReader(process.cwd(), keystaticConfig);
 let slugs = [];
@@ -30,54 +31,13 @@ posts.sort((a, b) => String(b.publishedAt ?? '').localeCompare(String(a.publishe
 const featured = posts.find((p) => p.featured);
 const rest = posts.filter((p) => p.slug !== featured?.slug);
 
-// 分类筛选条：优先读「分类管理」singleton（后台可增删改），
-// 读不到或为空时回落到内置默认表，保证站点永远不会因数据缺失而报错。
-const DEFAULT_CATEGORIES = [
-  { label: '技术', value: 'tech' },
-  { label: '产品', value: 'product' },
-  { label: '随笔', value: 'notes' },
-];
+// 分类/标签/站点信息统一从公共模块读取（后台可增删改），读不到自动回落默认值
+const { site: siteInfo, categories: managedCategories, categoryLabel, tagLabel, tags } =
+  await loadSiteData();
 
-let managedCategories = DEFAULT_CATEGORIES;
-let siteInfo = { title: 'Tackix', description: '', tagline: '' };
-try {
-  const [cats, site] = await Promise.all([
-    reader.singletons.categories.read(),
-    reader.singletons.site.read(),
-  ]);
-  if (site) {
-    siteInfo = {
-      title: site.title || siteInfo.title,
-      description: site.description || siteInfo.description,
-      tagline: site.tagline || siteInfo.tagline,
-    };
-  }
-  const items = cats?.items?.filter((c) => c?.value && c?.label);
-  if (items?.length) {
-    managedCategories = items.map((c) => ({ label: c.label, value: c.value }));
-  }
-} catch (e) {
-  console.warn('[build] 读取分类/站点信息失败，回落到默认分类：', e);
-}
-
-// 「未分类」是系统内置分类（value=uncategorized），不在管理表里，
-// 但只要有文章未分类就必须出现在筛选条上，否则这些文章将无处可去。
-const UNCATEGORIZED_LABEL = '未分类';
-const categoryMap = new Map(managedCategories.map((c) => [c.value, c.label]));
-const hasUncategorized = posts.some(
-  (p) => (p.category ?? 'uncategorized') === 'uncategorized'
-);
-const categories = [
-  { value: 'all', label: '全部' },
-  ...(hasUncategorized ? [{ value: 'uncategorized', label: UNCATEGORIZED_LABEL }] : []),
-  ...managedCategories.filter((c) => posts.some((p) => p.category === c.value)),
-];
-
-// 文章的分类值 -> 显示名；未登记的值兜底显示「未分类」
-const categoryLabel = (v) => {
-  const key = v ?? 'uncategorized';
-  return key === 'uncategorized' ? UNCATEGORIZED_LABEL : categoryMap.get(key) ?? UNCATEGORIZED_LABEL;
-};
+// 只列出实际有文章的分类/标签，避免出现点进去是空的筛选项
+const categories = buildFilterOptions(posts, managedCategories);
+const usedTags = tags.filter((t) => posts.some((p) => (p.tags ?? []).includes(t.value)));
 ---
 
 <Base
@@ -133,6 +93,9 @@ const categoryLabel = (v) => {
                 {featured.excerpt && <p class="card-excerpt">{featured.excerpt}</p>}
                 <div class="card-meta">
                   <span class="tag">{categoryLabel(featured.category)}</span>
+                  {(featured.tags ?? []).map((t) => (
+                    <span class="tag tag-plain">{tagLabel(t)}</span>
+                  ))}
                   {featured.publishedAt && <span>{featured.publishedAt}</span>}
                 </div>
               </div>
@@ -160,6 +123,9 @@ const categoryLabel = (v) => {
                     {post.excerpt && <p class="card-excerpt">{post.excerpt}</p>}
                     <div class="card-meta">
                       <span class="tag">{categoryLabel(post.category)}</span>
+                      {(post.tags ?? []).slice(0, 2).map((t) => (
+                        <span class="tag tag-plain">{tagLabel(t)}</span>
+                      ))}
                       {post.publishedAt && <span>{post.publishedAt}</span>}
                     </div>
                   </div>
@@ -289,6 +255,7 @@ const categoryLabel = (v) => {
     font-size: 12px;
   }
   .tag { padding: 2px 8px; border-radius: 6px; background: #eef3f8; color: #185fa5; }
+  .tag-plain { background: #f2f4f6; color: #6b7280; }
   .empty { color: var(--muted); padding: 32px 0; text-align: center; }
   .empty[hidden] { display: none; }
 
