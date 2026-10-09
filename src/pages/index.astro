@@ -173,6 +173,10 @@ const usedTags = tags.filter((t) => posts.some((p) => (p.tags ?? []).includes(t.
     overflow: hidden;
     background: #e6f1fb;
     border-bottom: 1px solid var(--border);
+    margin-top: -32px;                 /* 顶到 header 下沿，消除白条 */
+    margin-left: calc(50% - 50vw);     /* 满屏出血：左右延伸到视口边缘 */
+    margin-right: calc(50% - 50vw);
+    padding: 56px 24px 48px;
   }
   .hero-blob {
     position: absolute;
@@ -180,11 +184,11 @@ const usedTags = tags.filter((t) => posts.some((p) => (p.tags ?? []).includes(t.
     background: #fff;
     pointer-events: none;
   }
-  .hero-blob-a { right: -40px; top: -40px; width: 180px; height: 180px; opacity: 0.5; }
-  .hero-blob-b { right: 60px; bottom: -56px; width: 104px; height: 104px; opacity: 0.35; }
-  .hero-inner { position: relative; max-width: 440px; padding: 44px 0 40px; }
-  .hero-title { margin: 0 0 10px; font-size: 24px; font-weight: 600; letter-spacing: -0.01em; }
-  .hero-sub { margin: 0 0 20px; color: var(--muted); line-height: 1.7; }
+  .hero-blob-a { right: -40px; top: -40px; width: 220px; height: 220px; opacity: 0.5; }
+  .hero-blob-b { right: 80px; bottom: -64px; width: 140px; height: 140px; opacity: 0.35; }
+  .hero-inner { position: relative; max-width: calc(var(--content-width) - 48px); margin: 0 auto; }
+  .hero-title { margin: 0 0 12px; font-size: 30px; font-weight: 600; letter-spacing: -0.01em; }
+  .hero-sub { margin: 0 0 22px; max-width: 560px; color: var(--muted); line-height: 1.7; }
   .hero-actions { display: flex; gap: 10px; flex-wrap: wrap; }
   .btn {
     display: inline-block;
@@ -217,7 +221,7 @@ const usedTags = tags.filter((t) => posts.some((p) => (p.tags ?? []).includes(t.
   .block { margin: 28px 0; }
   .block-title { margin: 0 0 12px; font-size: 12px; font-weight: 400; color: #9aa1a9; letter-spacing: 0.04em; }
 
-  .grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; }
+  .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 18px; }
   .card {
     display: flex;
     flex-direction: column;
@@ -260,8 +264,9 @@ const usedTags = tags.filter((t) => posts.some((p) => (p.tags ?? []).includes(t.
   .empty[hidden] { display: none; }
 
   @media (max-width: 640px) {
-    .hero-inner { padding: 26px 0 24px; }
-    .hero-title { font-size: 19px; }
+    .hero { margin-top: -20px; padding: 32px 16px; }
+    .hero-inner { padding: 0; }
+    .hero-title { font-size: 22px; }
     .hero-blob-a { width: 120px; height: 120px; right: -30px; top: -30px; }
     .hero-blob-b { display: none; }
     .grid { grid-template-columns: minmax(0, 1fr); }
