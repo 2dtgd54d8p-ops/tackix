@@ -1,10 +1,16 @@
 ---
+import { loadSiteData } from '../lib/site-data';
+
 interface Props {
   title?: string;
   description?: string;
 }
 const { title, description } = Astro.props;
-const siteTitle = 'Tackix';
+// 站名/描述/页脚统一读后台「站点信息」singleton，读不到自动回落默认值。
+// 此前在此处写死 'Tackix'，导致后台改了站点标题只有首页生效、内页仍是旧标题。
+const { site } = await loadSiteData();
+const siteTitle = site.title;
+const footerText = site.footer ? `Powered by ${site.footer}` : `Powered by ${siteTitle}`;
 ---
 
 <!doctype html>
@@ -12,7 +18,7 @@ const siteTitle = 'Tackix';
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <meta name="description" content={description ?? siteTitle} />
+    <meta name="description" content={description ?? site.description} />
     <title>{title ? `${title} · ${siteTitle}` : siteTitle}</title>
     <slot name="head" />
   </head>
@@ -31,7 +37,7 @@ const siteTitle = 'Tackix';
       <slot />
     </main>
     <footer class="site-footer">
-      <span>Powered by Tackix</span>
+      <span>{footerText}</span>
     </footer>
     <style is:global>
       :root {
