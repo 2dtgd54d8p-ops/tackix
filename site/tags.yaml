@@ -1,0 +1,9 @@
+items:
+  - label: Astro
+    value: astro
+  - label: Cloudflare
+    value: cloudflare
+  - label: Keystatic
+    value: keystatic
+  - label: 教程
+    value: tutorial
