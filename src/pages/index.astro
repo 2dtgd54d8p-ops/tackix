@@ -38,6 +38,24 @@ const { site: siteInfo, categories: managedCategories, categoryLabel, tagLabel, 
 // 只列出实际有文章的分类/标签，避免出现点进去是空的筛选项
 const categories = buildFilterOptions(posts, managedCategories);
 const usedTags = tags.filter((t) => posts.some((p) => (p.tags ?? []).includes(t.value)));
+
+// 计数基于网格实际展示的 rest，避免筛选后数量对不上
+const catCounts = {};
+rest.forEach((p) => {
+  const k = p.category ?? 'uncategorized';
+  catCounts[k] = (catCounts[k] ?? 0) + 1;
+});
+const tagCounts = {};
+rest.forEach((p) => (p.tags ?? []).forEach((t) => { tagCounts[t] = (tagCounts[t] ?? 0) + 1; }));
+
+// 分类卡：柔和底色随索引轮换，营造"彩色卡片"观感
+const CAT_TINTS = ['#e8f1fb', '#e9f7ee', '#fbf2e6', '#f1ebfb', '#fbe9f0', '#e7f3fb'];
+const categoryCards = categories.map((c, i) => ({
+  ...c,
+  count: c.value === 'all' ? rest.length : (catCounts[c.value] ?? 0),
+  tint: CAT_TINTS[i % CAT_TINTS.length],
+}));
+const tagCards = usedTags.map((t) => ({ ...t, count: tagCounts[t.value] ?? 0 }));
 ---
 
 <Base
@@ -62,19 +80,47 @@ const usedTags = tags.filter((t) => posts.some((p) => (p.tags ?? []).includes(t.
       <p class="empty">还没有文章，去后台创建第一篇吧。</p>
     ) : (
       <>
-        {categories.length > 1 && (
-          <nav class="filters" id="latest" aria-label="按分类筛选文章">
-            {categories.map((c, i) => (
+        {/* 分类导航卡：替代原筛选按钮，点击即筛选下方网格并平滑滚动 */}
+        <section class="block">
+          <h2 class="block-title">浏览分类</h2>
+          <div class="cat-cards">
+            {categoryCards.map((c, i) => (
               <button
                 type="button"
-                class={`filter-btn${i === 0 ? ' is-active' : ''}`}
+                class={`cat-card${i === 0 ? ' is-active' : ''}`}
                 data-filter={c.value}
                 aria-pressed={i === 0 ? 'true' : 'false'}
+                style={`--tint:${c.tint}`}
               >
-                {c.label}
+                <span class="cat-name">{c.label}</span>
+                <span class="cat-count">{c.count}</span>
               </button>
             ))}
-          </nav>
+          </div>
+        </section>
+
+        {/* 关于本站 */}
+        <section class="block about-block">
+          <h2 class="block-title">关于本站</h2>
+          <p class="about-text">{siteInfo.description || '记录技术、实践与思考的独立空间。'}</p>
+          <div class="about-actions">
+            <a class="btn btn-primary" href="/posts">浏览全部文章</a>
+            <a class="btn" href="/contact">联系我</a>
+          </div>
+        </section>
+
+        {/* 热门标签：点击按标签筛选 */}
+        {tagCards.length > 0 && (
+          <section class="block">
+            <h2 class="block-title">热门标签</h2>
+            <div class="tag-pills">
+              {tagCards.map((t) => (
+                <button type="button" class="tag-pill" data-tagfilter={t.value} aria-pressed="false">
+                  #{tagLabel(t.value)} <span class="pill-count">{t.count}</span>
+                </button>
+              ))}
+            </div>
+          </section>
         )}
 
         {featured && (
@@ -103,14 +149,18 @@ const usedTags = tags.filter((t) => posts.some((p) => (p.tags ?? []).includes(t.
           </section>
         )}
 
-        <section class="block">
+        <section class="block" id="latest">
           <h2 class="block-title">最新文章</h2>
           {rest.length === 0 ? (
             <p class="empty">暂无更多文章。</p>
           ) : (
             <div class="grid">
               {rest.map((post) => (
-                <article class="card" data-category={post.category ?? 'uncategorized'}>
+                <article
+                  class="card"
+                  data-category={post.category ?? 'uncategorized'}
+                  data-tags={(post.tags ?? []).join(' ')}
+                >
                   {post.cover && (
                     <div class="card-media card-media-sm">
                       <img src={post.cover} alt="" loading="lazy" />
@@ -133,34 +183,64 @@ const usedTags = tags.filter((t) => posts.some((p) => (p.tags ?? []).includes(t.
               ))}
             </div>
           )}
-          <p class="empty" data-empty hidden>该分类下暂无文章。</p>
+          <p class="empty" data-empty hidden>该筛选下暂无文章。</p>
         </section>
 
         <script>
-          // 分类筛选：纯前端过滤，切换无需重新部署
-          const bar = document.getElementById('latest');
+          // 分类卡 + 标签胶囊：纯前端统一筛选，切换无需重新部署
           const grid = document.querySelector('.grid');
           const emptyHint = document.querySelector('[data-empty]');
-          if (bar && grid) {
-            const cards = Array.from(grid.querySelectorAll('.card'));
-            bar.addEventListener('click', (e) => {
-              const btn = e.target.closest('.filter-btn');
-              if (!btn) return;
-              const value = btn.getAttribute('data-filter');
-              bar.querySelectorAll('.filter-btn').forEach((b) => {
+          const cards = grid ? Array.from(grid.querySelectorAll('.card')) : [];
+          const catCards = Array.from(document.querySelectorAll('.cat-card'));
+          const tagPills = Array.from(document.querySelectorAll('.tag-pill'));
+          const gridSection = document.getElementById('latest');
+
+          function applyFilter(kind, value) {
+            let visible = 0;
+            cards.forEach((c) => {
+              let show = false;
+              if (kind === 'all') show = true;
+              else if (kind === 'cat') show = c.getAttribute('data-category') === value;
+              else if (kind === 'tag')
+                show = (c.getAttribute('data-tags') || '').split(' ').includes(value);
+              c.hidden = !show;
+              if (show) visible += 1;
+            });
+            if (emptyHint) emptyHint.hidden = visible > 0;
+            if (gridSection && visible > 0)
+              gridSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
+          }
+
+          catCards.forEach((btn) => {
+            btn.addEventListener('click', () => {
+              catCards.forEach((b) => {
                 const on = b === btn;
                 b.classList.toggle('is-active', on);
                 b.setAttribute('aria-pressed', on ? 'true' : 'false');
               });
-              let visible = 0;
-              cards.forEach((c) => {
-                const show = value === 'all' || c.getAttribute('data-category') === value;
-                c.hidden = !show;
-                if (show) visible += 1;
+              tagPills.forEach((p) => {
+                p.classList.remove('is-active');
+                p.setAttribute('aria-pressed', 'false');
               });
-              if (emptyHint) emptyHint.hidden = visible > 0;
+              const v = btn.getAttribute('data-filter');
+              applyFilter(v === 'all' ? 'all' : 'cat', v);
             });
-          }
+          });
+
+          tagPills.forEach((btn) => {
+            btn.addEventListener('click', () => {
+              tagPills.forEach((p) => {
+                const on = p === btn;
+                p.classList.toggle('is-active', on);
+                p.setAttribute('aria-pressed', on ? 'true' : 'false');
+              });
+              catCards.forEach((c) => {
+                c.classList.remove('is-active');
+                c.setAttribute('aria-pressed', 'false');
+              });
+              applyFilter('tag', btn.getAttribute('data-tagfilter'));
+            });
+          });
         </script>
       </>
     )
@@ -204,19 +284,60 @@ const usedTags = tags.filter((t) => posts.some((p) => (p.tags ?? []).includes(t.
   .btn-primary { background: var(--fg); border-color: var(--fg); color: #fff; }
   .btn-primary:hover { background: #33383d; border-color: #33383d; }
 
-  .filters { display: flex; gap: 8px; flex-wrap: wrap; margin: 24px 0 8px; }
-  .filter-btn {
-    padding: 4px 12px;
+  /* 分类导航卡 */
+  .cat-cards {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+    gap: 12px;
+  }
+  .cat-card {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    padding: 14px 16px;
     border: 1px solid var(--border);
-    border-radius: 8px;
+    border-radius: 12px;
+    background: var(--tint, #fff);
+    cursor: pointer;
+    font: inherit;
+    text-align: left;
+    transition: transform 0.15s ease, box-shadow 0.15s ease, border-color 0.15s ease;
+  }
+  .cat-card:hover { transform: translateY(-2px); box-shadow: 0 4px 14px rgba(0, 0, 0, 0.06); border-color: #cfd4da; }
+  .cat-card.is-active { border-color: var(--accent); box-shadow: 0 0 0 2px rgba(24, 95, 165, 0.15); }
+  .cat-name { font-size: 15px; font-weight: 600; color: var(--fg); }
+  .cat-count { font-size: 12px; color: var(--muted); background: rgba(255, 255, 255, 0.7); border-radius: 999px; padding: 1px 8px; }
+
+  /* 关于本站 */
+  .about-block {
+    background: #fff;
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 20px 22px;
+  }
+  .about-text { margin: 0 0 16px; color: var(--muted); line-height: 1.8; font-size: 14px; }
+  .about-actions { display: flex; gap: 10px; flex-wrap: wrap; }
+
+  /* 热门标签 */
+  .tag-pills { display: flex; flex-wrap: wrap; gap: 8px; }
+  .tag-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 5px 12px;
+    border: 1px solid var(--border);
+    border-radius: 999px;
     background: #fff;
     color: var(--muted);
     font: inherit;
     font-size: 13px;
     cursor: pointer;
+    transition: border-color 0.15s ease, color 0.15s ease, background 0.15s ease;
   }
-  .filter-btn:hover { border-color: #cfd4da; }
-  .filter-btn.is-active { background: var(--fg); border-color: var(--fg); color: #fff; }
+  .tag-pill:hover { border-color: #cfd4da; color: var(--fg); }
+  .tag-pill.is-active { background: var(--accent); border-color: var(--accent); color: #fff; }
+  .pill-count { font-size: 11px; opacity: 0.7; }
 
   .block { margin: 28px 0; }
   .block-title { margin: 0 0 12px; font-size: 12px; font-weight: 400; color: #9aa1a9; letter-spacing: 0.04em; }
@@ -270,7 +391,7 @@ const usedTags = tags.filter((t) => posts.some((p) => (p.tags ?? []).includes(t.
     .hero-blob-a { width: 120px; height: 120px; right: -30px; top: -30px; }
     .hero-blob-b { display: none; }
     .grid { grid-template-columns: minmax(0, 1fr); }
-    .filters { flex-wrap: nowrap; overflow-x: auto; padding-bottom: 4px; }
-    .filter-btn { white-space: nowrap; }
+    .cat-cards { grid-template-columns: repeat(2, 1fr); }
+    .cat-name { font-size: 14px; }
   }
 </style>
