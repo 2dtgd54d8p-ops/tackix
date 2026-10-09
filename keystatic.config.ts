@@ -1,4 +1,5 @@
 import { config, collection, singleton, fields } from '@keystatic/core';
+import { createElement } from 'react';
 
 // 存储后端切换（仅决定 /keystatic 后台 UI 的数据读写来源，不影响静态站点的构建）：
 // - 生产（构建 + Cloudflare Worker 运行时）一律使用 github 模式，后台经 GitHub App 读写仓库
@@ -31,6 +32,32 @@ const storage = useLocal
 
 export default config({
   storage,
+
+  // 后台 UI 全中文。Keystatic 内置语言包（见 @keystatic/core 的 app/l10n/locales），
+  // 支持 zh-CN / zh-TW 等 33 种语言；设置后右上角用户菜单里的 "Log out" 等
+  // 系统文案会自动显示为中文（"退出登录"），无需自行翻译。
+  locale: 'zh-CN',
+
+  // 后台侧边栏顶部的品牌位（原本只是一段静态文字）。这里把它渲染成指向站点
+  // 首页的链接：后台左上角标题/图标点击即回到前台首页，方便在 CMS 与站点之间切换。
+  // 注意用 createElement 而非 JSX —— 本文件是 .ts（不是 .tsx），且会被打进
+  // Cloudflare Worker 运行时，必须避免 JSX 语法。
+  ui: {
+    brand: {
+      name: '独立站平台',
+      mark: () =>
+        createElement(
+          'a',
+          {
+            href: '/',
+            title: '返回站点首页',
+            'aria-label': '返回站点首页',
+            style: { display: 'inline-flex', alignItems: 'center', gap: '0.5em' },
+          },
+          '独立站平台'
+        ),
+    },
+  },
 
   collections: {
     posts: collection({
