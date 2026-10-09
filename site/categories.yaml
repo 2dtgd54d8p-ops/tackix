@@ -1,0 +1,7 @@
+items:
+  - label: 技术
+    value: tech
+  - label: 产品
+    value: product
+  - label: 随笔
+    value: notes
