@@ -46,7 +46,7 @@ export default config({
   // Cloudflare Worker 运行时，必须避免 JSX 语法。
   ui: {
     brand: {
-      name: '独立站平台',
+      name: 'Tackix',
       mark: () =>
         createElement(
           'a',
