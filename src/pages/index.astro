@@ -25,30 +25,245 @@ const posts = (await Promise.all(
 
 // 按发布日期倒序
 posts.sort((a, b) => String(b.publishedAt ?? '').localeCompare(String(a.publishedAt ?? '')));
+
+// 置顶（后台勾选「首页置顶」）单独抽出来做大卡片；同一篇只出现一次
+const featured = posts.find((p) => p.featured);
+const rest = posts.filter((p) => p.slug !== featured?.slug);
+
+// 分类筛选条：只列出实际存在的分类，避免空选项
+const CATEGORY_LABELS = {
+  uncategorized: '未分类',
+  tech: '技术',
+  product: '产品',
+  notes: '随笔',
+};
+const categories = [
+  { value: 'all', label: '全部' },
+  ...Object.entries(CATEGORY_LABELS)
+    .filter(([value]) => rest.some((p) => (p.category ?? 'uncategorized') === value))
+    .map(([value, label]) => ({ value, label })),
+];
+
+// 分类值 -> 中文名，找不到时回退显示原值
+const categoryLabel = (v) => CATEGORY_LABELS[v ?? 'uncategorized'] ?? String(v ?? '');
 ---
 
-<Base title="首页">
-  <section>
-    <h1>最新文章</h1>
-    {
-      posts.length === 0 ? (
-        <p class="empty">
-          还没有内容。运行 <code>npm run dev</code> 后访问
-          <a href="/keystatic">/keystatic</a> 创建第一篇文章。
-        </p>
-      ) : (
-        <ul class="post-list">
-          {posts.map((post) => (
-            <li>
-              <h2><a href={`/posts/${post.slug}`}>{post.title}</a></h2>
-              <div class="post-meta">
-                {post.publishedAt && <span>{post.publishedAt}</span>}
-                {post.excerpt && <span> · {post.excerpt}</span>}
-              </div>
-            </li>
-          ))}
-        </ul>
-      )
-    }
+<Base title="首页" description="Tackix —— 记录技术、实践与思考的独立空间。">
+  <section class="hero">
+    <div class="hero-blob hero-blob-a" aria-hidden="true"></div>
+    <div class="hero-blob hero-blob-b" aria-hidden="true"></div>
+    <div class="hero-inner">
+      <h1 class="hero-title">Tackix</h1>
+      <p class="hero-sub">记录技术、实践与思考的独立空间。写代码，也写字。</p>
+      <div class="hero-actions">
+        <a class="btn btn-primary" href="#latest">开始阅读</a>
+        <a class="btn" href="/posts">全部分类</a>
+      </div>
+    </div>
   </section>
+
+  {
+    posts.length === 0 ? (
+      <p class="empty">还没有文章，去后台创建第一篇吧。</p>
+    ) : (
+      <>
+        {categories.length > 1 && (
+          <nav class="filters" id="latest" aria-label="按分类筛选文章">
+            {categories.map((c, i) => (
+              <button
+                type="button"
+                class={`filter-btn${i === 0 ? ' is-active' : ''}`}
+                data-filter={c.value}
+                aria-pressed={i === 0 ? 'true' : 'false'}
+              >
+                {c.label}
+              </button>
+            ))}
+          </nav>
+        )}
+
+        {featured && (
+          <section class="block">
+            <h2 class="block-title">置顶</h2>
+            <article class="card card-featured">
+              {featured.cover && (
+                <div class="card-media">
+                  <img src={featured.cover} alt="" loading="eager" />
+                </div>
+              )}
+              <div class="card-body">
+                <h3 class="card-title">
+                  <a href={`/posts/${featured.slug}`}>{featured.title}</a>
+                </h3>
+                {featured.excerpt && <p class="card-excerpt">{featured.excerpt}</p>}
+                <div class="card-meta">
+                  <span class="tag">{categoryLabel(featured.category)}</span>
+                  {featured.publishedAt && <span>{featured.publishedAt}</span>}
+                </div>
+              </div>
+            </article>
+          </section>
+        )}
+
+        <section class="block">
+          <h2 class="block-title">最新文章</h2>
+          {rest.length === 0 ? (
+            <p class="empty">暂无更多文章。</p>
+          ) : (
+            <div class="grid">
+              {rest.map((post) => (
+                <article class="card" data-category={post.category ?? 'uncategorized'}>
+                  {post.cover && (
+                    <div class="card-media card-media-sm">
+                      <img src={post.cover} alt="" loading="lazy" />
+                    </div>
+                  )}
+                  <div class="card-body">
+                    <h3 class="card-title">
+                      <a href={`/posts/${post.slug}`}>{post.title}</a>
+                    </h3>
+                    {post.excerpt && <p class="card-excerpt">{post.excerpt}</p>}
+                    <div class="card-meta">
+                      <span class="tag">{categoryLabel(post.category)}</span>
+                      {post.publishedAt && <span>{post.publishedAt}</span>}
+                    </div>
+                  </div>
+                </article>
+              ))}
+            </div>
+          )}
+          <p class="empty" data-empty hidden>该分类下暂无文章。</p>
+        </section>
+
+        <script>
+          // 分类筛选：纯前端过滤，切换无需重新部署
+          const bar = document.getElementById('latest');
+          const grid = document.querySelector('.grid');
+          const emptyHint = document.querySelector('[data-empty]');
+          if (bar && grid) {
+            const cards = Array.from(grid.querySelectorAll('.card'));
+            bar.addEventListener('click', (e) => {
+              const btn = e.target.closest('.filter-btn');
+              if (!btn) return;
+              const value = btn.getAttribute('data-filter');
+              bar.querySelectorAll('.filter-btn').forEach((b) => {
+                const on = b === btn;
+                b.classList.toggle('is-active', on);
+                b.setAttribute('aria-pressed', on ? 'true' : 'false');
+              });
+              let visible = 0;
+              cards.forEach((c) => {
+                const show = value === 'all' || c.getAttribute('data-category') === value;
+                c.hidden = !show;
+                if (show) visible += 1;
+              });
+              if (emptyHint) emptyHint.hidden = visible > 0;
+            });
+          }
+        </script>
+      </>
+    )
+  }
 </Base>
+
+<style>
+  .hero {
+    position: relative;
+    overflow: hidden;
+    background: #e6f1fb;
+    border-bottom: 1px solid var(--border);
+  }
+  .hero-blob {
+    position: absolute;
+    border-radius: 50%;
+    background: #fff;
+    pointer-events: none;
+  }
+  .hero-blob-a { right: -40px; top: -40px; width: 180px; height: 180px; opacity: 0.5; }
+  .hero-blob-b { right: 60px; bottom: -56px; width: 104px; height: 104px; opacity: 0.35; }
+  .hero-inner { position: relative; max-width: 440px; padding: 44px 0 40px; }
+  .hero-title { margin: 0 0 10px; font-size: 24px; font-weight: 600; letter-spacing: -0.01em; }
+  .hero-sub { margin: 0 0 20px; color: var(--muted); line-height: 1.7; }
+  .hero-actions { display: flex; gap: 10px; flex-wrap: wrap; }
+  .btn {
+    display: inline-block;
+    padding: 6px 16px;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    background: #fff;
+    color: var(--muted);
+    font-size: 13px;
+    text-decoration: none;
+  }
+  .btn:hover { text-decoration: none; border-color: #cfd4da; }
+  .btn-primary { background: var(--fg); border-color: var(--fg); color: #fff; }
+  .btn-primary:hover { background: #33383d; border-color: #33383d; }
+
+  .filters { display: flex; gap: 8px; flex-wrap: wrap; margin: 24px 0 8px; }
+  .filter-btn {
+    padding: 4px 12px;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    background: #fff;
+    color: var(--muted);
+    font: inherit;
+    font-size: 13px;
+    cursor: pointer;
+  }
+  .filter-btn:hover { border-color: #cfd4da; }
+  .filter-btn.is-active { background: var(--fg); border-color: var(--fg); color: #fff; }
+
+  .block { margin: 28px 0; }
+  .block-title { margin: 0 0 12px; font-size: 12px; font-weight: 400; color: #9aa1a9; letter-spacing: 0.04em; }
+
+  .grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; }
+  .card {
+    display: flex;
+    flex-direction: column;
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    background: #fff;
+    overflow: hidden;
+  }
+  .card[hidden] { display: none; }
+  .card-featured { border-color: #d7dce1; }
+  .card-media { aspect-ratio: 16 / 7; background: #f2f4f6; }
+  .card-media-sm { aspect-ratio: 16 / 9; }
+  .card-media img { width: 100%; height: 100%; object-fit: cover; display: block; }
+  .card-body { display: flex; flex-direction: column; gap: 6px; padding: 14px 16px; flex: 1; }
+  .card-title { margin: 0; font-size: 16px; font-weight: 600; line-height: 1.4; }
+  .card-featured .card-title { font-size: 18px; }
+  .card-title a { color: var(--fg); }
+  .card-excerpt {
+    margin: 0;
+    color: var(--muted);
+    font-size: 13px;
+    line-height: 1.7;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+  }
+  .card-meta {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-top: auto;
+    padding-top: 6px;
+    color: #9aa1a9;
+    font-size: 12px;
+  }
+  .tag { padding: 2px 8px; border-radius: 6px; background: #eef3f8; color: #185fa5; }
+  .empty { color: var(--muted); padding: 32px 0; text-align: center; }
+  .empty[hidden] { display: none; }
+
+  @media (max-width: 640px) {
+    .hero-inner { padding: 26px 0 24px; }
+    .hero-title { font-size: 19px; }
+    .hero-blob-a { width: 120px; height: 120px; right: -30px; top: -30px; }
+    .hero-blob-b { display: none; }
+    .grid { grid-template-columns: minmax(0, 1fr); }
+    .filters { flex-wrap: nowrap; overflow-x: auto; padding-bottom: 4px; }
+    .filter-btn { white-space: nowrap; }
+  }
+</style>
