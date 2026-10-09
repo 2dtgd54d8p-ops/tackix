@@ -16,3 +16,7 @@ node_modules/
 
 # project memory (local)
 .workbuddy/
+
+# local push helper (reads PAT from env var, never commit)
+.push_tac.py
+.wrangler/
