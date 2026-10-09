@@ -19,6 +19,14 @@ import { createElement } from 'react';
 //   时自动重建部署，从根本上解决“新增文章首页不显示”的问题。
 const useLocal = typeof process !== 'undefined' && process.env?.KEYSTATIC_USE_LOCAL === '1';
 
+// 文章分类下拉的可选项（Keystatic select 仅支持静态数组）。
+// 与后台「分类管理」singleton 保持一致：增删分类时两处都要改。
+const CATEGORY_OPTIONS = [
+  { label: '技术', value: 'tech' },
+  { label: '产品', value: 'product' },
+  { label: '随笔', value: 'notes' },
+];
+
 const storage = useLocal
   ? ({ kind: 'local' } as const)
   : ({
@@ -96,13 +104,17 @@ export default config({
         // 草稿开关：false 的文章不会被构建进站点（见 index.astro / [slug].astro 的过滤）
         published: fields.checkbox({ label: '已发布', defaultValue: true }),
         featured: fields.checkbox({ label: '首页置顶', defaultValue: false }),
+        // ⚠️ Keystatic 的 select.options 只支持静态数组（见
+        // @keystatic/core form/fields/select 的签名），无法运行时读取文件，
+        // 所以这里必须硬编码。新增/删除分类要同时改两处，保证前后台一致：
+        //   ① 下方 CATEGORY_OPTIONS
+        //   ② 后台「分类管理」singleton（site/categories.yaml）
+        // 前台首页筛选条以「分类管理」为准。
         category: fields.select({
           label: '分类',
           options: [
             { label: '未分类', value: 'uncategorized' },
-            { label: '技术', value: 'tech' },
-            { label: '产品', value: 'product' },
-            { label: '随笔', value: 'notes' },
+            ...CATEGORY_OPTIONS,
           ],
           defaultValue: 'uncategorized',
         }),
@@ -133,10 +145,42 @@ export default config({
 
   singletons: {
     site: {
-      label: '站点设置',
+      label: '站点信息',
       schema: {
         title: fields.text({ label: '站点标题' }),
         description: fields.text({ label: '站点描述', multiline: true }),
+        // 首页 Hero 区那句主标语，留空则回落到默认文案
+        tagline: fields.text({ label: '首页标语' }),
+      },
+    },
+    // 分类管理：分类从此处可增删改，不再写死在代码里。
+    // 为什么需要它：Keystatic 的 fields.select 的 options 只接受静态数组
+    // （见 @keystatic/core 的 form/fields/select 签名 options: readonly Option[]），
+    // 不支持运行时读取文件，因此无法直接把「分类列表」变成动态数据源。
+    // 折中做法：分类用一个可编辑的 singleton 来维护，文章表单仍用静态
+    // 下拉框（其选项由下方 CATEGORY_OPTIONS 同步），两者保持一致。
+    // 新增分类步骤：① 在此页添加一项 → ② 把同样的 label/value 加到
+    // keystatic.config.ts 的 CATEGORY_OPTIONS → ③ 提交并等自动部署。
+    categories: {
+      label: '分类管理',
+      schema: {
+        items: fields.array(
+          {
+            label: '分类',
+            schema: {
+              label: fields.text({
+                label: '显示名称',
+                description: '前台筛选条与文章卡片上显示的文字，如「技术」',
+              }),
+              value: fields.text({
+                label: '标识',
+                description:
+                  '英文唯一标识，写入文章 frontmatter，如 tech。已发布文章请勿随意修改，否则会失去对应分类。',
+              }),
+            },
+          },
+          { label: '分类项' }
+        ),
       },
     },
   },
