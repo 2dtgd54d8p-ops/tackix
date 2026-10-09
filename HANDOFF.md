@@ -8,7 +8,7 @@
 - 线上：`https://tackix.pages.dev`
 - 技术栈：Astro + Cloudflare Pages + Keystatic（GitHub 存储）+ D1
 - 部署：GitHub Actions 自动构建并 `wrangler pages deploy`（push main 即触发，约 1 分钟生效）
-- 推代码方式：用户本机 `git push` 到 `github.com` 被代理 502 拦截，改用 GitHub REST API（PAT）推送；仓库内助手 `.push_tac.py`（已落地仓库根，勿再放 /tmp，会被清）
+- 推代码方式：用户本机 `git push` 到 `github.com` 被代理 502 拦截，改用 GitHub REST API（PAT）推送；仓库内助手 `.push_tac.py`（已落地仓库根、**已加入 `.gitignore` 不入库**、PAT 改读环境变量 `TACKIX_PAT`，运行前需 `export TACKIX_PAT=<你的 GitHub PAT>`，**不在文件里落明文**）
 
 ## 二、已完成（一句话带过）
 D1 绑定、联系表单入库、留言后台（ADMIN_TOKEN 保护）、邮件通知代码打通、安全头、KEYSTATIC_SECRET 随机化、GitHub PAT 轮换闭环（旧 `ghp_470d…` 已删，新 `ghp_aSmz…` 接管）。
@@ -62,4 +62,4 @@ D1 绑定、联系表单入库、留言后台（ADMIN_TOKEN 保护）、邮件�
 ## 六、本地 git 状态提示（接手时先看一眼）
 - 本机 `.git` 当前与远端 `origin/main` **分叉**：本地旧 commit `717d9f4` 已失效，远端为 API 推送的 `e8c86c90` + `768575cd`（宽度修复那次）。
 - 若 `github.com` 网络恢复，先对齐再动手：`git fetch origin && git reset --hard origin/main`。
-- 本环境 `git push` 到 `github.com` 常被代理 502 挡死；改代码后用仓库内 `.push_tac.py`（走 `api.github.com`）推送，触发 CF 重建。注意它串行推多个文件，并行会 409（第二个抓到旧 base sha），失败就重试该文件。
+- 本环境 `git push` 到 `github.com` 常被代理 502 挡死；改代码后用仓库内 `.push_tac.py`（走 `api.github.com`，PAT 读环境变量 `TACKIX_PAT`）推送，触发 CF 重建。注意它串行推多个文件，并行会 409（第二个抓到旧 base sha），失败就重试该文件。`.push_tac.py` 已加入 `.gitignore` 不入库，密钥不落明文。
