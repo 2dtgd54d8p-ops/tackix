@@ -30,31 +30,66 @@ posts.sort((a, b) => String(b.publishedAt ?? '').localeCompare(String(a.publishe
 const featured = posts.find((p) => p.featured);
 const rest = posts.filter((p) => p.slug !== featured?.slug);
 
-// 分类筛选条：只列出实际存在的分类，避免空选项
-const CATEGORY_LABELS = {
-  uncategorized: '未分类',
-  tech: '技术',
-  product: '产品',
-  notes: '随笔',
-};
-const categories = [
-  { value: 'all', label: '全部' },
-  ...Object.entries(CATEGORY_LABELS)
-    .filter(([value]) => rest.some((p) => (p.category ?? 'uncategorized') === value))
-    .map(([value, label]) => ({ value, label })),
+// 分类筛选条：优先读「分类管理」singleton（后台可增删改），
+// 读不到或为空时回落到内置默认表，保证站点永远不会因数据缺失而报错。
+const DEFAULT_CATEGORIES = [
+  { label: '技术', value: 'tech' },
+  { label: '产品', value: 'product' },
+  { label: '随笔', value: 'notes' },
 ];
 
-// 分类值 -> 中文名，找不到时回退显示原值
-const categoryLabel = (v) => CATEGORY_LABELS[v ?? 'uncategorized'] ?? String(v ?? '');
+let managedCategories = DEFAULT_CATEGORIES;
+let siteInfo = { title: 'Tackix', description: '', tagline: '' };
+try {
+  const [cats, site] = await Promise.all([
+    reader.singletons.categories.read(),
+    reader.singletons.site.read(),
+  ]);
+  if (site) {
+    siteInfo = {
+      title: site.title || siteInfo.title,
+      description: site.description || siteInfo.description,
+      tagline: site.tagline || siteInfo.tagline,
+    };
+  }
+  const items = cats?.items?.filter((c) => c?.value && c?.label);
+  if (items?.length) {
+    managedCategories = items.map((c) => ({ label: c.label, value: c.value }));
+  }
+} catch (e) {
+  console.warn('[build] 读取分类/站点信息失败，回落到默认分类：', e);
+}
+
+// 「未分类」是系统内置分类（value=uncategorized），不在管理表里，
+// 但只要有文章未分类就必须出现在筛选条上，否则这些文章将无处可去。
+const UNCATEGORIZED_LABEL = '未分类';
+const categoryMap = new Map(managedCategories.map((c) => [c.value, c.label]));
+const hasUncategorized = posts.some(
+  (p) => (p.category ?? 'uncategorized') === 'uncategorized'
+);
+const categories = [
+  { value: 'all', label: '全部' },
+  ...(hasUncategorized ? [{ value: 'uncategorized', label: UNCATEGORIZED_LABEL }] : []),
+  ...managedCategories.filter((c) => posts.some((p) => p.category === c.value)),
+];
+
+// 文章的分类值 -> 显示名；未登记的值兜底显示「未分类」
+const categoryLabel = (v) => {
+  const key = v ?? 'uncategorized';
+  return key === 'uncategorized' ? UNCATEGORIZED_LABEL : categoryMap.get(key) ?? UNCATEGORIZED_LABEL;
+};
 ---
 
-<Base title="首页" description="Tackix —— 记录技术、实践与思考的独立空间。">
+<Base
+  title="首页"
+  description={siteInfo.description || `${siteInfo.title} —— 记录技术、实践与思考的独立空间。`}
+>
   <section class="hero">
     <div class="hero-blob hero-blob-a" aria-hidden="true"></div>
     <div class="hero-blob hero-blob-b" aria-hidden="true"></div>
     <div class="hero-inner">
-      <h1 class="hero-title">Tackix</h1>
-      <p class="hero-sub">记录技术、实践与思考的独立空间。写代码，也写字。</p>
+      <h1 class="hero-title">{siteInfo.title}</h1>
+      <p class="hero-sub">{siteInfo.tagline || '记录技术、实践与思考的独立空间。写代码，也写字。'}</p>
       <div class="hero-actions">
         <a class="btn btn-primary" href="#latest">开始阅读</a>
         <a class="btn" href="/posts">全部分类</a>
