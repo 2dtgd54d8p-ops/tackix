@@ -38,8 +38,10 @@ export default config({
   // 系统文案会自动显示为中文（"退出登录"），无需自行翻译。
   locale: 'zh-CN',
 
-  // 后台侧边栏顶部的品牌位（原本只是一段静态文字）。这里把它渲染成指向站点
-  // 首页的链接：后台左上角标题/图标点击即回到前台首页，方便在 CMS 与站点之间切换。
+  // 后台侧边栏顶部的品牌位。这里渲染成指向站点首页的链接：
+  // - 加 target="_blank"：新标签页打开，不覆盖后台本身（方便 CMS ↔ 前台对照）
+  // - mark 槽位有固定尺寸约束，不能直接塞中文，否则会被压扁成竖条纹（已踩坑），
+  //   所以这里只放一个矢量 SVG 图标；站点名交给 name 字段正常排版。
   // 注意用 createElement 而非 JSX —— 本文件是 .ts（不是 .tsx），且会被打进
   // Cloudflare Worker 运行时，必须避免 JSX 语法。
   ui: {
@@ -50,11 +52,34 @@ export default config({
           'a',
           {
             href: '/',
-            title: '返回站点首页',
-            'aria-label': '返回站点首页',
-            style: { display: 'inline-flex', alignItems: 'center', gap: '0.5em' },
+            target: '_blank',
+            rel: 'noopener noreferrer',
+            title: '在新标签页打开站点首页',
+            'aria-label': '在新标签页打开站点首页',
+            style: {
+              display: 'inline-flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+            },
           },
-          '独立站平台'
+          createElement(
+            'svg',
+            {
+              width: 26,
+              height: 26,
+              viewBox: '0 0 24 24',
+              fill: 'none',
+              stroke: 'currentColor',
+              strokeWidth: 2,
+              strokeLinecap: 'round',
+              strokeLinejoin: 'round',
+              'aria-hidden': 'true',
+            },
+            // 小房子轮廓：明确表达"回到站点首页"
+            createElement('path', { d: 'M3 10.5 12 3l9 7.5' }),
+            createElement('path', { d: 'M5 9.5V21h14V9.5' }),
+            createElement('path', { d: 'M9.5 21v-6h5v6' })
+          )
         ),
     },
   },
