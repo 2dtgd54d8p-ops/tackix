@@ -4,6 +4,7 @@ import { marked } from 'marked';
 import keystaticConfig from '../../../keystatic.config';
 import Base from '../../layouts/Base.astro';
 import Comments from '../../components/Comments.astro';
+import { loadSiteData } from '../../lib/site-data';
 
 export async function getStaticPaths() {
   const reader = createReader(process.cwd(), keystaticConfig);
@@ -32,17 +33,24 @@ export async function getStaticPaths() {
 
 const { post } = Astro.props;
 const html = marked(post.body ?? '');
+
+// 分类/标签中文名从后台管理的 singleton 读取；读不到自动回落默认值。
+// 修复：此前直接输出 {post.category}，导致 tech/product 这类英文标识
+// 暴露给访客，与站点中文化目标冲突。
+const { categoryLabel, tagLabel } = await loadSiteData();
+const categoryName = post.category && post.category !== 'uncategorized'
+  ? categoryLabel(post.category)
+  : null;
+const tagNames = Array.isArray(post.tags)
+  ? post.tags.map((t) => tagLabel(t)).filter(Boolean)
+  : [];
 ---
 
 <Base title={post.title}>
   <article class="prose">
     <h1>{post.title}</h1>
     {post.publishedAt && <p class="post-meta">{post.publishedAt}</p>}
-    {
-      post.category && post.category !== 'uncategorized' && (
-        <span class="badge">{post.category}</span>
-      )
-    }
+    {categoryName && <span class="badge">{categoryName}</span>}
     {
       post.cover && (
         <img
@@ -54,9 +62,9 @@ const html = marked(post.body ?? '');
     }
     <div set:html={html} />
     {
-      Array.isArray(post.tags) && post.tags.length > 0 && (
+      tagNames.length > 0 && (
         <div class="tags">
-          {post.tags.map((t) => (
+          {tagNames.map((t) => (
             <span class="tag">{t}</span>
           ))}
         </div>
