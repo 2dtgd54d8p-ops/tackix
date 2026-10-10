@@ -76,6 +76,10 @@ const showFloatContact =
         <span>{siteTitle}</span>
       </a>
       <div class="header-right">
+        <form class="header-search" role="search" action="/search" method="get">
+          <svg class="hs-icon" viewBox="0 0 24 24" width="16" height="16" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7" /><path d="M21 21l-4.35-4.35" /></svg>
+          <input class="hs-input" type="search" name="q" placeholder="搜索…" aria-label="站内搜索" enterkeyhint="search" />
+        </form>
         <nav aria-label="主导航">
           {
             navItems.map((item) => (
@@ -89,10 +93,6 @@ const showFloatContact =
             ))
           }
         </nav>
-        <form class="header-search" role="search" action="/search" method="get">
-          <svg class="hs-icon" viewBox="0 0 24 24" width="16" height="16" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7" /><path d="M21 21l-4.35-4.35" /></svg>
-          <input class="hs-input" type="search" name="q" placeholder="搜索…" aria-label="站内搜索" enterkeyhint="search" />
-        </form>
         <div class="appearance-wrap">
           <button
             id="appearance-btn"
