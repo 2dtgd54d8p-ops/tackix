@@ -20,6 +20,23 @@ const footerText = site.footer ? `Powered by ${site.footer}` : `Powered by ${sit
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <meta name="description" content={description ?? site.description} />
     <title>{title ? `${title} · ${siteTitle}` : siteTitle}</title>
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content={title ? `${title} · ${siteTitle}` : siteTitle} />
+    <meta property="og:description" content={description ?? site.description} />
+    <meta property="og:site_name" content={siteTitle} />
+    <meta property="og:url" content={new URL(Astro.url.pathname, Astro.site ?? Astro.url).href} />
+    <meta name="twitter:card" content="summary_large_image" />
+    <script
+      type="application/ld+json"
+      set:html={JSON.stringify({
+        '@context': 'https://schema.org',
+        '@type': 'WebSite',
+        name: siteTitle,
+        description: site.description,
+        url: (Astro.site ?? Astro.url).href,
+      })}
+    />
     <slot name="head" />
   </head>
   <body>

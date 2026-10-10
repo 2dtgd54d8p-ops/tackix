@@ -24,20 +24,31 @@ const posts = (await Promise.all(
   })
 )).filter((p) => p && p.published !== false); // 仅展示已发布
 
+// 估算阅读时长：中文约 400 字/分钟，英文约 200 词/分钟
+function readingMinutes(body) {
+  if (!body || typeof body !== 'string') return 1;
+  const cjk = (body.match(/[一-龥]/g) || []).length;
+  const words = (body.replace(/[一-龥]/g, ' ').match(/[a-zA-Z0-9]+/g) || []).length;
+  return Math.max(1, Math.ceil(cjk / 400 + words / 200));
+}
+
+// 给每篇补上阅读时长，供卡片展示与排序使用
+const withMeta = posts.map((p) => ({ ...p, readMin: readingMinutes(p.body) }));
+
 // 按发布日期倒序
-posts.sort((a, b) => String(b.publishedAt ?? '').localeCompare(String(a.publishedAt ?? '')));
+withMeta.sort((a, b) => String(b.publishedAt ?? '').localeCompare(String(a.publishedAt ?? '')));
 
 // 置顶（后台勾选「首页置顶」）单独抽出来做大卡片；同一篇只出现一次
-const featured = posts.find((p) => p.featured);
-const rest = posts.filter((p) => p.slug !== featured?.slug);
+const featured = withMeta.find((p) => p.featured);
+const rest = withMeta.filter((p) => p.slug !== featured?.slug);
 
 // 分类/标签/站点信息统一从公共模块读取（后台可增删改），读不到自动回落默认值
 const { site: siteInfo, categories: managedCategories, categoryLabel, tagLabel, tags } =
   await loadSiteData();
 
 // 只列出实际有文章的分类/标签，避免出现点进去是空的筛选项
-const categories = buildFilterOptions(posts, managedCategories);
-const usedTags = tags.filter((t) => posts.some((p) => (p.tags ?? []).includes(t.value)));
+const categories = buildFilterOptions(withMeta, managedCategories);
+const usedTags = tags.filter((t) => withMeta.some((p) => (p.tags ?? []).includes(t.value)));
 
 // 计数基于网格实际展示的 rest，避免筛选后数量对不上
 const catCounts = {};
@@ -56,12 +67,26 @@ const categoryCards = categories.map((c, i) => ({
   tint: CAT_TINTS[i % CAT_TINTS.length],
 }));
 const tagCards = usedTags.map((t) => ({ ...t, count: tagCounts[t.value] ?? 0 }));
+
+// 结构化数据：首页文章列表（ItemList），利于搜索引擎理解
+const jsonLd = {
+  '@context': 'https://schema.org',
+  '@type': 'ItemList',
+  itemListElement: rest.map((p, i) => ({
+    '@type': 'ListItem',
+    position: i + 1,
+    url: new URL(`/posts/${p.slug}`, Astro.site ?? Astro.url).toString(),
+    name: p.title,
+  })),
+};
 ---
 
 <Base
   title="首页"
   description={siteInfo.description || `${siteInfo.title} —— 记录技术、实践与思考的独立空间。`}
 >
+  <script type="application/ld+json" set:html={JSON.stringify(jsonLd)} />
+
   <section class="hero">
     <div class="hero-blob hero-blob-a" aria-hidden="true"></div>
     <div class="hero-blob hero-blob-b" aria-hidden="true"></div>
@@ -143,6 +168,7 @@ const tagCards = usedTags.map((t) => ({ ...t, count: tagCounts[t.value] ?? 0 }))
                     <span class="tag tag-plain">{tagLabel(t)}</span>
                   ))}
                   {featured.publishedAt && <span>{featured.publishedAt}</span>}
+                  <span class="read-time">· {featured.readMin} 分钟</span>
                 </div>
               </div>
             </article>
@@ -150,7 +176,14 @@ const tagCards = usedTags.map((t) => ({ ...t, count: tagCounts[t.value] ?? 0 }))
         )}
 
         <section class="block" id="latest">
-          <h2 class="block-title">最新文章</h2>
+          <div class="block-head">
+            <h2 class="block-title">最新文章</h2>
+            <div class="sort-bar" role="group" aria-label="排序方式">
+              <button type="button" class="sort-btn is-active" data-sort="newest" aria-pressed="true">最新</button>
+              <button type="button" class="sort-btn" data-sort="title" aria-pressed="false">标题</button>
+              <span class="sort-count" data-count></span>
+            </div>
+          </div>
           {rest.length === 0 ? (
             <p class="empty">暂无更多文章。</p>
           ) : (
@@ -160,6 +193,8 @@ const tagCards = usedTags.map((t) => ({ ...t, count: tagCounts[t.value] ?? 0 }))
                   class="card"
                   data-category={post.category ?? 'uncategorized'}
                   data-tags={(post.tags ?? []).join(' ')}
+                  data-title={post.title}
+                  data-date={post.publishedAt ?? ''}
                 >
                   {post.cover && (
                     <div class="card-media card-media-sm">
@@ -177,38 +212,73 @@ const tagCards = usedTags.map((t) => ({ ...t, count: tagCounts[t.value] ?? 0 }))
                         <span class="tag tag-plain">{tagLabel(t)}</span>
                       ))}
                       {post.publishedAt && <span>{post.publishedAt}</span>}
+                      <span class="read-time">· {post.readMin} 分钟</span>
                     </div>
                   </div>
                 </article>
               ))}
             </div>
           )}
+          <button type="button" class="load-more" data-loadmore hidden>加载更多</button>
           <p class="empty" data-empty hidden>该筛选下暂无文章。</p>
         </section>
 
         <script>
-          // 分类卡 + 标签胶囊：纯前端统一筛选，切换无需重新部署
+          // 分类卡 + 标签胶囊 + 排序 + 分页：纯前端统一处理，切换无需重新部署
+          const PAGE = 6;
+          const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
           const grid = document.querySelector('.grid');
           const emptyHint = document.querySelector('[data-empty]');
+          const loadMoreBtn = document.querySelector('[data-loadmore]');
+          const counter = document.querySelector('[data-count]');
           const cards = grid ? Array.from(grid.querySelectorAll('.card')) : [];
           const catCards = Array.from(document.querySelectorAll('.cat-card'));
           const tagPills = Array.from(document.querySelectorAll('.tag-pill'));
+          const sortBtns = Array.from(document.querySelectorAll('.sort-btn'));
           const gridSection = document.getElementById('latest');
 
-          function applyFilter(kind, value) {
-            let visible = 0;
-            cards.forEach((c) => {
-              let show = false;
-              if (kind === 'all') show = true;
-              else if (kind === 'cat') show = c.getAttribute('data-category') === value;
-              else if (kind === 'tag')
-                show = (c.getAttribute('data-tags') || '').split(' ').includes(value);
-              c.hidden = !show;
-              if (show) visible += 1;
+          const state = { cat: 'all', tag: '', sort: 'newest', visible: PAGE };
+
+          function matches(card) {
+            const cat = card.getAttribute('data-category');
+            const tags = (card.getAttribute('data-tags') || '').split(' ').filter(Boolean);
+            if (state.cat !== 'all' && cat !== state.cat) return false;
+            if (state.tag && !tags.includes(state.tag)) return false;
+            return true;
+          }
+
+          function sorted() {
+            const list = cards.filter(matches);
+            list.sort((a, b) => {
+              if (state.sort === 'title') {
+                return (a.getAttribute('data-title') || '').localeCompare(
+                  b.getAttribute('data-title') || '',
+                  'zh'
+                );
+              }
+              return String(b.getAttribute('data-date') || '').localeCompare(
+                String(a.getAttribute('data-date') || '')
+              );
             });
-            if (emptyHint) emptyHint.hidden = visible > 0;
-            if (gridSection && visible > 0)
-              gridSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            return list;
+          }
+
+          function render() {
+            const list = sorted();
+            cards.forEach((c) => (c.hidden = true));
+            list.slice(0, state.visible).forEach((c) => {
+              c.hidden = false;
+              grid.appendChild(c); // 按排序结果重排 DOM 顺序
+            });
+            if (loadMoreBtn) loadMoreBtn.hidden = list.length <= state.visible;
+            if (emptyHint) emptyHint.hidden = list.length > 0;
+            if (counter) counter.textContent = `共 ${list.length} 篇`;
+          }
+
+          function scrollToGrid() {
+            if (gridSection && (state.cat !== 'all' || state.tag)) {
+              gridSection.scrollIntoView({ behavior: reduceMotion ? 'auto' : 'smooth', block: 'start' });
+            }
           }
 
           catCards.forEach((btn) => {
@@ -222,8 +292,11 @@ const tagCards = usedTags.map((t) => ({ ...t, count: tagCounts[t.value] ?? 0 }))
                 p.classList.remove('is-active');
                 p.setAttribute('aria-pressed', 'false');
               });
-              const v = btn.getAttribute('data-filter');
-              applyFilter(v === 'all' ? 'all' : 'cat', v);
+              state.cat = btn.getAttribute('data-filter') || 'all';
+              state.tag = '';
+              state.visible = PAGE;
+              render();
+              scrollToGrid();
             });
           });
 
@@ -238,9 +311,34 @@ const tagCards = usedTags.map((t) => ({ ...t, count: tagCounts[t.value] ?? 0 }))
                 c.classList.remove('is-active');
                 c.setAttribute('aria-pressed', 'false');
               });
-              applyFilter('tag', btn.getAttribute('data-tagfilter'));
+              state.tag = btn.getAttribute('data-tagfilter') || '';
+              state.cat = 'all';
+              state.visible = PAGE;
+              render();
+              scrollToGrid();
             });
           });
+
+          sortBtns.forEach((btn) => {
+            btn.addEventListener('click', () => {
+              sortBtns.forEach((b) => {
+                const on = b === btn;
+                b.classList.toggle('is-active', on);
+                b.setAttribute('aria-pressed', on ? 'true' : 'false');
+              });
+              state.sort = btn.getAttribute('data-sort') || 'newest';
+              render();
+            });
+          });
+
+          if (loadMoreBtn) {
+            loadMoreBtn.addEventListener('click', () => {
+              state.visible += PAGE;
+              render();
+            });
+          }
+
+          render();
         </script>
       </>
     )
@@ -251,12 +349,19 @@ const tagCards = usedTags.map((t) => ({ ...t, count: tagCounts[t.value] ?? 0 }))
   .hero {
     position: relative;
     overflow: hidden;
-    background: #e6f1fb;
+    background: linear-gradient(135deg, #eaf2fb 0%, #f3f7fc 45%, #eef6f1 100%);
     border-bottom: 1px solid var(--border);
     margin-top: -32px;                 /* 顶到 header 下沿，消除白条 */
     margin-left: calc(50% - 50vw);     /* 满屏出血：左右延伸到视口边缘 */
     margin-right: calc(50% - 50vw);
     padding: 56px 24px 48px;
+  }
+  .hero::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: radial-gradient(600px 240px at 85% -10%, rgba(24, 95, 165, 0.10), transparent 60%);
+    pointer-events: none;
   }
   .hero-blob {
     position: absolute;
@@ -341,6 +446,25 @@ const tagCards = usedTags.map((t) => ({ ...t, count: tagCounts[t.value] ?? 0 }))
 
   .block { margin: 28px 0; }
   .block-title { margin: 0 0 12px; font-size: 12px; font-weight: 400; color: #9aa1a9; letter-spacing: 0.04em; }
+  .block-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 12px; flex-wrap: wrap; }
+  .block-head .block-title { margin: 0; }
+
+  /* 排序栏 */
+  .sort-bar { display: inline-flex; align-items: center; gap: 6px; }
+  .sort-btn {
+    padding: 4px 12px;
+    border: 1px solid var(--border);
+    border-radius: 999px;
+    background: #fff;
+    color: var(--muted);
+    font: inherit;
+    font-size: 12px;
+    cursor: pointer;
+    transition: border-color 0.15s ease, color 0.15s ease, background 0.15s ease;
+  }
+  .sort-btn:hover { border-color: #cfd4da; color: var(--fg); }
+  .sort-btn.is-active { background: var(--fg); border-color: var(--fg); color: #fff; }
+  .sort-count { font-size: 12px; color: #9aa1a9; margin-left: 4px; }
 
   .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 18px; }
   .card {
@@ -350,7 +474,10 @@ const tagCards = usedTags.map((t) => ({ ...t, count: tagCounts[t.value] ?? 0 }))
     border-radius: 12px;
     background: #fff;
     overflow: hidden;
+    transition: transform 0.15s ease, box-shadow 0.15s ease, border-color 0.15s ease;
   }
+  .card:hover { transform: translateY(-3px); box-shadow: 0 6px 20px rgba(0, 0, 0, 0.07); border-color: #cfd4da; }
+  .card:hover .card-title a { color: var(--accent); }
   .card[hidden] { display: none; }
   .card-featured { border-color: #d7dce1; }
   .card-media { aspect-ratio: 16 / 7; background: #f2f4f6; }
@@ -359,7 +486,7 @@ const tagCards = usedTags.map((t) => ({ ...t, count: tagCounts[t.value] ?? 0 }))
   .card-body { display: flex; flex-direction: column; gap: 6px; padding: 14px 16px; flex: 1; }
   .card-title { margin: 0; font-size: 16px; font-weight: 600; line-height: 1.4; }
   .card-featured .card-title { font-size: 18px; }
-  .card-title a { color: var(--fg); }
+  .card-title a { color: var(--fg); transition: color 0.15s ease; }
   .card-excerpt {
     margin: 0;
     color: var(--muted);
@@ -379,10 +506,40 @@ const tagCards = usedTags.map((t) => ({ ...t, count: tagCounts[t.value] ?? 0 }))
     color: #9aa1a9;
     font-size: 12px;
   }
+  .read-time { color: #9aa1a9; }
   .tag { padding: 2px 8px; border-radius: 6px; background: #eef3f8; color: #185fa5; }
   .tag-plain { background: #f2f4f6; color: #6b7280; }
+
+  /* 加载更多 */
+  .load-more {
+    display: block;
+    margin: 20px auto 0;
+    padding: 8px 22px;
+    border: 1px solid var(--border);
+    border-radius: 999px;
+    background: #fff;
+    color: var(--fg);
+    font: inherit;
+    font-size: 13px;
+    cursor: pointer;
+    transition: border-color 0.15s ease, background 0.15s ease;
+  }
+  .load-more:hover { border-color: var(--accent); background: #f4f8fd; }
+  .load-more[hidden] { display: none; }
+
   .empty { color: var(--muted); padding: 32px 0; text-align: center; }
   .empty[hidden] { display: none; }
+
+  /* 键盘可达性：统一焦点轮廓 */
+  .cat-card:focus-visible,
+  .tag-pill:focus-visible,
+  .sort-btn:focus-visible,
+  .load-more:focus-visible,
+  .card-title a:focus-visible,
+  .btn:focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: 2px;
+  }
 
   @media (max-width: 640px) {
     .hero { margin-top: -20px; padding: 32px 16px; }
@@ -393,5 +550,11 @@ const tagCards = usedTags.map((t) => ({ ...t, count: tagCounts[t.value] ?? 0 }))
     .grid { grid-template-columns: minmax(0, 1fr); }
     .cat-cards { grid-template-columns: repeat(2, 1fr); }
     .cat-name { font-size: 14px; }
+  }
+
+  /* 尊重「减少动态效果」系统偏好 */
+  @media (prefers-reduced-motion: reduce) {
+    * { transition: none !important; scroll-behavior: auto !important; }
+    .card:hover, .cat-card:hover { transform: none; }
   }
 </style>
