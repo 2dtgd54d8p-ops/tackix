@@ -1,0 +1,36 @@
+name: 'TAC HM-150 热熔胶棒'
+model: 'TAC-HM-150'
+excerpt: 'EVA 基热熔胶棒，加热熔融快速铺展、冷却即固化，适用于木材与纸品包装的连续化高速粘接。'
+published: true
+featured: false
+category: 'hotmelt'
+scenario: 'packaging'
+baseMaterial: '木材 / 纸张 / 瓦楞纸 / 织物'
+displacement: '0.05–1 mm'
+tempRange: '-20~80℃'
+cureType: 'heat'
+viscosity: '固体，加热熔融'
+certifications:
+  - 'rohs'
+  - 'reach'
+body: |
+  ## 产品概述
+
+  TAC HM-150 是 EVA（乙烯-醋酸乙烯酯）基热熔胶棒，采用加热熔融的方式实现快速粘接，
+  冷却后即完成固化。粘接速度快、无溶剂残留、便于自动化，常见于包装与木工封箱工序。
+
+  ## 主要特性
+
+  - 加热熔融即粘，速度快，适合连续化生产线
+  - 无溶剂、耐低温，对纸张与木材浸润性好
+  - 熔融温度适中，减少对基材的热损伤
+  - 成本经济，适合大批量工艺
+
+  > 耐热与耐候性能有限，不适合高温高湿工况或长期结构承重。
+
+  ## 典型应用
+
+  - 纸箱封箱、彩盒包装封口
+  - 木工家具板件、抽屉组装
+  - 书籍装订、纸制品加工
+  - 鞋材、布袋等轻工品粘接

@@ -1,0 +1,39 @@
+name: 'TAC EP-550 导热环氧灌封胶'
+model: 'TAC-EP-550'
+excerpt: '双组分导热环氧灌封胶，导热系数 1.5 W/m·K，兼具 Excellent 绝缘性与低热阻，适用于电子模块散热封装。'
+published: true
+featured: true
+category: 'epoxy'
+scenario: 'newenergy'
+baseMaterial: '铝 / 铜 / 陶瓷 / FRP'
+displacement: '0.2–6 mm'
+tempRange: '-40~150℃'
+cureType: '2k'
+viscosity: '混合后 8,000 mPa·s'
+certifications:
+  - 'rohs'
+  - 'reach'
+  - 'ul'
+body: |
+  ## 产品概述
+
+  TAC EP-550 是双组分导热环氧灌封胶，在提供良好粘接与机械强度的同时，具备
+  **Excellent 的导热性能与绝缘性**，可将芯片、功率器件产生的热量有效传导至散热基板，
+  降低器件工作温度、延长使用寿命。
+
+  ## 主要特性
+
+  - 导热系数约 1.5 W/m·K，显著降低界面热阻
+  - Excellent 电绝缘性，满足高压隔离要求
+  - 低收缩率，降低灌封应力与器件损伤风险
+  - 阻燃等级达标，耐高温，长期可靠性好
+  - 室温固化，亦可加热加速固化
+
+  > 灌封工艺建议：控制气泡（可真空脱泡），对发热器件可加铺散热路径以进一步降低热阻。
+
+  ## 典型应用
+
+  - 功率模块、IGBT/LED 器件的灌封封装
+  - 新能源电池模组、储能柜结构灌封
+  - 充电桩、电控板电子模块封装
+  - 电源模块、传感器组件灌封

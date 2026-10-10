@@ -29,10 +29,26 @@ const CATEGORY_OPTIONS = [
 
 // 文章标签下拉的可选项。与后台「标签管理」singleton 保持一致。
 const TAG_OPTIONS = [
-  { label: 'Astro', value: 'astro' },
-  { label: 'Cloudflare', value: 'cloudflare' },
-  { label: 'Keystatic', value: 'keystatic' },
-  { label: '教程', value: 'tutorial' },
+  { label: '选型指南', value: 'selection-guide' },
+  { label: '环氧胶', value: 'epoxy' },
+  { label: '聚氨酯胶', value: 'polyurethane' },
+  { label: '硅酮密封胶', value: 'silicone-sealant' },
+  { label: 'UV 固化胶', value: 'uv-adhesive' },
+  { label: '瞬干胶', value: 'cyanoacrylate' },
+  { label: '厌氧胶', value: 'anaerobic' },
+  { label: '热熔胶', value: 'hotmelt' },
+  { label: '基材粘接', value: 'substrate' },
+  { label: '表面处理', value: 'surface-treatment' },
+  { label: '结构粘接', value: 'structural-bonding' },
+  { label: '密封防水', value: 'sealing' },
+  { label: '耐温耐候', value: 'temperature-weather' },
+  { label: '电子封装', value: 'electronics' },
+  { label: '汽车制造', value: 'automotive' },
+  { label: '新能源', value: 'new-energy' },
+  { label: '建筑工程', value: 'construction' },
+  { label: '包装印刷', value: 'packaging' },
+  { label: '医疗器械', value: 'medical' },
+  { label: '常见问题', value: 'faq' },
 ];
 
 // 应用场景（胶粘剂/密封剂典型行业）。与 site-data DEFAULT_SCENARIOS 保持一致。
@@ -195,14 +211,19 @@ export default config({
           defaultValue: '',
         }),
         // 常见问题：渲染为 FAQ 区块并生成 FAQPage 结构化数据，利于 AI/搜索直接抽取答案
+        // ⚠️ 两个 Keystatic 0.6.9 的坑（叠加后会让**所有**文章读取失败）：
+        //   ① array() 第一个参数必须「直接是 schema 对象」，写成 array({label, schema:{...}}) 会把整包当 schema 解析；
+        //   ② fields.text 返回的是 SlugFormField，而 array 会用 slugField 机制把元素里的 slug 类字段
+        //      当作「条目唯一标识」劫持，报 "Expected never to be called"。
+        // 用 fields.object 包一层即可得到非 slug 的 ObjectField，YAML 数据结构（question/answer）保持不变。
         faq: fields.array(
-          {
-            label: '问答',
-            schema: {
+          fields.object(
+            {
               question: fields.text({ label: '问题' }),
               answer: fields.text({ label: '答案', multiline: true }),
             },
-          },
+            { label: '问答' }
+          ),
           { label: '常见问题（FAQ）' }
         ),
         // 图片会经 GitHub App 提交到仓库 public/uploads/，构建时由静态资源直接产出
