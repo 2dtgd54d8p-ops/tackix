@@ -4,8 +4,10 @@ import Base from '../layouts/Base.astro';
 
 <Base title="搜索">
   <section>
-    <h1>搜索</h1>
-    <p class="hint">输入关键词检索站内文章（索引由 Pagefind 在构建时生成）。</p>
+    <div class="page-head">
+      <h1>搜索</h1>
+      <p>输入关键词检索站内文章（索引由 Pagefind 在构建时生成）。</p>
+    </div>
     <link rel="stylesheet" href="/pagefind/pagefind-ui.css" />
     <div id="search"></div>
   </section>
@@ -28,11 +30,17 @@ import Base from '../layouts/Base.astro';
 </script>
 
 <style>
-  .hint {
-    color: #6b7280;
-    font-size: 14px;
-  }
   #search {
-    margin-top: 16px;
+    max-width: 720px;
+    margin: 0 auto;
+  }
+  /* 让 Pagefind 内置 UI 更贴合本站圆角与主题色 */
+  #search :global(.pagefind-ui__search-input) {
+    border-radius: var(--r-pill);
+    border-color: var(--border-strong);
+  }
+  #search :global(.pagefind-ui__search-input:focus) {
+    border-color: var(--accent);
+    box-shadow: 0 0 0 3px var(--accent-soft);
   }
 </style>

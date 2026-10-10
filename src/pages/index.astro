@@ -59,12 +59,19 @@ rest.forEach((p) => {
 const tagCounts = {};
 rest.forEach((p) => (p.tags ?? []).forEach((t) => { tagCounts[t] = (tagCounts[t] ?? 0) + 1; }));
 
-// 分类卡：柔和底色随索引轮换，营造"彩色卡片"观感
-const CAT_TINTS = ['#e8f1fb', '#e9f7ee', '#fbf2e6', '#f1ebfb', '#fbe9f0', '#e7f3fb'];
+// 参考站签名四色渐变，依索引轮换
+const TILE_GRADS = [
+  'linear-gradient(135deg, #1ec8c8, #12a0c9)',
+  'linear-gradient(135deg, #f6a63c, #f2792f)',
+  'linear-gradient(135deg, #9b5cf5, #6f2fe0)',
+  'linear-gradient(135deg, #4f9bf5, #3d6ee8)',
+  'linear-gradient(135deg, #26c281, #12a150)',
+  'linear-gradient(135deg, #f2668b, #d63f6f)',
+];
 const categoryCards = categories.map((c, i) => ({
   ...c,
   count: c.value === 'all' ? rest.length : (catCounts[c.value] ?? 0),
-  tint: CAT_TINTS[i % CAT_TINTS.length],
+  grad: TILE_GRADS[i % TILE_GRADS.length],
 }));
 const tagCards = usedTags.map((t) => ({ ...t, count: tagCounts[t.value] ?? 0 }));
 
@@ -88,14 +95,14 @@ const jsonLd = {
   <script type="application/ld+json" set:html={JSON.stringify(jsonLd)} />
 
   <section class="hero">
-    <div class="hero-blob hero-blob-a" aria-hidden="true"></div>
-    <div class="hero-blob hero-blob-b" aria-hidden="true"></div>
+    <div class="hero-glow" aria-hidden="true"></div>
     <div class="hero-inner">
+      <span class="hero-eyebrow">独立创作 · 技术与思考</span>
       <h1 class="hero-title">{siteInfo.title}</h1>
       <p class="hero-sub">{siteInfo.tagline || '记录技术、实践与思考的独立空间。写代码，也写字。'}</p>
       <div class="hero-actions">
-        <a class="btn btn-primary" href="#latest">开始阅读</a>
-        <a class="btn" href="/posts">全部分类</a>
+        <a class="btn btn-light" href="#latest">开始阅读</a>
+        <a class="btn btn-outline-light" href="/posts">全部分类</a>
       </div>
     </div>
   </section>
@@ -105,52 +112,34 @@ const jsonLd = {
       <p class="empty">还没有文章，去后台创建第一篇吧。</p>
     ) : (
       <>
-        {/* 分类导航卡：替代原筛选按钮，点击即筛选下方网格并平滑滚动 */}
+        {/* 浏览分类：彩色渐变瓷砖，点击筛选下方网格 */}
         <section class="block">
-          <h2 class="block-title">浏览分类</h2>
+          <div class="section-head">
+            <h2>浏览分类</h2>
+            <p>按主题快速找到你感兴趣的内容</p>
+          </div>
           <div class="cat-cards">
             {categoryCards.map((c, i) => (
               <button
                 type="button"
-                class={`cat-card${i === 0 ? ' is-active' : ''}`}
+                class={`tile cat-card${i === 0 ? ' is-active' : ''}`}
                 data-filter={c.value}
                 aria-pressed={i === 0 ? 'true' : 'false'}
-                style={`--tint:${c.tint}`}
+                style={`--tile-grad:${c.grad}`}
               >
-                <span class="cat-name">{c.label}</span>
-                <span class="cat-count">{c.count}</span>
+                <span class="tile-name">{c.label}</span>
+                <span class="tile-count">{c.count} 篇</span>
               </button>
             ))}
           </div>
         </section>
 
-        {/* 关于本站 */}
-        <section class="block about-block">
-          <h2 class="block-title">关于本站</h2>
-          <p class="about-text">{siteInfo.description || '记录技术、实践与思考的独立空间。'}</p>
-          <div class="about-actions">
-            <a class="btn btn-primary" href="/posts">浏览全部文章</a>
-            <a class="btn" href="/contact">联系我</a>
-          </div>
-        </section>
-
-        {/* 热门标签：点击按标签筛选 */}
-        {tagCards.length > 0 && (
-          <section class="block">
-            <h2 class="block-title">热门标签</h2>
-            <div class="tag-pills">
-              {tagCards.map((t) => (
-                <button type="button" class="tag-pill" data-tagfilter={t.value} aria-pressed="false">
-                  #{tagLabel(t.value)} <span class="pill-count">{t.count}</span>
-                </button>
-              ))}
-            </div>
-          </section>
-        )}
-
         {featured && (
           <section class="block">
-            <h2 class="block-title">置顶</h2>
+            <div class="section-head">
+              <h2>精选推荐</h2>
+              <p>值得优先一读的文章</p>
+            </div>
             <article class="card card-featured">
               {featured.cover && (
                 <div class="card-media">
@@ -176,13 +165,14 @@ const jsonLd = {
         )}
 
         <section class="block" id="latest">
-          <div class="block-head">
-            <h2 class="block-title">最新文章</h2>
-            <div class="sort-bar" role="group" aria-label="排序方式">
-              <button type="button" class="sort-btn is-active" data-sort="newest" aria-pressed="true">最新</button>
-              <button type="button" class="sort-btn" data-sort="title" aria-pressed="false">标题</button>
-              <span class="sort-count" data-count></span>
-            </div>
+          <div class="section-head">
+            <h2>最新文章</h2>
+            <p>持续记录，持续更新</p>
+          </div>
+          <div class="sort-bar" role="group" aria-label="排序方式">
+            <button type="button" class="sort-btn is-active" data-sort="newest" aria-pressed="true">最新</button>
+            <button type="button" class="sort-btn" data-sort="title" aria-pressed="false">标题</button>
+            <span class="sort-count" data-count></span>
           </div>
           {rest.length === 0 ? (
             <p class="empty">暂无更多文章。</p>
@@ -223,8 +213,38 @@ const jsonLd = {
           <p class="empty" data-empty hidden>该筛选下暂无文章。</p>
         </section>
 
+        {tagCards.length > 0 && (
+          <section class="block">
+            <div class="section-head">
+              <h2>热门标签</h2>
+              <p>点击标签，查看同主题文章</p>
+            </div>
+            <div class="tag-pills">
+              {tagCards.map((t) => (
+                <button type="button" class="tag-pill" data-tagfilter={t.value} aria-pressed="false">
+                  #{tagLabel(t.value)} <span class="pill-count">{t.count}</span>
+                </button>
+              ))}
+            </div>
+          </section>
+        )}
+
+        {/* 关于本站：整幅色带 */}
+        <section class="band">
+          <div class="band-inner">
+            <div class="section-head">
+              <h2>关于本站</h2>
+              <p>{siteInfo.description || '记录技术、实践与思考的独立空间。'}</p>
+            </div>
+            <div class="band-actions">
+              <a class="btn btn-primary" href="/posts">浏览全部文章</a>
+              <a class="btn" href="/contact">联系我</a>
+            </div>
+          </div>
+        </section>
+
         <script>
-          // 分类卡 + 标签胶囊 + 排序 + 分页：纯前端统一处理，切换无需重新部署
+          // 分类瓷砖 + 标签胶囊 + 排序 + 分页：纯前端统一处理，切换无需重新部署
           const PAGE = 6;
           const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
           const grid = document.querySelector('.grid');
@@ -346,165 +366,145 @@ const jsonLd = {
 </Base>
 
 <style>
+  /* ---------- Hero：深紫渐变 + 居中白字（对齐参考站） ---------- */
   .hero {
     position: relative;
     overflow: hidden;
-    background:
-      radial-gradient(120% 130% at 100% 0%, var(--accent-soft) 0%, transparent 55%),
-      linear-gradient(135deg, var(--surface-2) 0%, var(--bg) 55%, var(--surface-3) 100%);
-    border-bottom: 1px solid var(--border);
-    margin-top: -32px;                 /* 顶到 header 下沿，消除白条 */
-    margin-left: calc(50% - 50vw);     /* 满屏出血：左右延伸到视口边缘 */
+    background: var(--hero-grad);
+    color: #fff;
+    text-align: center;
+    margin-top: -44px;                 /* 顶到 header 下沿 */
+    margin-left: calc(50% - 50vw);     /* 满屏出血 */
     margin-right: calc(50% - 50vw);
-    padding: 60px 24px 52px;
+    padding: 84px 24px 92px;
   }
-  .hero::before {
-    content: '';
+  .hero-glow {
     position: absolute;
-    inset: 0;
-    background: radial-gradient(600px 240px at 85% -10%, color-mix(in srgb, var(--accent) 12%, transparent), transparent 60%);
+    left: 50%;
+    top: -180px;
+    width: 640px;
+    height: 640px;
+    transform: translateX(-50%);
+    background: radial-gradient(circle, rgba(255, 255, 255, 0.22), transparent 62%);
     pointer-events: none;
   }
-  .hero-blob {
-    position: absolute;
-    border-radius: 50%;
-    background: color-mix(in srgb, var(--accent) 14%, var(--surface));
-    pointer-events: none;
+  .hero-inner { position: relative; max-width: 760px; margin: 0 auto; }
+  .hero-eyebrow {
+    display: inline-block;
+    margin-bottom: 18px;
+    padding: 6px 16px;
+    border: 1px solid rgba(255, 255, 255, 0.38);
+    border-radius: var(--r-pill);
+    font-size: 12.5px;
+    letter-spacing: 0.14em;
+    color: rgba(255, 255, 255, 0.92);
   }
-  .hero-blob-a { right: -40px; top: -40px; width: 220px; height: 220px; opacity: 0.6; }
-  .hero-blob-b { right: 80px; bottom: -64px; width: 140px; height: 140px; opacity: 0.45; }
-  .hero-inner { position: relative; max-width: calc(var(--content-width) - 48px); margin: 0 auto; }
   .hero-title {
-    margin: 0 0 14px;
+    margin: 0 0 18px;
     font-family: var(--font-display);
-    font-size: 34px;
-    font-weight: 700;
-    letter-spacing: -0.01em;
-    color: var(--fg);
+    font-size: 46px;
+    font-weight: 800;
+    line-height: 1.2;
+    letter-spacing: -0.02em;
+    color: #fff;
+    text-shadow: 0 2px 24px rgba(0, 0, 0, 0.18);
   }
-  .hero-sub { margin: 0 0 24px; max-width: 560px; color: var(--muted); line-height: 1.75; font-size: 15px; }
-  .hero-actions { display: flex; gap: 10px; flex-wrap: wrap; }
+  .hero-sub {
+    margin: 0 auto 30px;
+    max-width: 560px;
+    font-size: 16px;
+    line-height: 1.8;
+    color: rgba(255, 255, 255, 0.85);
+  }
+  .hero-actions { display: flex; gap: 14px; flex-wrap: wrap; justify-content: center; }
 
-  /* 分类导航卡 */
+  /* ---------- 版块 ---------- */
+  .block { margin: 64px 0; }
+
+  /* 分类瓷砖网格 */
   .cat-cards {
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
-    gap: 12px;
-  }
-  .cat-card {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 8px;
-    padding: 14px 16px;
-    border: 1px solid var(--border);
-    border-radius: var(--r-md);
-    background: var(--tint, var(--surface));
-    cursor: pointer;
-    font: inherit;
-    text-align: left;
-    transition: transform var(--dur) var(--ease), box-shadow var(--dur) var(--ease),
-      border-color var(--dur) var(--ease);
-  }
-  .cat-card:hover {
-    transform: translateY(-2px);
-    box-shadow: var(--shadow-md);
-    border-color: var(--border-strong);
-  }
-  .cat-card.is-active {
-    border-color: var(--accent);
-    box-shadow: 0 0 0 2px color-mix(in srgb, var(--accent) 22%, transparent);
-  }
-  .cat-name { font-size: 15px; font-weight: 600; color: var(--fg); }
-  .cat-count {
-    font-size: 12px;
-    color: var(--muted);
-    background: color-mix(in srgb, #fff 70%, transparent);
-    border-radius: var(--r-pill);
-    padding: 1px 8px;
+    grid-template-columns: repeat(auto-fill, minmax(196px, 1fr));
+    gap: 18px;
   }
 
-  /* 关于本站 */
-  .about-block {
-    background: var(--surface);
-    border: 1px solid var(--border);
-    border-radius: var(--r-lg);
-    padding: 22px 24px;
-    box-shadow: var(--shadow-sm);
-  }
-  .about-text { margin: 0 0 16px; color: var(--muted); line-height: 1.85; font-size: 14px; }
-  .about-actions { display: flex; gap: 10px; flex-wrap: wrap; }
-
-  /* 热门标签 */
-  .tag-pills { display: flex; flex-wrap: wrap; gap: 8px; }
-  .tag-pill {
-    display: inline-flex;
-    align-items: center;
-    gap: 6px;
-    padding: 5px 12px;
-    border: 1px solid var(--border);
+  /* 排序栏 */
+  .sort-bar { display: flex; align-items: center; justify-content: center; gap: 8px; margin: -12px 0 26px; }
+  .sort-btn {
+    padding: 6px 16px;
+    border: 1px solid var(--border-strong);
     border-radius: var(--r-pill);
     background: var(--surface);
     color: var(--muted);
     font: inherit;
     font-size: 13px;
+    font-weight: 500;
     cursor: pointer;
-    transition: border-color var(--dur) var(--ease), color var(--dur) var(--ease),
-      background var(--dur) var(--ease);
+    transition: border-color var(--dur) var(--ease), color var(--dur) var(--ease), background var(--dur) var(--ease);
   }
-  .tag-pill:hover { border-color: var(--border-strong); color: var(--fg); }
-  .tag-pill.is-active { background: var(--accent); border-color: var(--accent); color: var(--on-accent); }
-  .pill-count { font-size: 11px; opacity: 0.7; }
+  .sort-btn:hover { border-color: var(--accent); color: var(--accent); }
+  .sort-btn.is-active { background: var(--accent); border-color: var(--accent); color: var(--on-accent); }
+  .sort-count { font-size: 12px; color: var(--faint); margin-left: 6px; }
 
-  .block { margin: 32px 0; }
-  .block-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 14px; flex-wrap: wrap; }
-  .block-head .block-title { margin: 0; }
-
-  /* 排序栏 */
-  .sort-bar { display: inline-flex; align-items: center; gap: 6px; }
-  .sort-btn {
-    padding: 4px 12px;
-    border: 1px solid var(--border);
-    border-radius: var(--r-pill);
-    background: var(--surface);
-    color: var(--muted);
-    font: inherit;
-    font-size: 12px;
-    cursor: pointer;
-    transition: border-color var(--dur) var(--ease), color var(--dur) var(--ease),
-      background var(--dur) var(--ease);
-  }
-  .sort-btn:hover { border-color: var(--border-strong); color: var(--fg); }
-  .sort-btn.is-active { background: var(--fg); border-color: var(--fg); color: var(--bg); }
-  .sort-count { font-size: 12px; color: var(--faint); margin-left: 4px; }
-
-  .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 18px; }
+  .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 22px; }
 
   /* 加载更多 */
   .load-more {
     display: block;
-    margin: 22px auto 0;
-    padding: 9px 24px;
+    margin: 30px auto 0;
+    padding: 11px 28px;
     border: 1px solid var(--border-strong);
     border-radius: var(--r-pill);
     background: var(--surface);
     color: var(--fg);
     font: inherit;
-    font-size: 13px;
+    font-size: 14px;
+    font-weight: 500;
     cursor: pointer;
-    transition: border-color var(--dur) var(--ease), background var(--dur) var(--ease);
+    transition: border-color var(--dur) var(--ease), background var(--dur) var(--ease), color var(--dur) var(--ease);
   }
-  .load-more:hover { border-color: var(--accent); background: var(--accent-soft); }
+  .load-more:hover { border-color: var(--accent); color: var(--accent); background: var(--accent-soft); }
   .load-more[hidden] { display: none; }
 
-  @media (max-width: 640px) {
-    .hero { margin-top: -20px; padding: 34px 16px; }
-    .hero-inner { padding: 0; }
-    .hero-title { font-size: 26px; }
-    .hero-blob-a { width: 120px; height: 120px; right: -30px; top: -30px; }
-    .hero-blob-b { display: none; }
-    .grid { grid-template-columns: minmax(0, 1fr); }
-    .cat-cards { grid-template-columns: repeat(2, 1fr); }
-    .cat-name { font-size: 14px; }
+  /* 热门标签 */
+  .tag-pills { display: flex; flex-wrap: wrap; gap: 10px; justify-content: center; }
+  .tag-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 7px 16px;
+    border: 1px solid var(--border-strong);
+    border-radius: var(--r-pill);
+    background: var(--surface);
+    color: var(--fg-soft);
+    font: inherit;
+    font-size: 13px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: border-color var(--dur) var(--ease), color var(--dur) var(--ease), background var(--dur) var(--ease), transform var(--dur) var(--ease);
+  }
+  .tag-pill:hover { border-color: var(--accent); color: var(--accent); transform: translateY(-2px); }
+  .tag-pill.is-active { background: var(--accent); border-color: var(--accent); color: var(--on-accent); }
+  .pill-count { font-size: 11px; opacity: 0.75; }
+
+  /* 关于本站：整幅色带 */
+  .band {
+    background: var(--band);
+    border-top: 1px solid var(--border);
+    border-bottom: 1px solid var(--border);
+    margin: 64px calc(50% - 50vw) 0;
+    padding: 64px 24px;
+  }
+  .band-inner { max-width: 720px; margin: 0 auto; }
+  .band-actions { display: flex; gap: 14px; flex-wrap: wrap; justify-content: center; }
+
+  @media (max-width: 700px) {
+    .hero { margin-top: -24px; padding: 56px 18px 62px; }
+    .hero-title { font-size: 30px; }
+    .hero-sub { font-size: 15px; }
+    .block { margin: 46px 0; }
+    .band { margin-top: 46px; padding: 46px 18px; }
+    .cat-cards { grid-template-columns: repeat(2, 1fr); gap: 12px; }
+    .grid { grid-template-columns: minmax(0, 1fr); gap: 18px; }
   }
 </style>

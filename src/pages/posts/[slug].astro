@@ -35,8 +35,6 @@ const { post } = Astro.props;
 const html = marked(post.body ?? '');
 
 // 分类/标签中文名从后台管理的 singleton 读取；读不到自动回落默认值。
-// 修复：此前直接输出 {post.category}，导致 tech/product 这类英文标识
-// 暴露给访客，与站点中文化目标冲突。
 const { categoryLabel, tagLabel } = await loadSiteData();
 const categoryName = post.category && post.category !== 'uncategorized'
   ? categoryLabel(post.category)
@@ -48,9 +46,11 @@ const tagNames = Array.isArray(post.tags)
 
 <Base title={post.title}>
   <article class="prose">
-    <h1>{post.title}</h1>
-    {post.publishedAt && <p class="post-meta">{post.publishedAt}</p>}
-    {categoryName && <span class="badge">{categoryName}</span>}
+    <header class="post-head">
+      {categoryName && <span class="badge">{categoryName}</span>}
+      <h1>{post.title}</h1>
+      {post.publishedAt && <p class="post-meta">{post.publishedAt}</p>}
+    </header>
     {
       post.cover && (
         <img
@@ -75,15 +75,23 @@ const tagNames = Array.isArray(post.tags)
 </Base>
 
 <style>
-  .post-meta {
-    margin: 0 0 12px;
-    color: var(--muted);
-    font-size: 13px;
+  .post-head {
+    text-align: center;
+    margin-bottom: 30px;
+    padding-bottom: 24px;
+    border-bottom: 1px solid var(--border);
   }
+  .post-head h1 { font-size: 36px; }
+  .post-head .badge { margin-bottom: 14px; }
+  .post-meta { margin: 0; color: var(--muted); font-size: 13.5px; }
   .tags {
-    margin-top: 28px;
+    margin-top: 30px;
     display: flex;
     flex-wrap: wrap;
     gap: 8px;
+    justify-content: center;
+  }
+  @media (max-width: 700px) {
+    .post-head h1 { font-size: 27px; }
   }
 </style>

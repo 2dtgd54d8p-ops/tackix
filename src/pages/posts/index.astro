@@ -34,8 +34,10 @@ const filterOptions = buildFilterOptions(posts, categories);
 
 <Base title="文章">
   <section>
-    <h1 class="page-title">全部文章</h1>
-    <p class="list-count">共 {posts.length} 篇</p>
+    <div class="page-head">
+      <h1>全部文章</h1>
+      <p>共 {posts.length} 篇 · 记录技术、实践与思考</p>
+    </div>
 
     {
       filterOptions.length > 1 && (
@@ -116,39 +118,35 @@ const filterOptions = buildFilterOptions(posts, categories);
 </Base>
 
 <style>
-  .page-title { margin: 0 0 4px; font-family: var(--font-display); font-size: 30px; font-weight: 700; color: var(--fg); letter-spacing: -0.01em; }
-  .list-count { margin: 0 0 4px; color: var(--muted); font-size: 13px; }
-
-  .filters { display: flex; gap: 8px; flex-wrap: wrap; margin: 22px 0 8px; }
+  .filters { display: flex; gap: 10px; flex-wrap: wrap; justify-content: center; margin: -8px 0 30px; }
   .filter-btn {
-    padding: 5px 14px;
-    border: 1px solid var(--border);
+    padding: 7px 18px;
+    border: 1px solid var(--border-strong);
     border-radius: var(--r-pill);
     background: var(--surface);
     color: var(--muted);
     font: inherit;
     font-size: 13px;
+    font-weight: 500;
     cursor: pointer;
     transition: border-color var(--dur) var(--ease), color var(--dur) var(--ease),
       background var(--dur) var(--ease);
   }
-  .filter-btn:hover { border-color: var(--border-strong); color: var(--fg); }
-  .filter-btn.is-active {
-    background: var(--accent);
-    border-color: var(--accent);
-    color: var(--on-accent);
-  }
+  .filter-btn:hover { border-color: var(--accent); color: var(--accent); }
+  .filter-btn.is-active { background: var(--accent); border-color: var(--accent); color: var(--on-accent); }
 
   .grid {
     display: grid;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: 18px;
-    margin-top: 18px;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 22px;
   }
 
-  @media (max-width: 640px) {
+  @media (max-width: 900px) {
+    .grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  }
+  @media (max-width: 620px) {
     .grid { grid-template-columns: minmax(0, 1fr); }
-    .filters { flex-wrap: nowrap; overflow-x: auto; padding-bottom: 4px; }
+    .filters { flex-wrap: nowrap; overflow-x: auto; padding-bottom: 6px; justify-content: flex-start; }
     .filter-btn { white-space: nowrap; }
   }
 </style>
