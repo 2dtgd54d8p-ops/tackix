@@ -49,9 +49,22 @@ import Base from '../layouts/Base.astro';
   #search :global(.pagefind-ui__search-input) {
     border-radius: var(--r-pill);
     border-color: var(--border-strong);
+    background: var(--surface);
+    color: var(--fg);
   }
   #search :global(.pagefind-ui__search-input:focus) {
     border-color: var(--accent);
     box-shadow: 0 0 0 3px var(--accent-soft);
+  }
+  /* 「清除」按钮：Pagefind 默认给了方形白底 + 8px 圆角，在胶囊形输入框里
+     方角会溢出圆角、白色底块与输入框背景不一致，形成"双重边框/竖线"错位。
+     改为透明底 + 贴合胶囊圆角，并稍微内收避免贴到圆弧。 */
+  #search :global(.pagefind-ui__search-clear) {
+    background: transparent;
+    border-radius: var(--r-pill);
+    right: 6px;
+  }
+  #search :global(.pagefind-ui__search-clear:hover) {
+    color: var(--accent);
   }
 </style>
