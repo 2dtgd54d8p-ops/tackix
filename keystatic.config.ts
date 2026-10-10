@@ -271,6 +271,40 @@ export default config({
         body: fields.mdx.inline({ label: '产品描述' }),
       },
     }),
+    // 案例库：行业成功案例，关联产品库，形成 内容 → 案例 → 产品 → 询盘 的闭环
+    cases: collection({
+      label: '案例',
+      slugField: 'title',
+      path: 'src/content/cases/*',
+      schema: {
+        title: fields.slug({ name: { label: '案例标题' } }),
+        excerpt: fields.text({ label: '一句话摘要', multiline: true }),
+        published: fields.checkbox({ label: '已发布', defaultValue: true }),
+        featured: fields.checkbox({ label: '推荐', defaultValue: false }),
+        scenario: fields.select({
+          label: '所属行业/场景',
+          options: [{ label: '未指定', value: '' }, ...SCENARIO_OPTIONS],
+          defaultValue: '',
+        }),
+        client: fields.text({ label: '客户 / 项目', description: '可匿名，如「某新能源电池厂商」' }),
+        challenge: fields.text({ label: '挑战', multiline: true }),
+        solution: fields.text({ label: '解决方案', multiline: true }),
+        result: fields.text({ label: '成果', multiline: true }),
+        // 关联产品：从产品库中选择，详情页自动生成内链（案例 → 产品）
+        // ⚠️ 多选关联必须用 fields.multiRelationship（返回 string[]）；
+        //    fields.relationship 是单值（string|null），传数组会报 "Must be a string"。
+        products: fields.multiRelationship({
+          label: '关联产品',
+          collection: 'products',
+        }),
+        cover: fields.image({
+          label: '封面图',
+          directory: 'public/uploads',
+          publicPath: '/uploads/',
+        }),
+        body: fields.mdx.inline({ label: '正文' }),
+      },
+    }),
   },
 
   singletons: {

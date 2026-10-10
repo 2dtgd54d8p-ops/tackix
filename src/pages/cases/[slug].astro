@@ -1,0 +1,221 @@
+---
+import { createReader } from '@keystatic/core/reader';
+import { marked } from 'marked';
+import keystaticConfig from '../../../keystatic.config';
+import Base from '../../layouts/Base.astro';
+import { loadSiteData } from '../../lib/site-data';
+
+export async function getStaticPaths() {
+  // ⚠️ reader 必须在 getStaticPaths 内部创建：frontmatter 顶层语句会被编译进
+  // 组件渲染函数，而 getStaticPaths 是独立的模块级导出，无法访问顶层作用域的变量。
+  const reader = createReader(process.cwd(), keystaticConfig);
+  let slugs: string[] = [];
+  try {
+    slugs = await reader.collections.cases.list();
+  } catch (e) {
+    console.warn('[build] 读取案例列表失败：', e);
+  }
+  const entries = await Promise.all(
+    slugs.map(async (slug) => {
+      try {
+        const item = await reader.collections.cases.read(slug);
+        return item && item.published !== false ? { params: { slug }, props: { item } } : null;
+      } catch (e) {
+        console.warn('[build] 读取案例失败：', slug, e);
+        return null;
+      }
+    })
+  );
+  return entries.filter(Boolean);
+}
+
+const { item } = Astro.props as { item: any };
+const html = marked(item.body ?? '');
+
+const { site, scenarioLabel } = await loadSiteData();
+// 组件作用域内的 reader：用于解析关联产品（与 getStaticPaths 内的互不影响）
+const reader = createReader(process.cwd(), keystaticConfig);
+const siteTitle = site.title;
+const base = Astro.site ?? new URL('https://tackix.pages.dev');
+const canonical = new URL(Astro.url.pathname, base).href;
+
+const scenarioName = scenarioLabel(item.scenario);
+
+// 关联产品：把 relationship 返回的 slug 解析为可读名称与链接
+// （relationship 可能返回数组或单个字符串，两处都兼容）
+const rawProducts = item.products;
+const productSlugs: string[] = Array.isArray(rawProducts)
+  ? rawProducts.filter(Boolean)
+  : rawProducts
+    ? [rawProducts]
+    : [];
+const productMap = new Map<string, { name: string; model?: string }>();
+if (productSlugs.length) {
+  await Promise.all(
+    productSlugs.map(async (s) => {
+      try {
+        const p = await reader.collections.products.read(s);
+        if (p) productMap.set(s, { name: p.name ?? s, model: p.model ?? '' });
+      } catch {
+        /* 忽略已删除的关联产品 */
+      }
+    })
+  );
+}
+const related = productSlugs.map((s) => ({ slug: s, ...(productMap.get(s) ?? { name: s }) }));
+
+const caseSchema = {
+  '@context': 'https://schema.org',
+  '@type': 'Article',
+  headline: item.title,
+  description: item.excerpt || '',
+  author: { '@type': 'Organization', name: siteTitle },
+  publisher: { '@type': 'Organization', name: siteTitle },
+  mainEntityOfPage: { '@type': 'WebPage', '@id': canonical },
+  ...(scenarioName ? { articleSection: scenarioName } : {}),
+};
+---
+
+<Base title={item.title} description={item.excerpt} keywords={[scenarioName, item.client].filter(Boolean)}>
+  <Fragment slot="head">
+    <script type="application/ld+json" set:html={JSON.stringify(caseSchema)} />
+  </Fragment>
+
+  <article class="prose case">
+    <header class="case-head">
+      {scenarioName && <span class="badge">{scenarioName}</span>}
+      <h1>{item.title}</h1>
+      {item.client && <p class="case-client">{item.client}</p>}
+    </header>
+
+    {item.cover && <img class="cover" src={item.cover.startsWith('/') ? item.cover : `/uploads/${item.cover}`} alt={item.title} />}
+
+    {item.excerpt && <p class="case-excerpt">{item.excerpt}</p>}
+
+    {
+      (item.challenge || item.solution || item.result) && (
+        <section class="case-blocks" aria-label="案例要点">
+          {item.challenge && (
+            <div class="case-block">
+              <h2>挑战</h2>
+              <p>{item.challenge}</p>
+            </div>
+          )}
+          {item.solution && (
+            <div class="case-block">
+              <h2>解决方案</h2>
+              <p>{item.solution}</p>
+            </div>
+          )}
+          {item.result && (
+            <div class="case-block">
+              <h2>成果</h2>
+              <p>{item.result}</p>
+            </div>
+          )}
+        </section>
+      )
+    }
+
+    {html && <div set:html={html} />}
+
+    {
+      related.length > 0 && (
+        <section class="related" aria-label="关联产品">
+          <h2>本案例使用的产品</h2>
+          <div class="related-list">
+            {related.map((p) => (
+              <a class="related-item" href={`/products/${p.slug}`}>
+                <span class="related-name">{p.name}</span>
+                {p.model && <span class="related-model">{p.model}</span>}
+                <span class="related-arrow" aria-hidden="true">→</span>
+              </a>
+            ))}
+          </div>
+        </section>
+      )
+    }
+
+    <section class="quote-block" aria-label="询盘">
+      <div class="quote-inner">
+        <div class="quote-text">
+          <h2>有类似需求？</h2>
+          <p>告诉我们您的基材、工况与产能，我们的技术团队将提供针对性的选型建议与样品支持。</p>
+        </div>
+        <div class="quote-actions">
+          <a class="btn btn-primary" href="/selector">开始选型</a>
+          <a class="btn btn-primary" href="/contact">联系我们</a>
+        </div>
+      </div>
+    </section>
+  </article>
+</Base>
+
+<style>
+  .case { max-width: 820px; }
+  .case-head { text-align: center; margin-bottom: 26px; }
+  .case-head h1 { font-size: 32px; letter-spacing: -0.015em; }
+  .case-client { margin: 10px 0 0; color: var(--muted); font-size: 15px; }
+  .case-excerpt {
+    text-align: center;
+    color: var(--fg-soft);
+    font-size: 17px;
+    line-height: 1.8;
+    margin: 0 auto 30px;
+    max-width: 680px;
+  }
+
+  .case-blocks { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 16px; margin: 30px 0; }
+  .case-block {
+    padding: 18px 20px;
+    border: 1px solid var(--border);
+    border-radius: var(--r-md);
+    background: var(--surface-2);
+  }
+  .case-block h2 { font-size: 15px; margin: 0 0 8px; color: var(--accent-strong); }
+  .case-block p { margin: 0; font-size: 14px; line-height: 1.75; color: var(--fg-soft); }
+
+  .related { margin: 32px 0; }
+  .related h2 { font-size: 20px; margin: 0 0 16px; color: var(--fg); }
+  .related-list { display: flex; flex-direction: column; gap: 10px; }
+  .related-item {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 14px 18px;
+    border: 1px solid var(--border-strong);
+    border-radius: var(--r-md);
+    background: var(--surface);
+    color: var(--fg);
+    text-decoration: none;
+    transition: border-color var(--dur) var(--ease), transform var(--dur) var(--ease);
+  }
+  .related-item:hover { border-color: var(--accent); transform: translateX(3px); color: var(--fg); }
+  .related-name { font-weight: 600; }
+  .related-model { color: var(--muted); font-size: 13px; }
+  .related-arrow { margin-left: auto; color: var(--accent); }
+
+  .quote-block { margin-top: 40px; }
+  .quote-inner {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 20px;
+    padding: 26px 28px;
+    border: 1px solid var(--border-strong);
+    border-radius: var(--r-lg);
+    background: var(--accent-soft);
+  }
+  .quote-text { flex: 1 1 320px; }
+  .quote-text h2 { font-size: 19px; margin: 0 0 8px; color: var(--accent-strong); }
+  .quote-text p { margin: 0; color: var(--fg-soft); font-size: 14px; line-height: 1.7; }
+  .quote-actions { display: flex; flex-wrap: wrap; gap: 12px; flex: none; }
+
+  @media (max-width: 700px) {
+    .case-head h1 { font-size: 26px; }
+    .case-blocks { grid-template-columns: minmax(0, 1fr); }
+    .quote-inner { flex-direction: column; align-items: stretch; }
+    .quote-actions .btn { flex: 1 1 auto; }
+  }
+</style>

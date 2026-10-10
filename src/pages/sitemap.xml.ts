@@ -7,7 +7,7 @@ import type { APIRoute } from 'astro';
 export const prerender = true;
 
 // 路由 URL 与页面 canonical 保持一致（均带尾部斜杠）
-const STATIC_ROUTES = ['/', '/products/', '/posts/', '/contact/', '/search/'];
+const STATIC_ROUTES = ['/', '/products/', '/selector/', '/cases/', '/posts/', '/contact/', '/search/'];
 
 export const GET: APIRoute = async (Astro) => {
   const base = Astro.site ?? new URL('https://tackix.pages.dev');
@@ -53,10 +53,31 @@ export const GET: APIRoute = async (Astro) => {
     )
   ).filter(Boolean) as string[];
 
+  // 案例
+  let caseSlugs: string[] = [];
+  try {
+    caseSlugs = await reader.collections.cases.list();
+  } catch {
+    caseSlugs = [];
+  }
+  const cases = (
+    await Promise.all(
+      caseSlugs.map(async (slug) => {
+        try {
+          const item = await reader.collections.cases.read(slug);
+          return item && item.published !== false ? slug : null;
+        } catch {
+          return null;
+        }
+      })
+    )
+  ).filter(Boolean) as string[];
+
   const urls = [
     ...STATIC_ROUTES,
     ...posts.map((s) => `/posts/${s}/`),
     ...products.map((s) => `/products/${s}/`),
+    ...cases.map((s) => `/cases/${s}/`),
   ];
   const body =
     `<?xml version="1.0" encoding="UTF-8"?>\n` +

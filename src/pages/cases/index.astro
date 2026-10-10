@@ -1,0 +1,160 @@
+---
+import { createReader } from '@keystatic/core/reader';
+import keystaticConfig from '../../../keystatic.config';
+import Base from '../../layouts/Base.astro';
+import { loadSiteData } from '../../lib/site-data';
+
+const reader = createReader(process.cwd(), keystaticConfig);
+let slugs: string[] = [];
+try {
+  slugs = await reader.collections.cases.list();
+} catch (e) {
+  console.warn('[build] 读取案例列表失败：', e);
+}
+
+const cases = (
+  await Promise.all(
+    slugs.map(async (slug) => {
+      try {
+        const c = await reader.collections.cases.read(slug);
+        return c && c.published !== false ? { slug, ...c } : null;
+      } catch {
+        return null;
+      }
+    })
+  )
+).filter(Boolean) as any[];
+
+// 推荐优先，其次按标题
+cases.sort(
+  (a, b) =>
+    Number(b.featured ?? false) - Number(a.featured ?? false) ||
+    String(a.title ?? '').localeCompare(String(b.title ?? ''))
+);
+
+const { scenarioLabel } = await loadSiteData();
+
+const scenarioSet = new Set(cases.map((c) => c.scenario).filter(Boolean));
+const scenarioFilters = [
+  { value: 'all', label: '全部行业' },
+  ...[...scenarioSet].map((v) => ({ value: v as string, label: scenarioLabel(v as string) })),
+];
+---
+
+<Base title="案例库">
+  <section>
+    <div class="page-head">
+      <h1>客户案例</h1>
+      <p>共 {cases.length} 个行业落地案例 · 真实场景中的胶粘剂选型与工艺验证</p>
+    </div>
+
+    {
+      scenarioFilters.length > 1 && (
+        <nav class="filters" id="scenario-filter" aria-label="按行业筛选">
+          {scenarioFilters.map((c, i) => (
+            <button
+              type="button"
+              class={`filter-btn${i === 0 ? ' is-active' : ''}`}
+              data-filter={c.value}
+              aria-pressed={i === 0 ? 'true' : 'false'}
+            >
+              {c.label}
+            </button>
+          ))}
+        </nav>
+      )
+    }
+
+    {
+      cases.length === 0 ? (
+        <p class="empty">案例库即将上线，敬请期待。</p>
+      ) : (
+        <div class="grid">
+          {cases.map((c) => (
+            <article class="card" data-scenario={c.scenario ?? ''}>
+              <a class="card-link" href={`/cases/${c.slug}`}>
+                {c.cover ? (
+                  <div class="card-media card-media-sm">
+                    <img
+                      src={c.cover.startsWith('/') ? c.cover : `/uploads/${c.cover}`}
+                      alt={c.title}
+                      loading="lazy"
+                    />
+                  </div>
+                ) : (
+                  <div class="card-media card-media-sm card-media-empty" />
+                )}
+                <div class="card-body">
+                  {c.scenario && <span class="tag">{scenarioLabel(c.scenario)}</span>}
+                  <h2 class="card-title">{c.title}</h2>
+                  {c.client && <p class="card-model">{c.client}</p>}
+                  {c.excerpt && <p class="card-excerpt">{c.excerpt}</p>}
+                </div>
+              </a>
+            </article>
+          ))}
+        </div>
+      )
+    }
+    <p class="empty" data-empty hidden>该行业暂无案例。</p>
+  </section>
+
+  <script>
+    const bar = document.getElementById('scenario-filter');
+    const grid = document.querySelector('.grid');
+    const emptyHint = document.querySelector('[data-empty]');
+    if (bar && grid) {
+      bar.addEventListener('click', (e) => {
+        const btn = (e.target as HTMLElement).closest('.filter-btn');
+        if (!btn) return;
+        bar.querySelectorAll('.filter-btn').forEach((b) => {
+          const on = b === btn;
+          b.classList.toggle('is-active', on);
+          b.setAttribute('aria-pressed', on ? 'true' : 'false');
+        });
+        const val = (btn as HTMLElement).getAttribute('data-filter') || 'all';
+        let visible = 0;
+        grid.querySelectorAll('.card').forEach((card) => {
+          const show = val === 'all' || card.getAttribute('data-scenario') === val;
+          (card as HTMLElement).hidden = !show;
+          if (show) visible++;
+        });
+        if (emptyHint) (emptyHint as HTMLElement).hidden = visible > 0;
+      });
+    }
+  </script>
+</Base>
+
+<style>
+  .filters { display: flex; gap: 10px; flex-wrap: wrap; justify-content: center; margin: -8px 0 18px; }
+  .filter-btn {
+    padding: 7px 18px;
+    border: 1px solid var(--border-strong);
+    border-radius: var(--r-pill);
+    background: var(--surface);
+    color: var(--muted);
+    font: inherit;
+    font-size: 13px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: border-color var(--dur) var(--ease), color var(--dur) var(--ease),
+      background var(--dur) var(--ease);
+  }
+  .filter-btn:hover { border-color: var(--accent); color: var(--accent); }
+  .filter-btn.is-active { background: var(--accent); border-color: var(--accent); color: var(--on-accent); }
+
+  .grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 22px; }
+  .card-link { display: flex; flex-direction: column; height: 100%; color: inherit; text-decoration: none; }
+  .card:hover .card-title { color: var(--accent); }
+  .card-model { margin: 0 0 6px; font-size: 13px; color: var(--muted); }
+  .card-media-empty { background: linear-gradient(135deg, var(--g1), var(--g4)); }
+
+  @media (max-width: 900px) {
+    .grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  }
+  @media (max-width: 620px) {
+    .grid { grid-template-columns: minmax(0, 1fr); }
+    .filters { flex-wrap: nowrap; overflow-x: auto; padding-bottom: 6px; justify-content: flex-start; }
+    .filter-btn { white-space: nowrap; }
+  }
+</style>

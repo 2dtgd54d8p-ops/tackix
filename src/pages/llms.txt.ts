@@ -61,6 +61,33 @@ export const GET: APIRoute = async (Astro) => {
   );
   const featured = products.filter((p) => p.featured).slice(0, 6);
 
+  // 案例库（已上线）
+  let caseSlugs: string[] = [];
+  try {
+    caseSlugs = await reader.collections.cases.list();
+  } catch {
+    caseSlugs = [];
+  }
+  const cases = (
+    await Promise.all(
+      caseSlugs.map(async (slug) => {
+        try {
+          const item = await reader.collections.cases.read(slug);
+          // Keystatic read() 结果不含 slug 字段，需从 list() 的键补回
+          return item && item.published !== false ? { slug, ...item } : null;
+        } catch {
+          return null;
+        }
+      })
+    )
+  ).filter(Boolean) as any[];
+  cases.sort(
+    (a, b) =>
+      Number(b.featured ?? false) - Number(a.featured ?? false) ||
+      String(a.title ?? '').localeCompare(String(b.title ?? ''))
+  );
+  const featuredCases = cases.filter((c) => c.featured).slice(0, 6);
+
   const lines: string[] = [];
   lines.push(`# ${site.title}`);
   lines.push('');
@@ -74,11 +101,11 @@ export const GET: APIRoute = async (Astro) => {
   lines.push('');
   lines.push(`- 首页: ${new URL('/', base).href}`);
   lines.push(`- 产品数据库: ${new URL('/products/', base).href}`);
+  lines.push(`- 产品选型工具: ${new URL('/selector/', base).href}`);
+  lines.push(`- 客户案例库: ${new URL('/cases/', base).href}`);
   lines.push(`- 技术文章库: ${new URL('/posts/', base).href}`);
   lines.push(`- 联系与询盘: ${new URL('/contact/', base).href}`);
   lines.push(`- 站内搜索: ${new URL('/search/', base).href}`);
-  lines.push(`- 选型工具（规划中）: ${new URL('/selector', base).href}`);
-  lines.push(`- 案例库（规划中）: ${new URL('/cases', base).href}`);
   lines.push('');
   lines.push('## 精选文章');
   lines.push('');
@@ -93,6 +120,16 @@ export const GET: APIRoute = async (Astro) => {
   } else {
     for (const p of featured) {
       lines.push(`- ${p.name}${p.model ? `（${p.model}）` : ''}: ${new URL(`/products/${p.slug}/`, base).href}`);
+    }
+  }
+  lines.push('');
+  lines.push('## 客户案例');
+  lines.push('');
+  if (featuredCases.length === 0) {
+    lines.push(`（案例库已上线，详见: ${new URL('/cases/', base).href}）`);
+  } else {
+    for (const c of featuredCases) {
+      lines.push(`- ${c.title}: ${new URL(`/cases/${c.slug}/`, base).href}`);
     }
   }
   lines.push('');
