@@ -17,7 +17,6 @@ const navItems = [
   { href: '/', label: '首页' },
   { href: '/posts', label: '文章' },
   { href: '/contact', label: '联系' },
-  { href: '/keystatic', label: '管理后台' },
 ];
 function isActive(href: string) {
   if (href === '/') return path === '/';
@@ -141,6 +140,7 @@ const showFloatContact =
     </main>
     <footer class="site-footer">
       <span>{footerText}</span>
+      <a class="footer-admin" href="/keystatic">管理后台</a>
     </footer>
     {showFloatContact && (
       <a class="float-contact" id="float-contact" href="/contact" aria-label="联系我">
@@ -647,6 +647,16 @@ const showFloatContact =
         background: var(--surface-3);
       }
       .site-footer span { opacity: 0.95; }
+      .footer-admin {
+        display: inline-block;
+        margin-top: 8px;
+        font-size: 12px;
+        color: var(--faint);
+        text-decoration: none;
+        transition: color var(--dur) var(--ease);
+      }
+      .footer-admin:hover { color: var(--accent); }
+      .footer-admin:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; border-radius: 3px; }
 
       /* ---------- 居中版块标题（参考站核心版式） ---------- */
       .section-head { text-align: center; max-width: 700px; margin: 0 auto 34px; }
