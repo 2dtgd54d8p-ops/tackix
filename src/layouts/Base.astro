@@ -930,7 +930,16 @@ const showFloatContact =
       /* ---------- 移动端 ---------- */
       @media (max-width: 700px) {
         .site-header { flex-direction: column; align-items: stretch; gap: 6px; padding: 12px 16px; }
-        .float-contact { display: none; }
+        /* 窄屏（自适应模式）下常驻显示带文字的「联系我」胶囊：触屏无 hover，故直接展开标签，并避开刘海安全区 */
+        .float-contact {
+          right: 16px;
+          bottom: calc(16px + env(safe-area-inset-bottom, 0px));
+          opacity: 1;
+          visibility: visible;
+          transform: none;
+          box-shadow: 0 8px 22px rgba(0, 0, 0, 0.24);
+        }
+        .float-contact .fc-label { max-width: 120px; opacity: 1; margin-left: 8px; }
         .header-right { flex-wrap: wrap; justify-content: center; width: 100%; gap: 8px; }
         nav { flex-wrap: wrap; gap: 2px; }
         nav a { padding: 7px 12px; }
