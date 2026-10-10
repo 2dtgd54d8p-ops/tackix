@@ -1,6 +1,7 @@
 ---
 import { loadSiteData } from '../lib/site-data';
 import SEO from '../components/SEO.astro';
+import { LOCALES, I18N_EMBED_JSON } from '../lib/i18n';
 
 interface Props {
   title?: string;
@@ -17,12 +18,12 @@ const whatsappNumber = (site.whatsapp ?? '').trim();
 // 导航当前页高亮
 const path = Astro.url.pathname;
 const navItems = [
-  { href: '/', label: '首页' },
-  { href: '/products', label: '产品' },
-  { href: '/selector', label: '选型' },
-  { href: '/cases', label: '案例' },
-  { href: '/posts', label: '文章' },
-  { href: '/contact', label: '联系' },
+  { href: '/', label: '首页', i18n: 'nav.home' },
+  { href: '/products', label: '产品', i18n: 'nav.products' },
+  { href: '/selector', label: '选型', i18n: 'nav.selector' },
+  { href: '/cases', label: '案例', i18n: 'nav.cases' },
+  { href: '/posts', label: '文章', i18n: 'nav.posts' },
+  { href: '/contact', label: '联系', i18n: 'nav.contact' },
 ];
 function isActive(href: string) {
   if (href === '/') return path === '/';
@@ -78,7 +79,7 @@ const showFloatContact =
           <button type="submit" class="hs-submit" aria-label="搜索">
             <svg class="hs-icon" viewBox="0 0 24 24" width="16" height="16" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7" /><path d="M21 21l-4.35-4.35" /></svg>
           </button>
-          <input class="hs-input" type="search" name="q" placeholder="搜索…" aria-label="站内搜索" enterkeyhint="search" />
+          <input class="hs-input" type="search" name="q" placeholder="搜索…" aria-label="站内搜索" enterkeyhint="search" data-i18n="search.placeholder" data-i18n-zh="搜索…" />
         </form>
         <nav aria-label="主导航">
           {
@@ -87,12 +88,36 @@ const showFloatContact =
                 href={item.href}
                 class={isActive(item.href) ? 'is-active' : ''}
                 aria-current={isActive(item.href) ? 'page' : undefined}
+                data-i18n={item.i18n}
+                data-i18n-zh={item.label}
               >
                 {item.label}
               </a>
             ))
           }
         </nav>
+        <div class="lang-wrap">
+          <button
+            id="lang-btn"
+            class="appearance-btn"
+            type="button"
+            aria-label="语言 / Language"
+            aria-haspopup="true"
+            aria-expanded="false"
+          >
+            <svg class="icon" viewBox="0 0 24 24" width="20" height="20" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9" /><path d="M3 12h18M12 3a15 15 0 0 1 0 18M12 3a15 15 0 0 0 0 18" /></svg>
+          </button>
+          <div id="lang-pop" class="appearance-pop lang-pop" role="menu" aria-label="语言选择">
+            {
+              LOCALES.map((l) => (
+                <button class="lang-opt" type="button" role="menuitemradio" aria-checked="false" data-lang={l.code} data-html={l.htmlLang}>
+                  <span class="lang-name">{l.label}</span>
+                  <span class="lang-code">{l.code}</span>
+                </button>
+              ))
+            }
+          </div>
+        </div>
         <div class="appearance-wrap">
           <button
             id="appearance-btn"
@@ -106,24 +131,24 @@ const showFloatContact =
           </button>
           <div id="appearance-pop" class="appearance-pop" role="menu" aria-label="外观设置">
             <div class="ap-section">
-              <div class="ap-title">明暗模式</div>
+              <div class="ap-title" data-i18n="appearance.mode" data-i18n-zh="明暗模式">明暗模式</div>
               <div class="mode-row" role="group" aria-label="明暗模式">
                 <button class="mode-btn" type="button" data-mode="auto" aria-pressed="true">
                   <svg class="icon" viewBox="0 0 24 24" width="16" height="16" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="12" rx="2" /><path d="M8 20h8M12 16v4" /></svg>
-                  <span>自动</span>
+                  <span data-i18n="appearance.auto" data-i18n-zh="自动">自动</span>
                 </button>
                 <button class="mode-btn" type="button" data-mode="light" aria-pressed="false">
                   <svg class="icon" viewBox="0 0 24 24" width="16" height="16" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="4.2" /><path d="M12 2v2.5M12 19.5V22M4.22 4.22l1.77 1.77M18.01 18.01l1.77 1.77M2 12h2.5M19.5 12H22M4.22 19.78l1.77-1.77M18.01 5.99l1.77-1.77" /></svg>
-                  <span>浅色</span>
+                  <span data-i18n="appearance.light" data-i18n-zh="浅色">浅色</span>
                 </button>
                 <button class="mode-btn" type="button" data-mode="dark" aria-pressed="false">
                   <svg class="icon" viewBox="0 0 24 24" width="16" height="16" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z" /></svg>
-                  <span>深色</span>
+                  <span data-i18n="appearance.dark" data-i18n-zh="深色">深色</span>
                 </button>
               </div>
             </div>
             <div class="ap-section">
-              <div class="ap-title">主题色</div>
+              <div class="ap-title" data-i18n="appearance.accent" data-i18n-zh="主题色">主题色</div>
               <div class="swatch-row" role="group" aria-label="主题色切换">
                 <button class="swatch is-active" type="button" data-accent="violet" style="--sw:#7c4df0" aria-label="紫色主题" aria-pressed="true"></button>
                 <button class="swatch" type="button" data-accent="blue" style="--sw:#3a7bff" aria-label="蓝色主题" aria-pressed="false"></button>
@@ -141,7 +166,7 @@ const showFloatContact =
     </main>
     <footer class="site-footer">
       <span>{footerText}</span>
-      <a class="footer-admin" href="/keystatic">管理后台</a>
+      <a class="footer-admin" href="/keystatic" data-i18n="footer.admin" data-i18n-zh="管理后台">管理后台</a>
     </footer>
     {showFloatContact && (
       <div class="float-cluster" id="float-cluster">
@@ -161,7 +186,7 @@ const showFloatContact =
         }
         <a class="float-contact" id="float-contact" href="/contact" aria-label="联系我们">
           <svg class="fc-icon" viewBox="0 0 24 24" width="22" height="22" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 11.5a8.4 8.4 0 0 1-9 8.4 9.7 9.7 0 0 1-2.8-.4L4 21l1.4-4.2A8.4 8.4 0 0 1 3 11.5 8.4 8.4 0 0 1 12 3a8.4 8.4 0 0 1 9 8.5z" /><path d="M8.5 10.4h7M8.5 13.4h4" /></svg>
-          <span class="fc-label">联系我们</span>
+          <span class="fc-label" data-i18n="float.contact" data-i18n-zh="联系我们">联系我们</span>
         </a>
       </div>
     )}
@@ -255,6 +280,69 @@ const showFloatContact =
         }
         window.addEventListener('scroll', onScroll, { passive: true });
         onScroll();
+      })();
+    </script>
+    <script is:inline type="application/json" id="i18n-data" set:html={I18N_EMBED_JSON}></script>
+    <script is:inline>
+      // 多语言外壳切换（T10）：从 localStorage.lang 读取偏好，替换 [data-i18n] 文案。
+      // 当前静态站仅有中文内容页，切换器先本地化界面外壳（导航/搜索/外观/页脚/悬浮）。
+      (function () {
+        var dataEl = document.getElementById('i18n-data');
+        var I18N = dataEl ? JSON.parse(dataEl.textContent || '{}') : {};
+        function applyI18n(lang, htmlLang) {
+          var dict = lang && lang !== 'zh-CN' && I18N[lang] ? I18N[lang] : null;
+          document.querySelectorAll('[data-i18n]').forEach(function (el) {
+            var key = el.getAttribute('data-i18n');
+            var zh = el.getAttribute('data-i18n-zh') || '';
+            var txt = (dict && dict[key]) ? dict[key] : zh;
+            if (!txt) return;
+            if (el.tagName === 'INPUT') el.placeholder = txt;
+            else el.textContent = txt;
+          });
+          document.documentElement.setAttribute('lang', htmlLang || (lang === 'zh-CN' ? 'zh-CN' : lang));
+        }
+        function paintLang() {
+          var cur = localStorage.getItem('lang') || 'zh-CN';
+          document.querySelectorAll('.lang-opt').forEach(function (b) {
+            var on = b.getAttribute('data-lang') === cur;
+            b.classList.toggle('is-active', on);
+            b.setAttribute('aria-checked', on ? 'true' : 'false');
+          });
+        }
+        // 初次应用：若用户之前选过非默认语言，直接替换外壳文案
+        var saved = (function () { try { return localStorage.getItem('lang'); } catch (e) { return null; } })();
+        if (saved && saved !== 'zh-CN') {
+          var savedBtn = document.querySelector('.lang-opt[data-lang="' + saved + '"]');
+          var savedHtml = savedBtn ? savedBtn.getAttribute('data-html') : saved;
+          applyI18n(saved, savedHtml);
+        }
+        paintLang();
+
+        // 切换器交互
+        var langBtn = document.getElementById('lang-btn');
+        var langPop = document.getElementById('lang-pop');
+        if (langBtn && langPop) {
+          function openLang() { langPop.classList.add('is-open'); langBtn.setAttribute('aria-expanded', 'true'); }
+          function closeLang() { langPop.classList.remove('is-open'); langBtn.setAttribute('aria-expanded', 'false'); }
+          langBtn.addEventListener('click', function (e) {
+            e.stopPropagation();
+            if (langPop.classList.contains('is-open')) closeLang(); else openLang();
+          });
+          document.addEventListener('click', function (e) {
+            if (langPop.classList.contains('is-open') && !langPop.contains(e.target) && e.target !== langBtn) closeLang();
+          });
+          document.addEventListener('keydown', function (e) { if (e.key === 'Escape') closeLang(); });
+          langPop.querySelectorAll('.lang-opt').forEach(function (b) {
+            b.addEventListener('click', function () {
+              var code = b.getAttribute('data-lang');
+              var html = b.getAttribute('data-html') || code;
+              try { localStorage.setItem('lang', code); } catch (e) {}
+              applyI18n(code, html);
+              paintLang();
+              closeLang();
+            });
+          });
+        }
       })();
     </script>
     <style is:global>
@@ -640,6 +728,32 @@ const showFloatContact =
       .swatch:hover { transform: scale(1.14); }
       .swatch.is-active { box-shadow: 0 0 0 2px var(--bg), 0 0 0 4px var(--accent); }
       .swatch:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+      /* 语言切换器（复用 appearance-pop 弹层样式） */
+      .lang-wrap { position: relative; flex: none; }
+      .lang-pop { width: 172px; gap: 4px; }
+      .lang-opt {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 10px;
+        width: 100%;
+        padding: 8px 10px;
+        border: 0;
+        border-radius: var(--r-sm);
+        background: transparent;
+        color: var(--fg-soft);
+        font: inherit;
+        font-size: 14px;
+        cursor: pointer;
+        text-align: left;
+        transition: color var(--dur) var(--ease), background var(--dur) var(--ease);
+      }
+      .lang-opt:hover { background: var(--surface-2); color: var(--accent); }
+      .lang-opt.is-active { background: var(--accent-soft); color: var(--accent-strong); }
+      .lang-opt .lang-code { font-size: 11px; color: var(--faint); }
+      .lang-opt.is-active .lang-code { color: var(--accent-strong); }
+      .lang-opt:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
 
       /* 主题切换时的平滑过渡 */
       body { transition: background-color 0.2s var(--ease), color 0.2s var(--ease); }

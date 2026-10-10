@@ -46,6 +46,15 @@ const rest = withMeta.filter((p) => p.slug !== featured?.slug);
 const { site: siteInfo, categories: managedCategories, categoryLabel, tagLabel, tags } =
   await loadSiteData();
 
+// T11：首页新增「解决方案」引导区，串联 文章→产品→案例→询盘 内链闭环，
+// 卡片展示真实条目数（来自后台集合），锚文本使用描述性文案以利 SEO 内部链接。
+let productSlugs = [];
+let caseSlugs = [];
+try { productSlugs = await reader.collections.products.list(); } catch (e) {}
+try { caseSlugs = await reader.collections.cases.list(); } catch (e) {}
+const productCount = productSlugs.length;
+const caseCount = caseSlugs.length;
+
 // 只列出实际有文章的分类/标签，避免出现点进去是空的筛选项
 const categories = buildFilterOptions(withMeta, managedCategories);
 const usedTags = tags.filter((t) => withMeta.some((p) => (p.tags ?? []).includes(t.value)));
@@ -97,13 +106,55 @@ const jsonLd = {
   <section class="hero">
     <div class="hero-glow" aria-hidden="true"></div>
     <div class="hero-inner">
-      <span class="hero-eyebrow">独立创作 · 技术与思考</span>
+      <span class="hero-eyebrow">工业胶粘剂与密封剂 · 选型 · 技术 · 询盘</span>
       <h1 class="hero-title">{siteInfo.title}</h1>
-      <p class="hero-sub">{siteInfo.tagline || '记录技术、实践与思考的独立空间。写代码，也写字。'}</p>
+      <p class="hero-sub">{siteInfo.tagline || '面向工业胶粘剂与密封剂行业的垂直平台：产品数据库、在线选型、技术文章与客户案例，支持多语言与在线询盘。'}</p>
       <div class="hero-actions">
-        <a class="btn btn-light" href="#latest">开始阅读</a>
-        <a class="btn btn-outline-light" href="/posts">全部分类</a>
+        <a class="btn btn-light" href="#solutions">探索解决方案</a>
+        <a class="btn btn-outline-light" href="/contact">联系我们报价</a>
       </div>
+    </div>
+  </section>
+
+  {/* T11：解决方案引导区 —— 串联 文章→产品→案例→询盘 内链闭环 */}
+  <section class="block" id="solutions">
+    <div class="section-head">
+      <h2>解决方案</h2>
+      <p>从产品选型到落地应用，一站式找到适合的胶粘剂方案</p>
+    </div>
+    <div class="sol-cards">
+      <a class="sol-card" href="/products">
+        <span class="sol-icon" style="--sol:#7c4df0" aria-hidden="true">
+          <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z" /><path d="M3.27 6.96 12 12.01l8.73-5.05M12 22.08V12" /></svg>
+        </span>
+        <h3>产品数据库</h3>
+        <p>按化学体系、固化方式与认证筛选工业胶粘剂与密封剂，查看关键参数与文档。</p>
+        <span class="sol-cta">浏览工业胶粘剂产品库（{productCount} 款） →</span>
+      </a>
+      <a class="sol-card" href="/selector">
+        <span class="sol-icon" style="--sol:#18a06a" aria-hidden="true">
+          <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="4" y1="21" x2="4" y2="14" /><line x1="4" y1="10" x2="4" y2="3" /><line x1="12" y1="21" x2="12" y2="12" /><line x1="12" y1="8" x2="12" y2="3" /><line x1="20" y1="21" x2="20" y2="16" /><line x1="20" y1="12" x2="20" y2="3" /><line x1="1" y1="14" x2="7" y2="14" /><line x1="9" y1="8" x2="15" y2="8" /><line x1="17" y1="16" x2="23" y2="16" /></svg>
+        </span>
+        <h3>在线选型工具</h3>
+        <p>根据应用场景、固化需求与基材自动推荐匹配的胶型，快速缩小选型范围。</p>
+        <span class="sol-cta">使用在线选型工具 →</span>
+      </a>
+      <a class="sol-card" href="/cases">
+        <span class="sol-icon" style="--sol:#f0883e" aria-hidden="true">
+          <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9H4.5a2.5 2.5 0 0 1 0-5H6m0 5h12m0 0h1.5a2.5 2.5 0 0 0 0-5H18m0 5v3a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2V9m0 0V6a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v3" /><path d="M9 17l3 3 3-3" /></svg>
+        </span>
+        <h3>客户案例库</h3>
+        <p>看同行如何在新能源、电子、汽车等场景落地胶粘剂方案与选型结果。</p>
+        <span class="sol-cta">查看客户应用案例（{caseCount} 个） →</span>
+      </a>
+      <a class="sol-card" href="/contact">
+        <span class="sol-icon" style="--sol:#3a7bff" aria-hidden="true">
+          <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 11.5a8.4 8.4 0 0 1-9 8.4 9.7 9.7 0 0 1-2.8-.4L4 21l1.4-4.2A8.4 8.4 0 0 1 3 11.5 8.4 8.4 0 0 1 12 3a8.4 8.4 0 0 1 9 8.5z" /><path d="M8.5 10.4h7M8.5 13.4h4" /></svg>
+        </span>
+        <h3>联系与询盘</h3>
+        <p>提供应用场景与技术要求，获取针对性选型建议、样品与技术文档。</p>
+        <span class="sol-cta">获取选型建议与报价 →</span>
+      </a>
     </div>
   </section>
 
@@ -229,15 +280,16 @@ const jsonLd = {
           </section>
         )}
 
-        {/* 关于本站：整幅色带 */}
+        {/* 关于本站 + 询盘闭环：引导从内容/案例走向联系页 */}
         <section class="band">
           <div class="band-inner">
             <div class="section-head">
-              <h2>关于本站</h2>
-              <p>{siteInfo.description || '记录技术、实践与思考的独立空间。'}</p>
+              <h2>需要选型建议？</h2>
+              <p>{siteInfo.description || '面向工业胶粘剂与密封剂行业的垂直平台，提供产品、选型、技术与案例。'}</p>
             </div>
             <div class="band-actions">
-              <a class="btn btn-primary" href="/posts">浏览全部文章</a>
+              <a class="btn btn-primary" href="/contact">联系我们获取报价</a>
+              <a class="btn" href="/posts">浏览技术文章</a>
             </div>
           </div>
         </section>
@@ -426,6 +478,58 @@ const jsonLd = {
     grid-template-columns: repeat(auto-fill, minmax(196px, 1fr));
     gap: 18px;
   }
+
+  /* T11：解决方案引导卡片 */
+  .sol-cards {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+    gap: 18px;
+  }
+  .sol-card {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    padding: 24px;
+    border: 1px solid var(--border);
+    border-radius: var(--r-lg);
+    background: var(--surface);
+    box-shadow: var(--shadow-sm);
+    text-decoration: none;
+    color: var(--fg-soft);
+    transition: transform var(--dur) var(--ease), box-shadow var(--dur) var(--ease),
+      border-color var(--dur) var(--ease);
+  }
+  .sol-card:hover {
+    transform: translateY(-4px);
+    box-shadow: var(--shadow-md);
+    border-color: var(--border-strong);
+    text-decoration: none;
+  }
+  .sol-icon {
+    width: 44px;
+    height: 44px;
+    border-radius: 12px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    background: color-mix(in srgb, var(--sol, var(--accent)) 16%, transparent);
+    color: var(--sol, var(--accent));
+    margin-bottom: 4px;
+  }
+  .sol-card h3 { margin: 0; font-size: 18px; font-weight: 700; color: var(--fg); }
+  .sol-card p { margin: 0; font-size: 13.5px; color: var(--muted); line-height: 1.7; }
+  .sol-cta {
+    margin-top: auto;
+    padding-top: 6px;
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--accent);
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    transition: gap var(--dur) var(--ease);
+  }
+  .sol-card:hover .sol-cta { gap: 10px; }
 
   /* 排序栏 */
   .sort-bar { display: flex; align-items: center; justify-content: center; gap: 8px; margin: -12px 0 26px; }

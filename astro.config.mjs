@@ -16,6 +16,15 @@ export default defineConfig({
   site: import.meta.env.PUBLIC_SITE_URL || 'https://tackix.pages.dev',
   output: 'static',
   adapter: cloudflare(),
+  // 多语言（T10 脚手架）：声明支持语种，为后续 /en /vi /th 内容路由与
+  // SEO hreflang 备用链接预留。当前静态站尚未生成非默认语种内容页，
+  // 默认语种不加路径前缀（prefixDefaultLocale:false），外壳 UI 文案由
+  // Base.astro 的客户端切换器做 localStorage 偏好替换。
+  i18n: {
+    defaultLocale: 'zh-CN',
+    locales: ['zh-CN', 'en', 'vi', 'th'],
+    routing: { prefixDefaultLocale: false },
+  },
   integrations: [
     react(),
     keystatic(), // 注入 /keystatic 后台与 /api/keystatic/* 接口
