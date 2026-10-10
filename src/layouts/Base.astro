@@ -32,6 +32,16 @@ function isActive(href: string) {
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <script is:inline>
+      (function () {
+        try {
+          var t = localStorage.getItem('theme');
+          if (t === 'light' || t === 'dark') {
+            document.documentElement.setAttribute('data-theme', t);
+          }
+        } catch (e) {}
+      })();
+    </script>
     <meta name="description" content={description ?? site.description} />
     <meta name="theme-color" content="#ffffff" media="(prefers-color-scheme: light)" />
     <meta name="theme-color" content="#12101c" media="(prefers-color-scheme: dark)" />
@@ -61,19 +71,31 @@ function isActive(href: string) {
         <img src="/favicon.svg" alt="" width="26" height="26" />
         <span>{siteTitle}</span>
       </a>
-      <nav aria-label="主导航">
-        {
-          navItems.map((item) => (
-            <a
-              href={item.href}
-              class={isActive(item.href) ? 'is-active' : ''}
-              aria-current={isActive(item.href) ? 'page' : undefined}
-            >
-              {item.label}
-            </a>
-          ))
-        }
-      </nav>
+      <div class="header-right">
+        <nav aria-label="主导航">
+          {
+            navItems.map((item) => (
+              <a
+                href={item.href}
+                class={isActive(item.href) ? 'is-active' : ''}
+                aria-current={isActive(item.href) ? 'page' : undefined}
+              >
+                {item.label}
+              </a>
+            ))
+          }
+        </nav>
+        <button
+          id="theme-toggle"
+          class="theme-toggle"
+          type="button"
+          aria-label="切换深色 / 浅色模式"
+          aria-pressed="false"
+        >
+          <svg class="icon icon-moon" viewBox="0 0 24 24" width="20" height="20" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z" /></svg>
+          <svg class="icon icon-sun" viewBox="0 0 24 24" width="20" height="20" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="4.2" /><path d="M12 2v2.5M12 19.5V22M4.22 4.22l1.77 1.77M18.01 18.01l1.77 1.77M2 12h2.5M19.5 12H22M4.22 19.78l1.77-1.77M18.01 5.99l1.77-1.77" /></svg>
+        </button>
+      </div>
     </header>
     <main class="container">
       <slot />
@@ -81,6 +103,36 @@ function isActive(href: string) {
     <footer class="site-footer">
       <span>{footerText}</span>
     </footer>
+    <script is:inline>
+      (function () {
+        var root = document.documentElement;
+        var btn = document.getElementById('theme-toggle');
+        if (!btn) return;
+        var mq = window.matchMedia('(prefers-color-scheme: dark)');
+        function effective() {
+          var t = root.getAttribute('data-theme');
+          return t ? t : (mq.matches ? 'dark' : 'light');
+        }
+        function paint() {
+          var dark = effective() === 'dark';
+          btn.classList.toggle('is-dark', dark);
+          btn.setAttribute('aria-pressed', dark ? 'true' : 'false');
+          btn.setAttribute('aria-label', dark ? '切换到浅色模式' : '切换到深色模式');
+          var meta = document.querySelector('meta[name="theme-color"]');
+          if (meta) meta.setAttribute('content', dark ? '#12101c' : '#ffffff');
+        }
+        btn.addEventListener('click', function () {
+          var next = effective() === 'dark' ? 'light' : 'dark';
+          root.setAttribute('data-theme', next);
+          try { localStorage.setItem('theme', next); } catch (e) {}
+          paint();
+        });
+        if (mq.addEventListener) mq.addEventListener('change', function () {
+          if (!root.getAttribute('data-theme')) paint();
+        });
+        paint();
+      })();
+    </script>
     <style is:global>
       :root {
         /* 表面层次 */
@@ -150,8 +202,9 @@ function isActive(href: string) {
         --dur: 0.18s;
       }
 
+      /* 系统偏好为暗、且用户未显式选浅色时生效（自动模式） */
       @media (prefers-color-scheme: dark) {
-        :root {
+        :root:not([data-theme='light']) {
           --bg: #12101c;
           --surface: #191624;
           --surface-2: #201c2e;
@@ -185,6 +238,42 @@ function isActive(href: string) {
           --shadow-lg: 0 20px 48px rgba(0, 0, 0, 0.55);
           --shadow-accent: 0 10px 26px rgba(124, 77, 240, 0.4);
         }
+      }
+
+      /* 用户手动强制暗色（覆盖系统偏好） */
+      :root[data-theme='dark'] {
+        --bg: #12101c;
+        --surface: #191624;
+        --surface-2: #201c2e;
+        --surface-3: #16131f;
+        --band: #16131f;
+
+        --fg: #ece9f5;
+        --fg-soft: #c7c2d6;
+        --muted: #9c97ab;
+        --faint: #6f6a80;
+
+        --accent: #a880ff;
+        --accent-strong: #c0a4ff;
+        --accent-soft: #241a3d;
+        --on-accent: #12101c;
+
+        --hero-grad: radial-gradient(120% 120% at 80% 0%, #7c4df0 0%, transparent 55%),
+          radial-gradient(90% 90% at 0% 100%, #4a2597 0%, transparent 55%),
+          linear-gradient(135deg, #1a0f3d 0%, #2c1a66 55%, #452090 100%);
+
+        --success: #4ec585;
+        --success-bg: #14261b;
+        --danger: #ef6f64;
+        --danger-bg: #2a1715;
+
+        --border: #2b2740;
+        --border-strong: #3a3550;
+
+        --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.3);
+        --shadow-md: 0 8px 22px rgba(0, 0, 0, 0.4);
+        --shadow-lg: 0 20px 48px rgba(0, 0, 0, 0.55);
+        --shadow-accent: 0 10px 26px rgba(124, 77, 240, 0.4);
       }
 
       * { box-sizing: border-box; }
@@ -241,6 +330,35 @@ function isActive(href: string) {
         background: var(--strip);
         opacity: 0.9;
       }
+      .header-right { display: flex; align-items: center; gap: 10px; }
+
+      /* 主题切换按钮 */
+      .theme-toggle {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        width: 38px;
+        height: 38px;
+        padding: 0;
+        flex: none;
+        border: 1px solid var(--border-strong);
+        border-radius: var(--r-pill);
+        background: var(--surface);
+        color: var(--fg-soft);
+        cursor: pointer;
+        transition: color var(--dur) var(--ease), border-color var(--dur) var(--ease),
+          background var(--dur) var(--ease), transform var(--dur) var(--ease);
+      }
+      .theme-toggle:hover { color: var(--accent); border-color: var(--accent); background: var(--accent-soft); }
+      .theme-toggle:active { transform: translateY(1px); }
+      .theme-toggle .icon { width: 19px; height: 19px; }
+      .theme-toggle .icon-sun { display: none; }
+      .theme-toggle.is-dark .icon-moon { display: none; }
+      .theme-toggle.is-dark .icon-sun { display: block; }
+
+      /* 主题切换时的平滑过渡 */
+      body { transition: background-color 0.2s var(--ease), color 0.2s var(--ease); }
+      .site-header { transition: background-color 0.2s var(--ease), border-color 0.2s var(--ease); }
       .brand {
         display: inline-flex;
         align-items: center;
@@ -557,6 +675,7 @@ function isActive(href: string) {
       /* ---------- 移动端 ---------- */
       @media (max-width: 700px) {
         .site-header { flex-direction: column; align-items: stretch; gap: 6px; padding: 12px 16px; }
+        .header-right { flex-wrap: wrap; justify-content: center; width: 100%; gap: 8px; }
         nav { flex-wrap: wrap; gap: 2px; }
         nav a { padding: 7px 12px; }
         .container { padding: 28px 16px 60px; }
