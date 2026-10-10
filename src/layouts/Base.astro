@@ -76,7 +76,9 @@ const showFloatContact =
       </a>
       <div class="header-right">
         <form class="header-search" role="search" action="/search" method="get">
-          <svg class="hs-icon" viewBox="0 0 24 24" width="16" height="16" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7" /><path d="M21 21l-4.35-4.35" /></svg>
+          <button type="submit" class="hs-submit" aria-label="搜索">
+            <svg class="hs-icon" viewBox="0 0 24 24" width="16" height="16" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7" /><path d="M21 21l-4.35-4.35" /></svg>
+          </button>
           <input class="hs-input" type="search" name="q" placeholder="搜索…" aria-label="站内搜索" enterkeyhint="search" />
         </form>
         <nav aria-label="主导航">
@@ -502,6 +504,21 @@ const showFloatContact =
         box-shadow: 0 0 0 3px var(--accent-soft);
       }
       .header-search .hs-icon { width: 16px; height: 16px; flex: none; color: var(--muted); }
+      /* 放大镜图标改为可点击的提交按钮：外观不变，但点击/回车均可触发搜索 */
+      .header-search .hs-submit {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        padding: 2px;
+        border: 0;
+        background: transparent;
+        color: var(--muted);
+        cursor: pointer;
+        border-radius: 50%;
+        transition: color var(--dur) var(--ease);
+      }
+      .header-search .hs-submit:hover { color: var(--accent); }
+      .header-search .hs-submit:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
       .header-search .hs-input {
         border: 0;
         outline: 0;
