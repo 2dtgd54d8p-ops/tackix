@@ -71,9 +71,26 @@ const alternates = [
   { lang: 'en', href: `/en/cases/${slug}/` },
   { lang: 'x-default', href: `/en/cases/${slug}/` },
 ];
+
+// Article JSON-LD（英文案例页）
+const caseSchema = {
+  '@context': 'https://schema.org',
+  '@type': 'Article',
+  headline: title,
+  description: excerpt,
+  articleSection: caseData.scenario ? SCN_EN[caseData.scenario] ?? scenarioLabel(caseData.scenario) : undefined,
+  inLanguage: 'en',
+  author: { '@type': 'Organization', name: 'Tackix' },
+  publisher: { '@type': 'Organization', name: 'Tackix' },
+  mainEntityOfPage: `https://tackix.pages.dev/en/cases/${slug}/`,
+};
 ---
 
 <Base title={title} description={excerpt} alternates={alternates} locale="en_US">
+  <Fragment slot="head">
+    <script type="application/ld+json" set:html={JSON.stringify(caseSchema)} />
+  </Fragment>
+
   <section>
     <a class="en-back" href="/en/cases/">← All Case Studies</a>
 
