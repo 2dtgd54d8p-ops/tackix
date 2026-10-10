@@ -16,7 +16,6 @@ const path = Astro.url.pathname;
 const navItems = [
   { href: '/', label: '首页' },
   { href: '/posts', label: '文章' },
-  { href: '/search', label: '搜索' },
   { href: '/contact', label: '联系' },
   { href: '/keystatic', label: '管理后台' },
 ];
@@ -90,6 +89,10 @@ const showFloatContact =
             ))
           }
         </nav>
+        <form class="header-search" role="search" action="/search" method="get">
+          <svg class="hs-icon" viewBox="0 0 24 24" width="16" height="16" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7" /><path d="M21 21l-4.35-4.35" /></svg>
+          <input class="hs-input" type="search" name="q" placeholder="搜索…" aria-label="站内搜索" enterkeyhint="search" />
+        </form>
         <div class="appearance-wrap">
           <button
             id="appearance-btn"
@@ -478,6 +481,39 @@ const showFloatContact =
         opacity: 0.9;
       }
       .header-right { display: flex; align-items: center; gap: 10px; }
+
+      /* 顶部常驻搜索栏 */
+      .header-search {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        height: 38px;
+        padding: 0 12px;
+        border: 1px solid var(--border-strong);
+        border-radius: var(--r-pill);
+        background: var(--surface-2);
+        color: var(--muted);
+        transition: border-color var(--dur) var(--ease), background var(--dur) var(--ease),
+          box-shadow var(--dur) var(--ease);
+      }
+      .header-search:focus-within {
+        border-color: var(--accent);
+        background: var(--surface);
+        box-shadow: 0 0 0 3px var(--accent-soft);
+      }
+      .header-search .hs-icon { width: 16px; height: 16px; flex: none; color: var(--muted); }
+      .header-search .hs-input {
+        border: 0;
+        outline: 0;
+        background: transparent;
+        color: var(--fg);
+        font: inherit;
+        font-size: 14px;
+        width: 150px;
+        padding: 0;
+      }
+      .header-search .hs-input::placeholder { color: var(--faint); }
+      .header-search .hs-input::-webkit-search-cancel-button { -webkit-appearance: none; }
 
       /* 外观设置（调色板按钮 + 弹层） */
       .appearance-wrap { position: relative; flex: none; }
@@ -942,6 +978,8 @@ const showFloatContact =
         }
         .float-contact .fc-label { max-width: 120px; opacity: 1; margin-left: 8px; }
         .header-right { flex-wrap: wrap; justify-content: center; width: 100%; gap: 8px; }
+        .header-search { width: 100%; max-width: 360px; }
+        .header-search .hs-input { width: 100%; }
         nav { flex-wrap: wrap; gap: 2px; }
         nav a { padding: 7px 12px; }
         .container { padding: 28px 16px 60px; }
