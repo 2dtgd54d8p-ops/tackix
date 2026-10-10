@@ -86,9 +86,45 @@ const alternates = [
   { lang: 'en', href: `/en/products/${product.slug ?? slug}/` },
   { lang: 'x-default', href: `/en/products/${product.slug ?? slug}/` },
 ];
+
+// Product JSON-LD（英文版）——与中文页等价，保证 Google 购物/富结果可用。
+// 价格刻意不写（站点不标价，offers 指向 /en/contact 询盘），符合 B2B 询盘制做法。
+const productSchema = {
+  '@context': 'https://schema.org',
+  '@type': 'Product',
+  name,
+  model: product.model ?? undefined,
+  description: excerpt,
+  sku: product.model || slug || undefined,
+  category: product.category ? productCategoryLabel(product.category) : undefined,
+  url: `https://tackix.pages.dev/en/products/${slug}/`,
+  ...(certs.length ? { certification: certs.map((c) => certLabel(c)).filter(Boolean) } : {}),
+  additionalProperty: [
+    product.baseMaterial && { propertyID: 'substrates', name: 'Substrates', value: product.baseMaterial },
+    product.displacement && { propertyID: 'gap', name: 'Gap / Bond Line', value: product.displacement },
+    product.tempRange && { propertyID: 'temperature', name: 'Temperature Range', value: product.tempRange },
+    product.viscosity && { propertyID: 'viscosity', name: 'Viscosity', value: product.viscosity },
+    product.cureType && { propertyID: 'cure', name: 'Cure Mechanism', value: cureLabel(product.cureType) },
+    product.scenario && { propertyID: 'application', name: 'Application', value: scenarioLabel(product.scenario) },
+  ].filter(Boolean),
+  offers: {
+    '@type': 'Offer',
+    availability: 'https://schema.org/InStock',
+    priceSpecification: { '@type': 'PriceSpecification', valueAddedTaxIncluded: false },
+    url: `https://tackix.pages.dev/en/contact/`,
+    // 不标价：引导询盘而非直接购买
+    price: '0',
+    priceCurrency: 'USD',
+    description: 'Contact us for quotation',
+  },
+};
 ---
 
 <Base title={name} description={excerpt} alternates={alternates} locale="en_US">
+  <Fragment slot="head">
+    <script type="application/ld+json" set:html={JSON.stringify(productSchema)} />
+  </Fragment>
+
   <section>
     <a class="en-back" href="/en/products/">{T.back}</a>
 
