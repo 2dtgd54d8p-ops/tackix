@@ -12,6 +12,9 @@ interface Props {
   locale?: string;
 }
 const { title, description, alternates, locale } = Astro.props;
+// 预上线闸门：未正式上线时全站输出 noindex 并显示顶部提示条
+import { prelaunchBanner } from '../lib/prelaunch';
+const prelaunchNotice = prelaunchBanner();
 // 站名/描述/页脚统一读后台「站点信息」singleton，读不到自动回落默认值。
 const { site } = await loadSiteData();
 const siteTitle = site.title;
@@ -165,6 +168,14 @@ const showFloatContact =
         </div>
       </div>
     </header>
+    {
+      prelaunchNotice && (
+        <aside class="prelaunch-bar" role="status">
+          <strong>{prelaunchNotice.title}</strong>
+          <span>{prelaunchNotice.body}</span>
+        </aside>
+      )
+    }
     <main class="container">
       <slot />
     </main>
@@ -762,6 +773,19 @@ const showFloatContact =
       /* 主题切换时的平滑过渡 */
       body { transition: background-color 0.2s var(--ease), color 0.2s var(--ease); }
       .site-header { transition: background-color 0.2s var(--ease), border-color 0.2s var(--ease); }
+
+      /* ── 预上线提示条（prelaunch）────────────────────────────────
+         未正式上线时显示，明确告知访客这是预览版本，避免被误当作
+         已正式提供的商业服务；正式上线后（prelaunch.ts 开关）自动消失。 */
+      .prelaunch-bar {
+        display: flex; flex-wrap: wrap; align-items: baseline; gap: 8px;
+        padding: 10px 24px; text-align: center;
+        background: color-mix(in srgb, var(--accent) 12%, var(--bg));
+        border-bottom: 1px solid var(--border);
+        font-size: 13.5px; line-height: 1.6;
+        color: var(--fg-soft);
+      }
+      .prelaunch-bar strong { color: var(--accent); font-weight: 600; }
       .brand {
         display: inline-flex;
         align-items: center;
