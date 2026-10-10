@@ -197,47 +197,53 @@ import Base from '../../layouts/Base.astro';
 </script>
 
 <style>
-  .hint { color: #6b7280; font-size: 14px; }
-  .status { font-size: 14px; min-height: 20px; margin: 0; }
-  .status.err { color: #c0392b; }
-  code { background: #f3f4f6; padding: 1px 5px; border-radius: 4px; font-size: 13px; }
+  code { background: var(--surface-2); padding: 1px 6px; border-radius: 4px; font-size: 13px; font-family: var(--font-mono); color: var(--fg-soft); }
 
   .gate-form { display: flex; gap: 10px; margin-top: 14px; }
   .gate-form input {
-    font: inherit; padding: 8px 10px; border: 1px solid #e5e7eb;
-    border-radius: 6px; background: #fff; color: #1f2328; min-width: 260px;
+    font: inherit; padding: 10px 12px; border: 1px solid var(--border-strong);
+    border-radius: var(--r-sm); background: var(--surface); color: var(--fg); min-width: 260px;
+    transition: border-color var(--dur) var(--ease), box-shadow var(--dur) var(--ease);
   }
+  .gate-form input:focus { outline: none; border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-soft); }
+
   .gate-form button, .toolbar button {
-    font: inherit; padding: 8px 16px; border: 0; border-radius: 6px;
-    background: #185fa5; color: #fff; cursor: pointer;
+    font: inherit; padding: 9px 18px; border: 1px solid transparent; border-radius: var(--r-sm);
+    background: var(--accent); color: var(--on-accent); cursor: pointer; font-size: 14px;
+    transition: background var(--dur) var(--ease), border-color var(--dur) var(--ease), color var(--dur) var(--ease);
   }
+  .gate-form button:hover, .toolbar button:hover { background: var(--accent-strong); }
+
   .toolbar button.ghost {
-    background: #fff; color: #374151; border: 1px solid #e5e7eb;
+    background: var(--surface); color: var(--fg-soft); border: 1px solid var(--border-strong);
   }
+  .toolbar button.ghost:hover { border-color: var(--accent); color: var(--accent); }
+
   .toolbar {
     display: flex; align-items: center; gap: 10px;
-    margin: 18px 0 10px; padding-bottom: 10px; border-bottom: 1px solid #e5e7eb;
+    margin: 18px 0 10px; padding-bottom: 10px; border-bottom: 1px solid var(--border);
   }
-  .summary { color: #6b7280; font-size: 13px; margin-right: auto; }
+  .summary { color: var(--muted); font-size: 13px; margin-right: auto; }
 
   .list { display: flex; flex-direction: column; gap: 12px; }
-  .empty { color: #6b7280; padding: 32px 0; text-align: center; }
   .card {
-    border: 1px solid #e5e7eb; border-radius: 8px;
-    padding: 14px 16px; background: #fff;
+    border: 1px solid var(--border); border-radius: var(--r-md);
+    padding: 14px 16px; background: var(--surface);
   }
   .card-head {
     display: flex; align-items: center; gap: 12px;
     flex-wrap: wrap; font-size: 13px;
   }
-  .who { font-weight: 600; color: #1f2328; }
-  .mail { color: #185fa5; }
-  .time { color: #6b7280; margin-right: auto; }
+  .who { font-weight: 600; color: var(--fg); }
+  .mail { color: var(--accent); }
+  .mail:hover { color: var(--accent-strong); }
+  .time { color: var(--muted); margin-right: auto; }
   .del {
     font: inherit; font-size: 12px; padding: 4px 10px;
-    border: 1px solid #e5e7eb; border-radius: 5px;
-    background: #fff; color: #c0392b; cursor: pointer;
+    border: 1px solid var(--border-strong); border-radius: var(--r-sm);
+    background: var(--surface); color: var(--danger); cursor: pointer;
+    transition: background var(--dur) var(--ease), border-color var(--dur) var(--ease);
   }
-  .del:hover { background: #fef2f2; }
-  .msg { margin-top: 8px; color: #1f2328; white-space: normal; word-break: break-word; }
+  .del:hover { background: var(--danger-bg); border-color: var(--danger); }
+  .msg { margin-top: 8px; color: var(--fg-soft); white-space: normal; word-break: break-word; }
 </style>
