@@ -1,4 +1,5 @@
 import type { APIRoute } from 'astro';
+import { isPreLaunch } from '../../lib/prelaunch';
 
 // 这是一个服务端接口（Cloudflare Pages Functions），不是静态页。
 // 依赖：Cloudflare Pages → Settings → Functions 里把 D1 绑定到变量名 **DB**。
@@ -11,6 +12,24 @@ const json = (data: unknown, status = 200) =>
   });
 
 type Row = { name: string; email: string; message: string };
+
+/**
+ * 询盘通道闸门。
+ * 优先看 Cloudflare 环境变量 `CONTACT_OPEN`：设为 '0'/'false'/'off' 时**关闭**；
+ * 未设置则回落到 `PUBLIC_PRELAUNCH`（构建期注入），
+ * 再回落到 src/lib/prelaunch.ts 的默认（当前 = 预上线，关闭）。
+ *
+ * 之所以服务端单独判一次：SEO 层的 noindex 是构建期决定的，而这里是请求期，
+ * 两者必须一致，否则会出现「页面已声明未收录但接口仍在收数据」的错配。
+ */
+function isContactOpen(env: any): boolean {
+  const OFF = new Set(['0', 'false', 'off', 'no', '']);
+  const explicit = env?.CONTACT_OPEN;
+  if (explicit !== undefined && explicit !== null && String(explicit).trim() !== '') {
+    return !OFF.has(String(explicit).trim().toLowerCase());
+  }
+  return !isPreLaunch();
+}
 
 /**
  * 可选：邮件通知（Resend）。
@@ -129,6 +148,23 @@ export const POST: APIRoute = async ({ request, locals }) => {
           },
         })
       : rawEnv;
+
+    // ── 预上线闸门 ────────────────────────────────────────────────
+    // 未正式上线时**不写库、不发信、不发 webhook**，只回一个「预留」应答。
+    // 原因：邮件与 D1 都是真实通道，预上线期间的演示/测试提交会污染
+    // 真实询盘线索。正式上线时把 CONTACT_OPEN（或 PUBLIC_PRELAUNCH）
+    // 设为 '0' 即自动恢复，无需改代码。详见 src/lib/prelaunch.ts
+    if (!isContactOpen(env)) {
+      return json(
+        {
+          ok: true,
+          prelaunch: true,
+          error: '本站尚未正式发布，暂不接收在线询盘。请稍后再试或直接邮件联系我们。',
+        },
+        200
+      );
+    }
+
     const db = env?.DB;
     if (!db) {
       return json(
