@@ -129,7 +129,7 @@ const jsonLd = {
         </span>
         <h3>产品数据库</h3>
         <p>按化学体系、固化方式与认证筛选工业胶粘剂与密封剂，查看关键参数与文档。</p>
-        <span class="sol-cta">浏览工业胶粘剂产品库（{productCount} 款） →</span>
+        <span class="sol-cta">浏览胶粘剂产品库（{productCount} 款） →</span>
       </a>
       <a class="sol-card" href="/selector">
         <span class="sol-icon" style="--sol:#18a06a" aria-hidden="true">
@@ -137,7 +137,7 @@ const jsonLd = {
         </span>
         <h3>选型工具</h3>
         <p>根据应用场景、固化需求与基材自动推荐匹配的胶型，快速缩小选型范围。</p>
-        <span class="sol-cta">使用在线选型工具 →</span>
+        <span class="sol-cta">开始在线选型 →</span>
       </a>
       <a class="sol-card" href="/cases">
         <span class="sol-icon" style="--sol:#f0883e" aria-hidden="true">
@@ -145,7 +145,7 @@ const jsonLd = {
         </span>
         <h3>应用案例</h3>
         <p>看同行如何在新能源、电子、汽车等场景落地胶粘剂方案与选型结果。</p>
-        <span class="sol-cta">查看客户应用案例（{caseCount} 个） →</span>
+        <span class="sol-cta">查看应用案例（{caseCount} 个） →</span>
       </a>
       <a class="sol-card" href="/contact">
         <span class="sol-icon" style="--sol:#3a7bff" aria-hidden="true">
@@ -527,6 +527,7 @@ const jsonLd = {
     display: inline-flex;
     align-items: center;
     gap: 6px;
+    white-space: nowrap; /* 文案+箭头强制单行，避免「→」被挤到第二行 */
     transition: gap var(--dur) var(--ease);
   }
   .sol-card:hover .sol-cta { gap: 10px; }
