@@ -9,6 +9,7 @@
  * <slot name="head"> 注入（见 posts/[slug].astro）。
  */
 import { loadSiteData } from '../lib/site-data';
+import { isPreLaunch } from '../lib/prelaunch';
 
 interface Props {
   title?: string;
@@ -48,22 +49,32 @@ const base = Astro.site ?? new URL('https://tackix.pages.dev');
 const canonical = new URL(Astro.url.pathname, base).href;
 const ogImage = image ? new URL(image, base).href : new URL('/og-default.svg', base).href;
 const kw = Array.isArray(keywords) && keywords.length ? keywords.filter(Boolean).join(', ') : '';
+
+// ── 预上线闸门（prelaunch）────────────────────────────────────────
+// 未正式上线时全站输出 noindex, nofollow，避免演示内容被搜索引擎收录，
+// 将来正式上线只需把 PRELAUNCH 置为 '0'（或删掉该 env），无需改任何页面代码。
+// 详见 src/lib/prelaunch.ts
+const prelaunch = isPreLaunch();
+const robots = prelaunch
+  ? 'noindex, nofollow, noarchive'
+  : noindex
+    ? 'noindex, nofollow'
+    : 'index, follow, max-image-preview:large';
 ---
 
 <title>{fullTitle}</title>
 <meta name="description" content={desc} />
-{
-  !noindex && (
-    <link rel="canonical" href={canonical} />
-    <meta name="robots" content="index, follow, max-image-preview:large" />
-  )
-}
-{noindex && <meta name="robots" content="noindex, nofollow" />}
+{/* canonical 仅在允许索引时输出：noindex 页面输出 canonical 反而会向搜索引擎
+    暗示「这页是该 URL 的权威版本」，与 noindex 冲突 */}
+{!prelaunch && !noindex && <link rel="canonical" href={canonical} />}
+<meta name="robots" content={robots} />
+{prelaunch && <meta name="googlebot" content="noindex, nofollow, noarchive" />}
 {kw && <meta name="keywords" content={kw} />}
 {
-  alternates?.map((a) => (
-    <link rel="alternate" hreflang={a.lang} href={new URL(a.href, base).href} />
-  ))
+  !prelaunch &&
+    alternates?.map((a) => (
+      <link rel="alternate" hreflang={a.lang} href={new URL(a.href, base).href} />
+    ))
 }
 <meta property="og:type" content={type} />
 {locale && <meta property="og:locale" content={locale} />}
