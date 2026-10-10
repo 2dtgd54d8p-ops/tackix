@@ -1,17 +1,33 @@
-# AI 检索体（GPTBot / PerplexityBot / Google-Extended）显式放行，提升站点在 AI 答案中的可见度
-User-agent: GPTBot
-Allow: /
+# robots.txt —— Tackix
+# ⚠️ 预上线闸门：当前站点处于「可访问但不收录」状态。
+#    页面级 noindex 由 src/lib/prelaunch.ts 统一控制（见 SEO.astro），
+#    robots.txt 侧再封一层，两者互为保险。
+#
+# 【正式上线时需要改这里】把下面被注释的 Allow 段取消注释，恢复抓取放行。
+# 站点信息结构（屏蔽后台）不受上线状态影响，始终生效。
 
-User-agent: PerplexityBot
-Allow: /
-
-User-agent: Google-Extended
-Allow: /
-
-# 默认爬虫：放行全站，仅屏蔽后台与后台 API
+# ── 预上线：全面禁止抓取 ────────────────────────────────────────
+# 说明：noindex 靠 meta 标签告知，但爬虫**必须先抓到页面**才能看到该标签。
+# 因此预上线期在 robots 层直接 Disallow，搜索引擎连页面都不会收录快照。
 User-agent: *
-Allow: /
-Disallow: /keystatic
-Disallow: /api/keystatic
+Disallow: /
 
-Sitemap: https://tackix.pages.dev/sitemap.xml
+# ── 正式上线后恢复为以下内容 ────────────────────────────────────
+# User-agent: *
+# Allow: /
+# Disallow: /keystatic
+# Disallow: /api/keystatic
+#
+# # AI 检索体（GPTBot / PerplexityBot / Google-Extended）显式放行，
+# # 提升站点在 AI 答案中的可见度
+# User-agent: GPTBot
+# Allow: /
+#
+# User-agent: PerplexityBot
+# Allow: /
+#
+# User-agent: Google-Extended
+# Allow: /
+
+# 预上线期不提交 sitemap（正式上线后再启用下一行）
+# Sitemap: https://tackix.pages.dev/sitemap.xml
