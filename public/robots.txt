@@ -1,4 +1,17 @@
+# AI 检索体（GPTBot / PerplexityBot / Google-Extended）显式放行，提升站点在 AI 答案中的可见度
+User-agent: GPTBot
+Allow: /
+
+User-agent: PerplexityBot
+Allow: /
+
+User-agent: Google-Extended
+Allow: /
+
+# 默认爬虫：放行全站，仅屏蔽后台与后台 API
 User-agent: *
+Allow: /
 Disallow: /keystatic
 Disallow: /api/keystatic
-Allow: /
+
+Sitemap: https://tackix.pages.dev/sitemap.xml

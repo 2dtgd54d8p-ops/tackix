@@ -1,5 +1,6 @@
 ---
 import { loadSiteData } from '../lib/site-data';
+import SEO from '../components/SEO.astro';
 
 interface Props {
   title?: string;
@@ -10,6 +11,8 @@ const { title, description } = Astro.props;
 const { site } = await loadSiteData();
 const siteTitle = site.title;
 const footerText = site.footer ? `Powered by ${site.footer}` : `Powered by ${siteTitle}`;
+// WhatsApp 号码（来自后台「站点信息」）；为空则不显示 WhatsApp 悬浮按钮
+const whatsappNumber = (site.whatsapp ?? '').trim();
 
 // 导航当前页高亮
 const path = Astro.url.pathname;
@@ -45,17 +48,10 @@ const showFloatContact =
         } catch (e) {}
       })();
     </script>
-    <meta name="description" content={description ?? site.description} />
+    <SEO title={title} description={description} />
     <meta name="theme-color" content="#ffffff" media="(prefers-color-scheme: light)" />
     <meta name="theme-color" content="#12101c" media="(prefers-color-scheme: dark)" />
-    <title>{title ? `${title} · ${siteTitle}` : siteTitle}</title>
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
-    <meta property="og:type" content="website" />
-    <meta property="og:title" content={title ? `${title} · ${siteTitle}` : siteTitle} />
-    <meta property="og:description" content={description ?? site.description} />
-    <meta property="og:site_name" content={siteTitle} />
-    <meta property="og:url" content={new URL(Astro.url.pathname, Astro.site ?? Astro.url).href} />
-    <meta name="twitter:card" content="summary_large_image" />
     <script
       type="application/ld+json"
       set:html={JSON.stringify({
@@ -145,10 +141,26 @@ const showFloatContact =
       <a class="footer-admin" href="/keystatic">管理后台</a>
     </footer>
     {showFloatContact && (
-      <a class="float-contact" id="float-contact" href="/contact" aria-label="联系我">
-        <svg class="fc-icon" viewBox="0 0 24 24" width="22" height="22" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 11.5a8.4 8.4 0 0 1-9 8.4 9.7 9.7 0 0 1-2.8-.4L4 21l1.4-4.2A8.4 8.4 0 0 1 3 11.5 8.4 8.4 0 0 1 12 3a8.4 8.4 0 0 1 9 8.5z" /><path d="M8.5 10.4h7M8.5 13.4h4" /></svg>
-        <span class="fc-label">联系我</span>
-      </a>
+      <div class="float-cluster" id="float-cluster">
+        {
+          whatsappNumber && (
+            <a
+              class="float-wa"
+              href={`https://wa.me/${whatsappNumber}?text=` + encodeURIComponent('您好，我想咨询工业胶粘剂/密封剂产品与选型。')}
+              target="_blank"
+              rel="noopener noreferrer"
+              aria-label="通过 WhatsApp 联系我们"
+            >
+              <svg class="wa-icon" viewBox="0 0 24 24" width="22" height="22" aria-hidden="true" fill="currentColor"><path d="M.057 24l1.687-6.163a11.867 11.867 0 0 1-1.587-5.946C.16 5.335 5.495 0 12.05 0a11.82 11.82 0 0 1 8.413 3.488 11.82 11.82 0 0 1 3.48 8.414c-.003 6.557-5.338 11.892-11.893 11.892a11.9 11.9 0 0 1-5.688-1.448L.057 24zm6.597-3.807c1.676.995 3.276 1.591 5.392 1.592 5.448 0 9.886-4.434 9.889-9.885.002-5.462-4.415-9.89-9.881-9.892-5.452 0-9.887 4.434-9.889 9.884a9.86 9.86 0 0 0 1.51 5.26l-.999 3.648 3.978-1.04zm11.387-5.464c-.074-.124-.272-.198-.57-.347-.297-.149-1.758-.868-2.031-.967-.272-.099-.47-.149-.669.149-.198.297-.768.967-.941 1.165-.173.198-.347.223-.644.074-.297-.149-1.255-.462-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.297-.347.446-.521.151-.172.2-.296.3-.495.099-.198.05-.372-.025-.521-.075-.148-.669-1.611-.916-2.206-.242-.579-.487-.501-.669-.51l-.57-.01c-.198 0-.52.074-.792.372s-1.04 1.016-1.04 2.479 1.065 2.876 1.213 3.074c.149.198 2.096 3.2 5.077 4.487.709.306 1.263.489 1.694.626.712.226 1.36.194 1.872.118.571-.085 1.758-.719 2.006-1.413.248-.695.248-1.29.173-1.414z" /></svg>
+              <span class="wa-label">WhatsApp</span>
+            </a>
+          )
+        }
+        <a class="float-contact" id="float-contact" href="/contact" aria-label="联系我们">
+          <svg class="fc-icon" viewBox="0 0 24 24" width="22" height="22" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 11.5a8.4 8.4 0 0 1-9 8.4 9.7 9.7 0 0 1-2.8-.4L4 21l1.4-4.2A8.4 8.4 0 0 1 3 11.5 8.4 8.4 0 0 1 12 3a8.4 8.4 0 0 1 9 8.5z" /><path d="M8.5 10.4h7M8.5 13.4h4" /></svg>
+          <span class="fc-label">联系我们</span>
+        </a>
+      </div>
     )}
     <script is:inline>
       (function () {
@@ -233,7 +245,7 @@ const showFloatContact =
     <script is:inline>
       // 右下角悬浮「联系我」：滚过首屏后淡入，避免与 Hero 抢视线的干扰
       (function () {
-        var el = document.getElementById('float-contact');
+        var el = document.getElementById('float-cluster');
         if (!el) return;
         function onScroll() {
           el.classList.toggle('is-visible', window.scrollY > 320);
@@ -952,32 +964,48 @@ const showFloatContact =
       article.prose hr { border: 0; border-top: 1px solid var(--border); margin: 30px 0; }
       .cover { width: 100%; border-radius: var(--r-lg); margin: 12px 0 26px; display: block; box-shadow: var(--shadow-md); }
 
-      /* ---------- 右下角悬浮「联系我」（滚过首屏后淡入，hover 展开文字） ---------- */
-      .float-contact {
+      /* ---------- 右下角悬浮联系簇（滚过首屏后淡入；含 WhatsApp + 联系页） ---------- */
+      .float-cluster {
         position: fixed;
         right: 24px;
         bottom: 24px;
         z-index: 45;
+        display: flex;
+        flex-direction: column;
+        align-items: flex-end;
+        gap: 10px;
+        opacity: 0;
+        visibility: hidden;
+        transform: translateY(10px);
+        transition: opacity var(--dur) var(--ease), transform var(--dur) var(--ease),
+          visibility var(--dur) var(--ease);
+      }
+      .float-cluster.is-visible { opacity: 1; visibility: visible; transform: none; }
+      .float-cluster:focus-within { opacity: 1; visibility: visible; transform: none; }
+
+      .float-contact,
+      .float-wa {
         display: inline-flex;
         align-items: center;
         height: 52px;
         padding: 0 15px;
         border-radius: var(--r-pill);
-        background: var(--accent);
-        color: var(--on-accent);
+        color: #fff;
         box-shadow: var(--shadow-accent);
         overflow: hidden;
-        opacity: 0;
-        visibility: hidden;
-        transform: translateY(10px);
-        transition: opacity var(--dur) var(--ease), transform var(--dur) var(--ease),
-          visibility var(--dur) var(--ease), background var(--dur) var(--ease);
+        transition: background-color var(--dur) var(--ease), color var(--dur) var(--ease),
+          transform var(--dur) var(--ease);
       }
-      .float-contact.is-visible { opacity: 1; visibility: visible; transform: none; }
+      .float-contact { background: var(--accent); color: var(--on-accent); }
       .float-contact:hover { background: var(--accent-strong); color: var(--on-accent); }
-      .float-contact:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; }
-      .float-contact .fc-icon { width: 22px; height: 22px; flex: none; }
-      .float-contact .fc-label {
+      .float-wa { background: #25d366; }
+      .float-wa:hover { background: #1ebe5b; }
+      .float-contact:focus-visible,
+      .float-wa:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; }
+      .float-contact .fc-icon,
+      .float-wa .wa-icon { width: 22px; height: 22px; flex: none; }
+      .float-contact .fc-label,
+      .float-wa .wa-label {
         max-width: 0;
         opacity: 0;
         overflow: hidden;
@@ -988,14 +1016,16 @@ const showFloatContact =
           margin var(--dur) var(--ease);
       }
       .float-contact:hover .fc-label,
-      .float-contact:focus-visible .fc-label { max-width: 120px; opacity: 1; margin-left: 8px; }
+      .float-contact:focus-visible .fc-label,
+      .float-wa:hover .wa-label,
+      .float-wa:focus-visible .wa-label { max-width: 120px; opacity: 1; margin-left: 8px; }
 
       /* ---------- 移动端 ---------- */
       @media (max-width: 700px) {
         .site-header { flex-direction: column; align-items: stretch; gap: 6px; padding: 12px 16px; }
         .brand { justify-content: center; } /* 自适应/窄屏下 logo 居中 */
-        /* 窄屏（自适应模式）下常驻显示带文字的「联系我」胶囊：触屏无 hover，故直接展开标签，并避开刘海安全区 */
-        .float-contact {
+        /* 窄屏：常驻展开标签（触屏无 hover），避开刘海安全区 */
+        .float-cluster {
           right: 16px;
           bottom: calc(16px + env(safe-area-inset-bottom, 0px));
           opacity: 1;
@@ -1003,7 +1033,8 @@ const showFloatContact =
           transform: none;
           box-shadow: 0 8px 22px rgba(0, 0, 0, 0.24);
         }
-        .float-contact .fc-label { max-width: 120px; opacity: 1; margin-left: 8px; }
+        .float-contact .fc-label,
+        .float-wa .wa-label { max-width: 120px; opacity: 1; margin-left: 8px; }
         .header-right { flex-wrap: wrap; justify-content: center; width: 100%; gap: 8px; }
         /* 自适应/窄屏：导航行在上，搜索框独占其下方一行 */
         .header-right > nav { order: 1; }

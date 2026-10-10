@@ -35,6 +35,24 @@ const TAG_OPTIONS = [
   { label: '教程', value: 'tutorial' },
 ];
 
+// 应用场景（胶粘剂/密封剂典型行业）。与 site-data DEFAULT_SCENARIOS 保持一致。
+const SCENARIO_OPTIONS = [
+  { label: '电子封装', value: 'electronics' },
+  { label: '汽车制造', value: 'automotive' },
+  { label: '新能源', value: 'newenergy' },
+  { label: '建筑工程', value: 'construction' },
+  { label: '包装印刷', value: 'packaging' },
+  { label: '医疗器械', value: 'medical' },
+  { label: '通用工业', value: 'general' },
+];
+
+// 决策阶段（买家旅程）：认知 → 评估 → 决策。
+const STAGE_OPTIONS = [
+  { label: '认知阶段', value: 'awareness' },
+  { label: '评估阶段', value: 'consideration' },
+  { label: '决策阶段', value: 'decision' },
+];
+
 const storage = useLocal
   ? ({ kind: 'local' } as const)
   : ({
@@ -132,6 +150,29 @@ export default config({
           label: '标签',
           options: TAG_OPTIONS,
         }),
+        // 应用场景：便于按行业检索与组织内容（与 site-data DEFAULT_SCENARIOS 保持一致）
+        scenario: fields.select({
+          label: '应用场景',
+          options: [{ label: '未指定', value: '' }, ...SCENARIO_OPTIONS],
+          defaultValue: '',
+        }),
+        // 决策阶段：认知 / 评估 / 决策，用于按买家旅程分层内容
+        stage: fields.select({
+          label: '决策阶段',
+          options: [{ label: '未指定', value: '' }, ...STAGE_OPTIONS],
+          defaultValue: '',
+        }),
+        // 常见问题：渲染为 FAQ 区块并生成 FAQPage 结构化数据，利于 AI/搜索直接抽取答案
+        faq: fields.array(
+          {
+            label: '问答',
+            schema: {
+              question: fields.text({ label: '问题' }),
+              answer: fields.text({ label: '答案', multiline: true }),
+            },
+          },
+          { label: '常见问题（FAQ）' }
+        ),
         // 图片会经 GitHub App 提交到仓库 public/uploads/，构建时由静态资源直接产出
         cover: fields.image({
           label: '封面图',
@@ -158,6 +199,11 @@ export default config({
         tagline: fields.text({ label: '首页标语' }),
         // 全站页脚署名（留空则只显示站点标题）
         footer: fields.text({ label: '页脚文字' }),
+        // 全站 WhatsApp 号码（仅数字，含国家码，如 8613800138000）；留空则前台不显示 WhatsApp 悬浮按钮
+        whatsapp: fields.text({
+          label: 'WhatsApp 号码',
+          description: '仅数字，含国家码。留空则不显示 WhatsApp 悬浮入口。',
+        }),
       },
     },
     // 分类管理：分类从此处可增删改，不再写死在代码里。
