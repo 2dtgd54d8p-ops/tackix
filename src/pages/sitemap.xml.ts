@@ -7,20 +7,22 @@ import type { APIRoute } from 'astro';
 export const prerender = true;
 
 // 路由 URL 与页面 canonical 保持一致（均带尾部斜杠）
-const STATIC_ROUTES = ['/', '/posts/', '/contact/', '/search/'];
+const STATIC_ROUTES = ['/', '/products/', '/posts/', '/contact/', '/search/'];
 
 export const GET: APIRoute = async (Astro) => {
   const base = Astro.site ?? new URL('https://tackix.pages.dev');
   const reader = createReader(process.cwd(), keystaticConfig);
-  let slugs: string[] = [];
+
+  // 文章
+  let postSlugs: string[] = [];
   try {
-    slugs = await reader.collections.posts.list();
+    postSlugs = await reader.collections.posts.list();
   } catch {
-    slugs = [];
+    postSlugs = [];
   }
   const posts = (
     await Promise.all(
-      slugs.map(async (slug) => {
+      postSlugs.map(async (slug) => {
         try {
           const post = await reader.collections.posts.read(slug);
           return post && post.published !== false ? slug : null;
@@ -31,7 +33,31 @@ export const GET: APIRoute = async (Astro) => {
     )
   ).filter(Boolean) as string[];
 
-  const urls = [...STATIC_ROUTES, ...posts.map((s) => `/posts/${s}/`)];
+  // 产品（B2B 产品库）
+  let productSlugs: string[] = [];
+  try {
+    productSlugs = await reader.collections.products.list();
+  } catch {
+    productSlugs = [];
+  }
+  const products = (
+    await Promise.all(
+      productSlugs.map(async (slug) => {
+        try {
+          const product = await reader.collections.products.read(slug);
+          return product && product.published !== false ? slug : null;
+        } catch {
+          return null;
+        }
+      })
+    )
+  ).filter(Boolean) as string[];
+
+  const urls = [
+    ...STATIC_ROUTES,
+    ...posts.map((s) => `/posts/${s}/`),
+    ...products.map((s) => `/products/${s}/`),
+  ];
   const body =
     `<?xml version="1.0" encoding="UTF-8"?>\n` +
     `<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n` +

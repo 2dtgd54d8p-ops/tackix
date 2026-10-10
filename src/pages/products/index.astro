@@ -1,0 +1,193 @@
+---
+import { createReader } from '@keystatic/core/reader';
+import keystaticConfig from '../../../keystatic.config';
+import Base from '../../layouts/Base.astro';
+import { loadSiteData } from '../../lib/site-data';
+
+const reader = createReader(process.cwd(), keystaticConfig);
+let slugs: string[] = [];
+try {
+  slugs = await reader.collections.products.list();
+} catch (e) {
+  console.warn('[build] 读取产品列表失败：', e);
+}
+
+const products = (
+  await Promise.all(
+    slugs.map(async (slug) => {
+      try {
+        const p = await reader.collections.products.read(slug);
+        return p && p.published !== false ? { slug, ...p } : null;
+      } catch {
+        return null;
+      }
+    })
+  )
+).filter(Boolean) as any[];
+
+// 首页推荐优先，其次按名称
+products.sort(
+  (a, b) => Number(b.featured ?? false) - Number(a.featured ?? false) ||
+    String(a.name ?? '').localeCompare(String(b.name ?? ''))
+);
+
+const { productCategoryLabel, scenarioLabel, certLabel } = await loadSiteData();
+
+// 双维度筛选：类型 + 场景（仅出现有产品的选项）
+const catSet = new Set(products.map((p) => p.category).filter(Boolean));
+const scenarioSet = new Set(products.map((p) => p.scenario).filter(Boolean));
+const catFilters = [
+  { value: 'all', label: '全部类型' },
+  ...[...catSet].map((v) => ({ value: v as string, label: productCategoryLabel(v as string) })),
+];
+const scenarioFilters = [
+  { value: 'all', label: '全部场景' },
+  ...[...scenarioSet].map((v) => ({ value: v as string, label: scenarioLabel(v as string) })),
+];
+---
+
+<Base title="产品库">
+  <section>
+    <div class="page-head">
+      <h1>产品库</h1>
+      <p>共 {products.length} 款工业胶粘剂与密封剂 · 按类型与场景筛选，支持 TDS/SDS 下载与在线询盘</p>
+    </div>
+
+    <nav class="filters" id="cat-filter" aria-label="按类型筛选">
+      {
+        catFilters.map((c, i) => (
+          <button
+            type="button"
+            class={`filter-btn${i === 0 ? ' is-active' : ''}`}
+            data-filter={c.value}
+            aria-pressed={i === 0 ? 'true' : 'false'}
+          >
+            {c.label}
+          </button>
+        ))
+      }
+    </nav>
+    <nav class="filters" id="scenario-filter" aria-label="按场景筛选">
+      {
+        scenarioFilters.map((c, i) => (
+          <button
+            type="button"
+            class={`filter-btn${i === 0 ? ' is-active' : ''}`}
+            data-filter={c.value}
+            aria-pressed={i === 0 ? 'true' : 'false'}
+          >
+            {c.label}
+          </button>
+        ))
+      }
+    </nav>
+
+    {
+      products.length === 0 ? (
+        <p class="empty">产品库即将上线，敬请期待。</p>
+      ) : (
+        <div class="grid">
+          {products.map((p) => (
+            <article class="card" data-category={p.category ?? ''} data-scenario={p.scenario ?? ''}>
+              <a class="card-link" href={`/products/${p.slug}`}>
+                {p.cover ? (
+                  <div class="card-media card-media-sm">
+                    <img src={p.cover.startsWith('/') ? p.cover : `/uploads/${p.cover}`} alt={p.name} loading="lazy" />
+                  </div>
+                ) : (
+                  <div class="card-media card-media-sm card-media-empty" />
+                )}
+                <div class="card-body">
+                  <h2 class="card-title">{p.name}</h2>
+                  {p.model && <p class="card-model">{p.model}</p>}
+                  {p.excerpt && <p class="card-excerpt">{p.excerpt}</p>}
+                  <div class="card-meta">
+                    {p.category && <span class="tag">{productCategoryLabel(p.category)}</span>}
+                    {p.scenario && <span class="tag tag-plain">{scenarioLabel(p.scenario)}</span>}
+                    {(p.certifications ?? []).slice(0, 3).map((c: string) => (
+                      <span class="tag tag-plain">{certLabel(c)}</span>
+                    ))}
+                  </div>
+                </div>
+              </a>
+            </article>
+          ))}
+        </div>
+      )
+    }
+    <p class="empty" data-empty hidden>没有符合条件的产品。</p>
+  </section>
+
+  <script>
+    // 双维度筛选：类型 × 场景（取交集）
+    const catBar = document.getElementById('cat-filter');
+    const scenarioBar = document.getElementById('scenario-filter');
+    const grid = document.querySelector('.grid');
+    const emptyHint = document.querySelector('[data-empty]');
+    let catVal = 'all';
+    let scenarioVal = 'all';
+    function apply() {
+      if (!grid) return;
+      let visible = 0;
+      grid.querySelectorAll('.card').forEach((card) => {
+        const okCat = catVal === 'all' || card.getAttribute('data-category') === catVal;
+        const okSc = scenarioVal === 'all' || card.getAttribute('data-scenario') === scenarioVal;
+        const show = okCat && okSc;
+        (card as HTMLElement).hidden = !show;
+        if (show) visible++;
+      });
+      if (emptyHint) (emptyHint as HTMLElement).hidden = visible > 0;
+    }
+    function bind(bar: HTMLElement | null, set: (v: string) => void) {
+      if (!bar) return;
+      bar.addEventListener('click', (e) => {
+        const btn = (e.target as HTMLElement).closest('.filter-btn');
+        if (!btn) return;
+        bar.querySelectorAll('.filter-btn').forEach((b) => {
+          const on = b === btn;
+          b.classList.toggle('is-active', on);
+          b.setAttribute('aria-pressed', on ? 'true' : 'false');
+        });
+        set((btn as HTMLElement).getAttribute('data-filter') || 'all');
+        apply();
+      });
+    }
+    bind(catBar as HTMLElement, (v) => (catVal = v));
+    bind(scenarioBar as HTMLElement, (v) => (scenarioVal = v));
+  </script>
+</Base>
+
+<style>
+  .filters { display: flex; gap: 10px; flex-wrap: wrap; justify-content: center; margin: -8px 0 18px; }
+  .filters + .filters { margin-top: -8px; }
+  .filter-btn {
+    padding: 7px 18px;
+    border: 1px solid var(--border-strong);
+    border-radius: var(--r-pill);
+    background: var(--surface);
+    color: var(--muted);
+    font: inherit;
+    font-size: 13px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: border-color var(--dur) var(--ease), color var(--dur) var(--ease),
+      background var(--dur) var(--ease);
+  }
+  .filter-btn:hover { border-color: var(--accent); color: var(--accent); }
+  .filter-btn.is-active { background: var(--accent); border-color: var(--accent); color: var(--on-accent); }
+
+  .grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 22px; }
+  .card-link { display: flex; flex-direction: column; height: 100%; color: inherit; text-decoration: none; }
+  .card:hover .card-title { color: var(--accent); }
+  .card-model { margin: 0 0 6px; font-size: 13px; color: var(--muted); }
+  .card-media-empty { background: linear-gradient(135deg, var(--g3), var(--g1)); }
+
+  @media (max-width: 900px) {
+    .grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  }
+  @media (max-width: 620px) {
+    .grid { grid-template-columns: minmax(0, 1fr); }
+    .filters { flex-wrap: nowrap; overflow-x: auto; padding-bottom: 6px; justify-content: flex-start; }
+    .filter-btn { white-space: nowrap; }
+  }
+</style>

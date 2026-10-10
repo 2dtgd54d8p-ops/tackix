@@ -1,0 +1,299 @@
+---
+import { createReader } from '@keystatic/core/reader';
+import { marked } from 'marked';
+import keystaticConfig from '../../../keystatic.config';
+import Base from '../../layouts/Base.astro';
+import { loadSiteData } from '../../lib/site-data';
+
+export async function getStaticPaths() {
+  const reader = createReader(process.cwd(), keystaticConfig);
+  let slugs: string[] = [];
+  try {
+    slugs = await reader.collections.products.list();
+  } catch (e) {
+    console.warn('[build] 读取产品列表失败（检查 KEYSTATIC_USE_LOCAL=1）：', e);
+  }
+  const entries = await Promise.all(
+    slugs.map(async (slug) => {
+      try {
+        const product = await reader.collections.products.read(slug);
+        // 未发布（published === false）的产品不生成静态页
+        return product && product.published !== false
+          ? { params: { slug }, props: { product } }
+          : null;
+      } catch (e) {
+        console.warn('[build] 读取产品失败：', slug, e);
+        return null;
+      }
+    })
+  );
+  return entries.filter(Boolean);
+}
+
+const { product } = Astro.props;
+const html = marked(product.body ?? '');
+
+const { site, productCategoryLabel, scenarioLabel, certLabel, cureLabel } = await loadSiteData();
+const siteTitle = site.title;
+const whatsappNumber = (site.whatsapp ?? '').trim();
+const base = Astro.site ?? new URL('https://tackix.pages.dev');
+const canonical = new URL(Astro.url.pathname, base).href;
+
+const categoryName = productCategoryLabel(product.category);
+const scenarioName = scenarioLabel(product.scenario);
+
+// SEO 关键词：类型 + 场景 + 认证
+const keywords = [
+  categoryName,
+  scenarioName,
+  ...(Array.isArray(product.certifications) ? product.certifications.map((c: string) => certLabel(c)) : []),
+].filter(Boolean);
+
+// 参数表：只展示有填值的字段
+const paramRows = [
+  { label: '适用基材', value: product.baseMaterial },
+  { label: '间隙 / 涂布厚度', value: product.displacement },
+  { label: '耐温范围', value: product.tempRange },
+  { label: '固化方式', value: product.cureType ? cureLabel(product.cureType) : '' },
+  { label: '粘度', value: product.viscosity },
+  {
+    label: '认证',
+    value: Array.isArray(product.certifications)
+      ? product.certifications.map((c: string) => certLabel(c)).join('、')
+      : '',
+  },
+].filter((r) => r.value && String(r.value).trim());
+
+// 封面图 / 文件下载链接：Keystatic 的文件/图片字段存的是相对于 publicPath 的文件名
+function toPublicUrl(v: unknown): string {
+  if (!v || typeof v !== 'string') return '';
+  return v.startsWith('/') ? v : `/uploads/${v}`;
+}
+const coverUrl = toPublicUrl(product.cover);
+const tdsUrl = toPublicUrl(product.tds);
+const sdsUrl = toPublicUrl(product.sds);
+
+const waHref = whatsappNumber
+  ? `https://wa.me/${whatsappNumber}?text=` +
+    encodeURIComponent(`您好，我想咨询产品「${product.name}」的报价与技术资料。`)
+  : '';
+
+// Product 结构化数据（B2B 不标价，offers 指向询盘页；技术参数用 additionalProperty 表达）
+const productSchema = {
+  '@context': 'https://schema.org',
+  '@type': 'Product',
+  name: product.name,
+  description: product.excerpt || '',
+  brand: { '@type': 'Brand', name: siteTitle },
+  ...(categoryName ? { category: categoryName } : {}),
+  ...(coverUrl ? { image: new URL(coverUrl, base).href } : {}),
+  additionalProperty: paramRows.map((r) => ({
+    '@type': 'PropertyValue',
+    name: r.label,
+    value: String(r.value),
+  })),
+  offers: {
+    '@type': 'Offer',
+    url: new URL('/contact/', base).href,
+    availability: 'https://schema.org/InStock',
+    seller: { '@type': 'Organization', name: siteTitle },
+  },
+};
+---
+
+<Base
+  title={product.name}
+  description={product.excerpt}
+  type="website"
+  keywords={keywords}
+>
+  <Fragment slot="head">
+    <script type="application/ld+json" set:html={JSON.stringify(productSchema)} />
+  </Fragment>
+
+  <article class="prose product">
+    <header class="product-head">
+      {categoryName && <span class="badge">{categoryName}</span>}
+      <h1>{product.name}</h1>
+      {product.model && <p class="product-model">型号：{product.model}</p>}
+      {
+        scenarioName && (
+          <div class="product-badges">
+            <span class="badge badge-scenario">场景：{scenarioName}</span>
+          </div>
+        )
+      }
+    </header>
+
+    {
+      coverUrl && (
+        <img class="cover" src={coverUrl} alt={product.name} />
+      )
+    }
+
+    {
+      product.excerpt && <p class="product-excerpt">{product.excerpt}</p>
+    }
+
+    {
+      paramRows.length > 0 && (
+        <section class="spec-block" aria-label="技术参数">
+          <h2>技术参数</h2>
+          <table class="spec-table">
+            <tbody>
+              {paramRows.map((r) => (
+                <tr>
+                  <th scope="row">{r.label}</th>
+                  <td>{r.value}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </section>
+      )
+    }
+
+    {
+      html && (
+        <section class="desc-block" aria-label="产品描述">
+          <h2>产品描述</h2>
+          <div set:html={html} />
+        </section>
+      )
+    }
+
+    {
+      (tdsUrl || sdsUrl) && (
+        <section class="doc-block" aria-label="技术文档下载">
+          <h2>技术文档</h2>
+          <div class="doc-btns">
+            {tdsUrl && (
+              <a class="btn" href={tdsUrl} target="_blank" rel="noopener noreferrer" download>
+                下载 TDS 技术说明书（PDF）
+              </a>
+            )}
+            {sdsUrl && (
+              <a class="btn" href={sdsUrl} target="_blank" rel="noopener noreferrer" download>
+                下载 SDS 安全数据表（PDF）
+              </a>
+            )}
+          </div>
+        </section>
+      )
+    }
+
+    <!-- B2B 不标价：引导询盘（WhatsApp + 联系页） -->
+    <section class="quote-block" aria-label="询盘报价">
+      <div class="quote-inner">
+        <div class="quote-text">
+          <h2>获取报价与技术支持</h2>
+          <p>本平台为工业胶粘剂与密封剂 B2B 渠道，所有产品按订单与规格报价。请留下需求，我们的技术团队将在 1 个工作日内回复。</p>
+        </div>
+        <div class="quote-actions">
+          {
+            whatsappNumber && (
+              <a class="btn btn-primary" href={waHref} target="_blank" rel="noopener noreferrer">
+                WhatsApp 咨询
+              </a>
+            )
+          }
+          <a class="btn btn-primary" href="/contact">联系我们报价</a>
+        </div>
+      </div>
+    </section>
+  </article>
+</Base>
+
+<style>
+  .product {
+    max-width: 820px;
+  }
+  .product-head { text-align: center; margin-bottom: 26px; }
+  .product-head h1 { font-size: 34px; letter-spacing: -0.015em; }
+  .product-model { margin: 10px 0 0; color: var(--muted); font-size: 15px; }
+  .product-badges {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    justify-content: center;
+    margin: 14px 0 0;
+  }
+  .badge-scenario { background: color-mix(in srgb, var(--g1) 18%, transparent); color: var(--g1); }
+
+  .product-excerpt {
+    text-align: center;
+    color: var(--fg-soft);
+    font-size: 17px;
+    line-height: 1.8;
+    margin: 0 auto 30px;
+    max-width: 680px;
+  }
+
+  .spec-block,
+  .desc-block,
+  .doc-block,
+  .quote-block { margin: 34px 0; }
+  .spec-block h2,
+  .desc-block h2,
+  .doc-block h2 {
+    font-size: 20px;
+    margin: 0 0 16px;
+    color: var(--fg);
+  }
+
+  /* 参数表 */
+  .spec-table {
+    width: 100%;
+    border-collapse: collapse;
+    border: 1px solid var(--border);
+    border-radius: var(--r-md);
+    overflow: hidden;
+    background: var(--surface);
+  }
+  .spec-table th,
+  .spec-table td {
+    text-align: left;
+    padding: 13px 18px;
+    border-bottom: 1px solid var(--border);
+    font-size: 14.5px;
+    vertical-align: top;
+  }
+  .spec-table tr:last-child th,
+  .spec-table tr:last-child td { border-bottom: 0; }
+  .spec-table th {
+    width: 38%;
+    color: var(--muted);
+    font-weight: 600;
+    background: var(--surface-2);
+  }
+  .spec-table td { color: var(--fg-soft); }
+
+  /* 文档下载按钮 */
+  .doc-btns { display: flex; flex-wrap: wrap; gap: 12px; }
+
+  /* 询盘区块 */
+  .quote-block { margin-top: 40px; }
+  .quote-inner {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 20px;
+    padding: 26px 28px;
+    border: 1px solid var(--border-strong);
+    border-radius: var(--r-lg);
+    background: var(--accent-soft);
+  }
+  .quote-text { flex: 1 1 340px; }
+  .quote-text h2 { font-size: 19px; margin: 0 0 8px; color: var(--accent-strong); }
+  .quote-text p { margin: 0; color: var(--fg-soft); font-size: 14px; line-height: 1.7; }
+  .quote-actions { display: flex; flex-wrap: wrap; gap: 12px; flex: none; }
+
+  @media (max-width: 700px) {
+    .product-head h1 { font-size: 26px; }
+    .quote-inner { flex-direction: column; align-items: stretch; }
+    .quote-actions { justify-content: stretch; }
+    .quote-actions .btn { flex: 1 1 auto; }
+    .spec-table th { width: 42%; }
+  }
+</style>

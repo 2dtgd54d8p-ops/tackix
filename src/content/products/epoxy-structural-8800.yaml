@@ -1,0 +1,34 @@
+name: 'ABRO 8800 双组分环氧结构胶'
+model: 'ABRO-8800'
+excerpt: '高韧性双组分环氧树脂结构胶，适用于金属、复合材料的承重粘接与结构装配。'
+published: true
+featured: true
+category: 'epoxy'
+scenario: 'automotive'
+baseMaterial: '钢 / 铝 / 碳纤维 / FRP'
+displacement: '0.1–5 mm'
+tempRange: '-40~120℃'
+cureType: '2k'
+viscosity: 'A 组分 12,000 mPa·s / B 组分 9,000 mPa·s'
+certifications:
+  - 'rohs'
+  - 'reach'
+body: |
+  ## 产品概述
+
+  ABRO 8800 是一款高韧性双组分环氧树脂结构胶，专为汽车制造、轨道交通与通用工业中的
+  **承重结构粘接**而设计。固化后形成坚韧、耐冲击的胶层，可替代部分机械紧固，减轻
+  装配重量并提升整体密封性。
+
+  ## 主要特性
+
+  - 高剪切与剥离强度，适合动态载荷场景
+  - 对金属、复合材料（FRP、碳纤维）附着力优异
+  - 耐油、耐化学介质，适应严苛工况
+  - 室温固化，亦可加热加速（60℃ / 30 min）
+
+  ## 典型应用
+
+  - 汽车车身结构件、电池包外壳粘接
+  - 新能源储能箱体密封与固定
+  - 工业设备金属框架的结构装配

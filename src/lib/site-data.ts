@@ -43,6 +43,38 @@ export const DEFAULT_STAGES = [
   { label: '决策阶段', value: 'decision' },
 ];
 
+// 产品类型（胶粘剂化学体系）—— 与 keystatic.config 的 PRODUCT_CATEGORY_OPTIONS 保持一致
+export const DEFAULT_PRODUCT_CATEGORIES = [
+  { label: '环氧树脂胶', value: 'epoxy' },
+  { label: '聚氨酯胶', value: 'polyurethane' },
+  { label: '丙烯酸胶', value: 'acrylic' },
+  { label: '硅胶/硅酮', value: 'silicone' },
+  { label: '瞬干胶(氰基丙烯酸酯)', value: 'cyanoacrylate' },
+  { label: 'UV 胶', value: 'uv' },
+  { label: '厌氧胶', value: 'anaerobic' },
+  { label: '热熔胶', value: 'hotmelt' },
+];
+
+// 产品认证 —— 与 keystatic.config 的 CERT_OPTIONS 保持一致
+export const DEFAULT_CERTS = [
+  { label: 'RoHS', value: 'rohs' },
+  { label: 'REACH', value: 'reach' },
+  { label: 'UL', value: 'ul' },
+  { label: 'FDA', value: 'fda' },
+  { label: 'NSF', value: 'nsf' },
+  { label: 'ISO 9001', value: 'iso9001' },
+  { label: '无卤', value: 'halogen-free' },
+];
+
+// 固化方式 —— 与 keystatic.config 的 CURE_OPTIONS 保持一致
+export const DEFAULT_CURE = [
+  { label: '室温固化', value: 'rt' },
+  { label: '加热固化', value: 'heat' },
+  { label: 'UV 固化', value: 'uv' },
+  { label: '湿气固化', value: 'moisture' },
+  { label: '双组分混合', value: '2k' },
+];
+
 export const DEFAULT_SITE = {
   title: 'Tackix',
   description:
@@ -90,6 +122,9 @@ export async function loadSiteData() {
   const tagMap = new Map(tags.map((t) => [t.value, t.label]));
   const scenarioMap = new Map(DEFAULT_SCENARIOS.map((c) => [c.value, c.label]));
   const stageMap = new Map(DEFAULT_STAGES.map((c) => [c.value, c.label]));
+  const productCategoryMap = new Map(DEFAULT_PRODUCT_CATEGORIES.map((c) => [c.value, c.label]));
+  const certMap = new Map(DEFAULT_CERTS.map((c) => [c.value, c.label]));
+  const cureMap = new Map(DEFAULT_CURE.map((c) => [c.value, c.label]));
 
   return {
     site,
@@ -105,6 +140,12 @@ export async function loadSiteData() {
     scenarioLabel: (v: string | undefined) => (v ? scenarioMap.get(v) ?? '' : ''),
     /** 决策阶段值 -> 中文名 */
     stageLabel: (v: string | undefined) => (v ? stageMap.get(v) ?? '' : ''),
+    /** 产品类型值 -> 中文名（空值返回空串） */
+    productCategoryLabel: (v: string | undefined) => (v ? productCategoryMap.get(v) ?? '' : ''),
+    /** 认证值 -> 中文名（空值返回原值） */
+    certLabel: (v: string) => certMap.get(v) ?? v,
+    /** 固化方式值 -> 中文名（空值返回空串） */
+    cureLabel: (v: string | undefined) => (v ? cureMap.get(v) ?? '' : ''),
   };
 }
 

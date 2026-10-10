@@ -53,6 +53,38 @@ const STAGE_OPTIONS = [
   { label: '决策阶段', value: 'decision' },
 ];
 
+// 产品类型（胶粘剂/密封剂化学体系）。与 site-data DEFAULT_PRODUCT_CATEGORIES 保持一致。
+const PRODUCT_CATEGORY_OPTIONS = [
+  { label: '环氧树脂胶', value: 'epoxy' },
+  { label: '聚氨酯胶', value: 'polyurethane' },
+  { label: '丙烯酸胶', value: 'acrylic' },
+  { label: '硅胶/硅酮', value: 'silicone' },
+  { label: '瞬干胶(氰基丙烯酸酯)', value: 'cyanoacrylate' },
+  { label: 'UV 胶', value: 'uv' },
+  { label: '厌氧胶', value: 'anaerobic' },
+  { label: '热熔胶', value: 'hotmelt' },
+];
+
+// 产品认证（环保/安规）。与 site-data DEFAULT_CERTS 保持一致。
+const CERT_OPTIONS = [
+  { label: 'RoHS', value: 'rohs' },
+  { label: 'REACH', value: 'reach' },
+  { label: 'UL', value: 'ul' },
+  { label: 'FDA', value: 'fda' },
+  { label: 'NSF', value: 'nsf' },
+  { label: 'ISO 9001', value: 'iso9001' },
+  { label: '无卤', value: 'halogen-free' },
+];
+
+// 固化方式。与 site-data DEFAULT_CURE 保持一致。
+const CURE_OPTIONS = [
+  { label: '室温固化', value: 'rt' },
+  { label: '加热固化', value: 'heat' },
+  { label: 'UV 固化', value: 'uv' },
+  { label: '湿气固化', value: 'moisture' },
+  { label: '双组分混合', value: '2k' },
+];
+
 const storage = useLocal
   ? ({ kind: 'local' } as const)
   : ({
@@ -185,6 +217,58 @@ export default config({
         // 注意：不要用 fields.document（已废弃且存结构化数组），也不要用
         // fields.markdoc（存 Markdoc AST 对象，需要换渲染器）。
         body: fields.mdx.inline({ label: '正文' }),
+      },
+    }),
+    // 产品库（B2B 核心模块）：参数化产品数据，前台做筛选/选型/询盘
+    products: collection({
+      label: '产品',
+      slugField: 'name',
+      path: 'src/content/products/*',
+      schema: {
+        name: fields.slug({ name: { label: '产品名称' } }),
+        model: fields.text({ label: '型号' }),
+        excerpt: fields.text({ label: '一句话简介', multiline: true }),
+        // 草稿开关：false 不进入站点
+        published: fields.checkbox({ label: '已发布', defaultValue: true }),
+        featured: fields.checkbox({ label: '首页推荐', defaultValue: false }),
+        // ⚠️ Keystatic select 仅支持静态数组，选项与 site-data DEFAULT_PRODUCT_CATEGORIES 保持一致
+        category: fields.select({
+          label: '胶粘剂类型',
+          options: [{ label: '未分类', value: '' }, ...PRODUCT_CATEGORY_OPTIONS],
+          defaultValue: '',
+        }),
+        scenario: fields.select({
+          label: '应用场景',
+          options: [{ label: '未指定', value: '' }, ...SCENARIO_OPTIONS],
+          defaultValue: '',
+        }),
+        baseMaterial: fields.text({ label: '适用基材', description: '如 钢/铝/碳纤维/FRP' }),
+        displacement: fields.text({ label: '间隙/涂布厚度', description: '如 0.05-2mm' }),
+        tempRange: fields.text({ label: '耐温范围', description: '如 -40~150℃' }),
+        cureType: fields.select({
+          label: '固化方式',
+          options: [{ label: '未指定', value: '' }, ...CURE_OPTIONS],
+          defaultValue: '',
+        }),
+        viscosity: fields.text({ label: '粘度', description: '如 5000 mPa·s' }),
+        certifications: fields.multiselect({ label: '认证', options: CERT_OPTIONS }),
+        // PDF 经 GitHub App 提交到 public/uploads/，构建时由静态资源直接产出下载链接
+        tds: fields.file({
+          label: 'TDS 技术说明书(PDF)',
+          directory: 'public/uploads',
+          publicPath: '/uploads/',
+        }),
+        sds: fields.file({
+          label: 'SDS 安全数据表(PDF)',
+          directory: 'public/uploads',
+          publicPath: '/uploads/',
+        }),
+        cover: fields.image({
+          label: '产品图',
+          directory: 'public/uploads',
+          publicPath: '/uploads/',
+        }),
+        body: fields.mdx.inline({ label: '产品描述' }),
       },
     }),
   },

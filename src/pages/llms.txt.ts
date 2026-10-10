@@ -33,6 +33,34 @@ export const GET: APIRoute = async (Astro) => {
   posts.sort((a, b) => String(b.publishedAt ?? '').localeCompare(String(a.publishedAt ?? '')));
   const top = posts.slice(0, 10);
 
+  // 产品库（已上线）
+  let productSlugs: string[] = [];
+  try {
+    productSlugs = await reader.collections.products.list();
+  } catch {
+    productSlugs = [];
+  }
+  const products = (
+    await Promise.all(
+      productSlugs.map(async (slug) => {
+        try {
+          const product = await reader.collections.products.read(slug);
+          // Keystatic read() 结果不含 slug 字段，需从 list() 的键补回
+          return product && product.published !== false ? { slug, ...product } : null;
+        } catch {
+          return null;
+        }
+      })
+    )
+  ).filter(Boolean) as any[];
+  // 首页推荐优先，其次按名称
+  products.sort(
+    (a, b) =>
+      Number(b.featured ?? false) - Number(a.featured ?? false) ||
+      String(a.name ?? '').localeCompare(String(b.name ?? ''))
+  );
+  const featured = products.filter((p) => p.featured).slice(0, 6);
+
   const lines: string[] = [];
   lines.push(`# ${site.title}`);
   lines.push('');
@@ -45,10 +73,10 @@ export const GET: APIRoute = async (Astro) => {
   lines.push('## 核心板块');
   lines.push('');
   lines.push(`- 首页: ${new URL('/', base).href}`);
+  lines.push(`- 产品数据库: ${new URL('/products/', base).href}`);
   lines.push(`- 技术文章库: ${new URL('/posts/', base).href}`);
   lines.push(`- 联系与询盘: ${new URL('/contact/', base).href}`);
   lines.push(`- 站内搜索: ${new URL('/search/', base).href}`);
-  lines.push(`- 产品数据库（规划中）: ${new URL('/products', base).href}`);
   lines.push(`- 选型工具（规划中）: ${new URL('/selector', base).href}`);
   lines.push(`- 案例库（规划中）: ${new URL('/cases', base).href}`);
   lines.push('');
@@ -56,6 +84,16 @@ export const GET: APIRoute = async (Astro) => {
   lines.push('');
   for (const p of top) {
     lines.push(`- ${p.title}: ${new URL(`/posts/${p.slug}/`, base).href}`);
+  }
+  lines.push('');
+  lines.push('## 精选产品');
+  lines.push('');
+  if (featured.length === 0) {
+    lines.push(`（产品库已上线，详见: ${new URL('/products/', base).href}）`);
+  } else {
+    for (const p of featured) {
+      lines.push(`- ${p.name}${p.model ? `（${p.model}）` : ''}: ${new URL(`/products/${p.slug}/`, base).href}`);
+    }
   }
   lines.push('');
   lines.push('## 内容授权');
