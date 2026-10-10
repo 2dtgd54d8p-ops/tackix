@@ -1,18 +1,35 @@
+# Cloudflare Pages 自定义响应头
+# 文档：https://developers.cloudflare.com/pages/configuration/headers/
+#
+# ⚠️ 预上线闸门：X-Robots-Tag 响应头是 meta robots 的**双保险**。
+#    两者区别：
+#      · meta robots      → 爬虫需先抓取页面才能读到（可能收录后才生效）
+#      · X-Robots-Tag 头 → 爬虫在 HTTP 响应阶段即可读到，阻止更彻底
+#    正式上线时删除下方「预上线」区块里的那行即可（meta 版本改 src/lib/prelaunch.ts）。
+
+# ── 预上线：全站禁止收录 ────────────────────────────────────────
+/*
+  X-Robots-Tag: noindex, nofollow, noarchive
+
 # 静态资源长缓存
 /_astro/*
   Cache-Control: public, max-age=31536000, immutable
 
 # 管理后台禁止被搜索引擎收录
 /keystatic*
-  X-Robots-Tag: noindex
+  X-Robots-Tag: noindex, nofollow, noarchive
 
 # 留言后台：不在导航露出，禁止收录，且不允许被 iframe 套入
 /admin/*
-  X-Robots-Tag: noindex, nofollow
+  X-Robots-Tag: noindex, nofollow, noarchive
+  Cache-Control: no-store
+
+# 询盘接口：预上线期已停止写库与发信，不应被搜索引擎抓取
+/api/*
+  X-Robots-Tag: noindex, nofollow, noarchive
   Cache-Control: no-store
 
 # 全局基础安全响应头（仅补充缺失防护，不影响站点功能）
-/*
   X-Content-Type-Options: nosniff
   Referrer-Policy: strict-origin-when-cross-origin
   X-Frame-Options: DENY
