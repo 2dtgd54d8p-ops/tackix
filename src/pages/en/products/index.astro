@@ -1,0 +1,149 @@
+---
+/**
+ * 英文产品列表页 /en/products（T12）
+ * 双维度筛选（化学体系 × 应用场景），文案英文，缺失译文回退中文。
+ */
+import { createReader } from '@keystatic/core/reader';
+// 三层深：en → pages → src
+import keystaticConfig from '../../../../keystatic.config';
+import Base from '../../../layouts/Base.astro';
+import { loadSiteData } from '../../../lib/site-data';
+import { pick } from '../../../lib/i18n-content';
+
+const reader = createReader(process.cwd(), keystaticConfig);
+let slugs: string[] = [];
+try {
+  slugs = await reader.collections.products.list();
+} catch (e) {
+  console.warn('[build] 读取产品列表失败：', e);
+}
+
+const products = (
+  await Promise.all(
+    slugs.map(async (slug) => {
+      try {
+        const p = await reader.collections.products.read(slug);
+        return p && p.published !== false ? { slug, ...p } : null;
+      } catch {
+        return null;
+      }
+    })
+  )
+).filter(Boolean) as any[];
+
+products.sort(
+  (a, b) => Number(b.featured ?? false) - Number(a.featured ?? false) ||
+    String(a.name ?? '').localeCompare(String(b.name ?? ''))
+);
+
+const { productCategoryLabel, scenarioLabel } = await loadSiteData();
+
+// 英文分类名
+const CAT_EN: Record<string, string> = {
+  epoxy: 'Epoxy', polyurethane: 'Polyurethane', acrylic: 'Acrylic',
+  silicone: 'Silicone', cyanoacrylate: 'Cyanoacrylate', uv: 'UV-Curable',
+  anaerobic: 'Anaerobic', hotmelt: 'Hot Melt',
+};
+const SCN_EN: Record<string, string> = {
+  electronics: 'Electronics', automotive: 'Automotive', newenergy: 'New Energy',
+  construction: 'Construction', packaging: 'Packaging', medical: 'Medical',
+  general: 'General Industrial',
+};
+
+const catSet = new Set(products.map((p) => p.category).filter(Boolean));
+const scnSet = new Set(products.map((p) => p.scenario).filter(Boolean));
+const catFilters = [
+  { value: 'all', label: 'All Chemistries' },
+  ...[...catSet].map((v) => ({ value: v as string, label: CAT_EN[v as string] ?? productCategoryLabel(v as string) })),
+];
+const scnFilters = [
+  { value: 'all', label: 'All Applications' },
+  ...[...scnSet].map((v) => ({ value: v as string, label: SCN_EN[v as string] ?? scenarioLabel(v as string) })),
+];
+---
+
+<Base
+  title="Product Database"
+  description="Browse industrial adhesives and sealants by chemistry and application: epoxy, polyurethane, silicone, UV, anaerobic, hot melt. Full technical parameters, TDS/SDS and online quotation."
+  alternates={[{ lang: 'zh-CN', href: '/products/' }, { lang: 'en', href: '/en/products/' }, { lang: 'x-default', href: '/en/products/' }]}
+  locale="en_US"
+>
+  <section>
+    <div class="page-head">
+      <h1>Product Database</h1>
+      <p>
+        {products.length} industrial adhesives and sealants · filter by chemistry and application ·
+        TDS/SDS available on request
+      </p>
+    </div>
+
+    <nav class="filters" id="cat-filter" aria-label="Filter by chemistry">
+      {catFilters.map((c, i) => <button type="button" class={i === 0 ? 'active' : ''} data-category={c.value}>{c.label}</button>)}
+    </nav>
+    <nav class="filters" id="scn-filter" aria-label="Filter by application">
+      {scnFilters.map((s, i) => <button type="button" class={i === 0 ? 'active' : ''} data-scenario={s.value}>{s.label}</button>)}
+    </nav>
+
+    <div class="grid en-cards">
+      {
+        products.map((p) => (
+          <a class="card en-card" href={`/en/products/${p.slug}/`} data-category={p.category ?? ''} data-scenario={p.scenario ?? ''}>
+            <div class="en-card-cat">{CAT_EN[p.category] ?? p.category}</div>
+            <h3>{pick(p.name, p.nameEn)}</h3>
+            <p class="en-card-excerpt">{pick(p.excerpt, p.excerptEn)}</p>
+            <span class="sol-cta">View technical data →</span>
+          </a>
+        ))
+      }
+    </div>
+    <p class="empty" id="no-hit" hidden>No products match the selected filters.</p>
+  </section>
+</Base>
+
+<script>
+  // 双维度筛选：类型 × 场景 取交集（与中文版逻辑一致）
+  const catBtns = document.querySelectorAll<HTMLButtonElement>('#cat-filter [data-category]');
+  const scnBtns = document.querySelectorAll<HTMLButtonElement>('#scn-filter [data-scenario]');
+  const cards = document.querySelectorAll<HTMLElement>('.en-card[data-category]');
+  const noHit = document.getElementById('no-hit');
+  let cat = 'all';
+  let scn = 'all';
+
+  function apply() {
+    let n = 0;
+    cards.forEach((c) => {
+      const okCat = cat === 'all' || c.dataset.category === cat;
+      const okScn = scn === 'all' || c.dataset.scenario === scn;
+      const show = okCat && okScn;
+      c.hidden = !show;
+      if (show) n++;
+    });
+    if (noHit) noHit.hidden = n > 0;
+  }
+
+  catBtns.forEach((b) =>
+    b.addEventListener('click', () => {
+      cat = b.dataset.category ?? 'all';
+      catBtns.forEach((x) => x.classList.toggle('active', x === b));
+      apply();
+    })
+  );
+  scnBtns.forEach((b) =>
+    b.addEventListener('click', () => {
+      scn = b.dataset.scenario ?? 'all';
+      scnBtns.forEach((x) => x.classList.toggle('active', x === b));
+      apply();
+    })
+  );
+</script>
+
+<style>
+  .en-cards { display: grid; gap: 20px; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); }
+  .en-card { display: flex; flex-direction: column; }
+  .en-card-cat {
+    font-size: 12px; font-weight: 600; letter-spacing: 0.04em; text-transform: uppercase;
+    color: var(--accent); margin-bottom: 8px;
+  }
+  .en-card h3 { font-size: 18px; margin: 0 0 8px; line-height: 1.35; }
+  .en-card-excerpt { color: var(--muted); font-size: 14.5px; line-height: 1.7; margin: 0 0 14px; flex: 1; }
+</style>

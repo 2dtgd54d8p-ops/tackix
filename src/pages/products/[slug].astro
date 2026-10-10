@@ -31,6 +31,7 @@ export async function getStaticPaths() {
 }
 
 const { product } = Astro.props;
+const slug = Astro.params.slug;   // 用于 hreflang 中英互指
 const html = marked(product.body ?? '');
 
 const { site, productCategoryLabel, scenarioLabel, certLabel, cureLabel } = await loadSiteData();
@@ -104,6 +105,12 @@ const productSchema = {
 <Base
   title={product.name}
   description={product.excerpt}
+
+  alternates={[
+    { lang: 'zh-CN', href: `/products/${slug}/` },
+    { lang: 'en', href: `/en/products/${slug}/` },
+    { lang: 'x-default', href: `/en/products/${slug}/` },
+  ]}
   type="website"
   keywords={keywords}
 >

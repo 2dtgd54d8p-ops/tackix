@@ -1,0 +1,80 @@
+---
+/**
+ * 英文案例列表页 /en/cases（T12）
+ */
+import { createReader } from '@keystatic/core/reader';
+import keystaticConfig from '../../../../keystatic.config';
+import Base from '../../../layouts/Base.astro';
+import { pick } from '../../../lib/i18n-content';
+import { loadSiteData } from '../../../lib/site-data';
+
+const reader = createReader(process.cwd(), keystaticConfig);
+let slugs: string[] = [];
+try {
+  slugs = await reader.collections.cases.list();
+} catch (e) {
+  console.warn('[build] 读取案例列表失败：', e);
+}
+
+const cases = (
+  await Promise.all(
+    slugs.map(async (slug) => {
+      try {
+        const c = await reader.collections.cases.read(slug);
+        return c && c.published !== false ? { slug, ...c } : null;
+      } catch {
+        return null;
+      }
+    })
+  )
+).filter(Boolean) as any[];
+
+cases.sort(
+  (a, b) => Number(b.featured ?? false) - Number(a.featured ?? false)
+);
+
+const { scenarioLabel } = await loadSiteData();
+const SCN_EN: Record<string, string> = {
+  electronics: 'Electronics', automotive: 'Automotive', newenergy: 'New Energy',
+  construction: 'Construction', packaging: 'Packaging', medical: 'Medical',
+  general: 'General Industrial',
+};
+---
+
+<Base
+  title="Application Case Studies"
+  description="Adhesive application case studies across automotive, electronics, new energy, construction, packaging and medical sectors."
+  alternates={[{ lang: 'zh-CN', href: '/cases/' }, { lang: 'en', href: '/en/cases/' }, { lang: 'x-default', href: '/en/cases/' }]}
+  locale="en_US"
+>
+  <section>
+    <div class="page-head">
+      <h1>Application Case Studies</h1>
+      <p>{cases.length} engineering solutions — challenge, approach and measured results.</p>
+    </div>
+
+    <div class="grid en-cards">
+      {
+        cases.map((c) => (
+          <a class="card en-card" href={`/en/cases/${c.slug}/`}>
+            {c.scenario && <div class="en-card-cat">{SCN_EN[c.scenario] ?? scenarioLabel(c.scenario)}</div>}
+            <h3>{pick(c.title, c.titleEn)}</h3>
+            <p class="en-card-excerpt">{pick(c.excerpt, c.excerptEn)}</p>
+            <span class="sol-cta">Read the case study →</span>
+          </a>
+        ))
+      }
+    </div>
+  </section>
+</Base>
+
+<style>
+  .en-cards { display: grid; gap: 20px; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); }
+  .en-card { display: flex; flex-direction: column; }
+  .en-card-cat {
+    font-size: 12px; font-weight: 600; letter-spacing: 0.04em; text-transform: uppercase;
+    color: var(--accent); margin-bottom: 8px;
+  }
+  .en-card h3 { font-size: 18px; margin: 0 0 8px; line-height: 1.35; }
+  .en-card-excerpt { color: var(--muted); font-size: 14.5px; line-height: 1.7; margin: 0 0 14px; flex: 1; }
+</style>

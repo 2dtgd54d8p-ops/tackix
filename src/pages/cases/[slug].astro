@@ -30,6 +30,7 @@ export async function getStaticPaths() {
 }
 
 const { item } = Astro.props as { item: any };
+const slug = Astro.params.slug;   // 用于 hreflang 互指
 const html = marked(item.body ?? '');
 
 const { site, scenarioLabel } = await loadSiteData();
@@ -76,7 +77,16 @@ const caseSchema = {
 };
 ---
 
-<Base title={item.title} description={item.excerpt} keywords={[scenarioName, item.client].filter(Boolean)}>
+<Base
+  title={item.title}
+  description={item.excerpt}
+  keywords={[scenarioName, item.client].filter(Boolean)}
+  alternates={[
+    { lang: 'zh-CN', href: `/cases/${slug}/` },
+    { lang: 'en', href: `/en/cases/${slug}/` },
+    { lang: 'x-default', href: `/en/cases/${slug}/` },
+  ]}
+>
   <Fragment slot="head">
     <script type="application/ld+json" set:html={JSON.stringify(caseSchema)} />
   </Fragment>

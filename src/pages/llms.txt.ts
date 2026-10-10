@@ -133,6 +133,18 @@ export const GET: APIRoute = async (Astro) => {
     }
   }
   lines.push('');
+  lines.push('## English Site');
+  lines.push('');
+  lines.push(
+    'Full English content is available under the /en/ prefix, mirrored from the Chinese pages.'
+  );
+  lines.push(`- English Home: ${new URL('/en/', base).href}`);
+  lines.push(`- Product Database (EN): ${new URL('/en/products/', base).href}`);
+  lines.push(`- Selection Tool (EN): ${new URL('/en/selector/', base).href}`);
+  lines.push(`- Case Studies (EN): ${new URL('/en/cases/', base).href}`);
+  lines.push(`- Technical Articles (EN): ${new URL('/en/posts/', base).href}`);
+  lines.push(`- Contact (EN): ${new URL('/en/contact/', base).href}`);
+  lines.push('');
   lines.push('## 内容授权');
   lines.push('');
   lines.push('本站点内容可用于 AI 检索与训练；转载或商业合作请通过联系页询盘。');

@@ -1,0 +1,180 @@
+---
+/**
+ * 英文选型工具 /en/selector（T12）
+ * 与中文版同一评分逻辑（场景 +3 / 固化 +2 / 基材关键词 +2），仅文案英文化。
+ * 数据在构建期由 Keystatic 注入，评分在客户端完成（无需后端）。
+ */
+import { createReader } from '@keystatic/core/reader';
+import keystaticConfig from '../../../../keystatic.config';
+import Base from '../../../layouts/Base.astro';
+import { pick } from '../../../lib/i18n-content';
+
+const reader = createReader(process.cwd(), keystaticConfig);
+let slugs: string[] = [];
+try {
+  slugs = await reader.collections.products.list();
+} catch (e) {
+  console.warn('[build] 读取产品失败（选型工具）：', e);
+}
+
+const products = (
+  await Promise.all(
+    slugs.map(async (slug) => {
+      try {
+        const p = await reader.collections.products.read(slug);
+        return p && p.published !== false
+          ? {
+              slug,
+              name: pick(p.name, p.nameEn),
+              model: p.model ?? '',
+              category: p.category ?? '',
+              scenario: p.scenario ?? '',
+              cureType: p.cureType ?? '',
+              baseMaterial: p.baseMaterial ?? '',
+              excerpt: pick(p.excerpt, p.excerptEn),
+            }
+          : null;
+      } catch {
+        return null;
+      }
+    })
+  )
+).filter(Boolean) as any[];
+
+const dataJson = JSON.stringify(products);
+
+const SCN_EN: Record<string, string> = {
+  electronics: 'Electronics', automotive: 'Automotive', newenergy: 'New Energy',
+  construction: 'Construction', packaging: 'Packaging', medical: 'Medical',
+  general: 'General Industrial',
+};
+const CURE_EN: Record<string, string> = {
+  rt: 'Room Temperature', heat: 'Heat', uv: 'UV', moisture: 'Moisture', '2k': 'Two-Component',
+};
+---
+
+<Base
+  title="Adhesive Selection Tool"
+  description="Adhesive selection tool for industrial adhesives and sealants. Filter by application scenario, cure mechanism and substrate to find matching products."
+  alternates={[{ lang: 'zh-CN', href: '/selector/' }, { lang: 'en', href: '/en/selector/' }, { lang: 'x-default', href: '/en/selector/' }]}
+  locale="en_US"
+>
+  <section>
+    <div class="page-head">
+      <h1>Adhesive Selection Tool</h1>
+      <p>Answer three questions and we will rank the most suitable products for your assembly.</p>
+    </div>
+
+    <form class="selector-form" id="sel-form">
+      <div class="field">
+        <label for="f-scenario">Application scenario *</label>
+        <select id="f-scenario" required>
+          <option value="">Please select…</option>
+          {Object.entries(SCN_EN).map(([v, l]) => <option value={v}>{l}</option>)}
+        </select>
+      </div>
+      <div class="field">
+        <label for="f-cure">Cure mechanism</label>
+        <select id="f-cure">
+          <option value="">Any</option>
+          {Object.entries(CURE_EN).map(([v, l]) => <option value={v}>{l}</option>)}
+        </select>
+      </div>
+      <div class="field">
+        <label for="f-material">Substrate (keywords separated by space or comma)</label>
+        <input id="f-material" type="text" placeholder="e.g. aluminium steel" />
+      </div>
+      <div class="selector-actions">
+        <button type="submit" class="btn btn-primary">Find Matching Products</button>
+        <button type="reset" class="btn">Reset</button>
+      </div>
+    </form>
+
+    <div id="results" class="selector-results" hidden>
+      <h2 class="section-title"><span id="count"></span></h2>
+      <div id="result-list" class="grid en-cards"></div>
+    </div>
+    <p id="no-hit" class="empty" hidden>
+      No matching products. Try a broader scenario, or
+      <a href="/en/contact">contact our engineers</a> for advice.
+    </p>
+  </section>
+
+  <script type="application/json" id="selector-data" set:html={dataJson} />
+</Base>
+
+<script is:inline>
+  const DATA = JSON.parse(document.getElementById('selector-data')?.textContent || '[]');
+  const form = document.getElementById('sel-form');
+  const results = document.getElementById('results');
+  const list = document.getElementById('result-list');
+  const countEl = document.getElementById('count');
+  const noHit = document.getElementById('no-hit');
+
+  // 与中文版一致的评分逻辑：场景 +3 / 固化 +2 / 基材关键词 +2
+  function score(p, s) {
+    let v = 0;
+    if (p.scenario && p.scenario === s.scenario) v += 3;
+    if (s.cure && p.cureType && p.cureType === s.cure) v += 2;
+    if (s.material) {
+      const kw = s.material.split(/[\s,，、/]+/).filter(Boolean);
+      const hay = `${p.baseMaterial || ''} ${p.name || ''} ${p.excerpt || ''}`.toLowerCase();
+      for (const k of kw) if (k && hay.includes(k.toLowerCase())) v += 2;
+    }
+    return v;
+  }
+
+  form?.addEventListener('submit', (e) => {
+    e.preventDefault();
+    const scenario = document.getElementById('f-scenario')?.value || '';
+    if (!scenario) return;
+    const s = {
+      scenario,
+      cure: document.getElementById('f-cure')?.value || '',
+      material: document.getElementById('f-material')?.value.trim() || '',
+    };
+    const hits = DATA.map((p) => ({ p, v: score(p, s) }))
+      .filter((x) => x.v > 0)
+      .sort((a, b) => b.v - a.v);
+    if (!list) return;
+    list.innerHTML = '';
+    hits.forEach(({ p, v }, i) => {
+      const a = document.createElement('a');
+      a.className = 'card en-card';
+      a.href = `/en/products/${p.slug}/`;
+      a.innerHTML =
+        `<div class="en-card-cat">${i === 0 ? 'Best Match' : 'Match ' + v}</div>` +
+        `<h3></h3><p class="en-card-excerpt"></p>` +
+        `<span class="sol-cta">View technical data →</span>`;
+      a.querySelector('h3').textContent = p.name;
+      a.querySelector('p').textContent = p.excerpt;
+      list.appendChild(a);
+    });
+    if (countEl) countEl.textContent = `${hits.length} matching product${hits.length === 1 ? '' : 's'}`;
+    if (results) results.hidden = false;
+    if (noHit) noHit.hidden = hits.length > 0;
+    results?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+  });
+
+  form?.addEventListener('reset', () => {
+    if (results) results.hidden = true;
+    if (noHit) noHit.hidden = true;
+  });
+</script>
+
+<style>
+  .selector-form {
+    display: grid; gap: 18px; max-width: 620px;
+    padding: 24px; background: var(--surface); border: 1px solid var(--border); border-radius: var(--r-md);
+  }
+  .selector-actions { display: flex; gap: 12px; flex-wrap: wrap; }
+  .selector-results { margin-top: 40px; }
+  .en-cards { display: grid; gap: 20px; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); }
+  .en-card { display: flex; flex-direction: column; }
+  .en-card-cat {
+    font-size: 12px; font-weight: 600; letter-spacing: 0.04em; text-transform: uppercase;
+    color: var(--accent); margin-bottom: 8px;
+  }
+  .en-card h3 { font-size: 18px; margin: 0 0 8px; line-height: 1.35; }
+  .en-card-excerpt { color: var(--muted); font-size: 14.5px; line-height: 1.7; margin: 0 0 14px; flex: 1; }
+</style>

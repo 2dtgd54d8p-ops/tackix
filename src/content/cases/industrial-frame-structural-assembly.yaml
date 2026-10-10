@@ -34,3 +34,31 @@ body: |
 
   结构粘接替代焊接彻底消除了热变形与应力集中问题，框架精度显著提升，
   同时减少了焊接与机加工校正工序，缩短制造周期并降低成本。
+
+# ── 英文内容（T12）──
+titleEn: 'Structural Assembly of Industrial Equipment Metal Frames'
+excerptEn: |
+  Two-component epoxy structural adhesive replaces welding for metal frame assembly, eliminating heat distortion and simplifying the process.
+challengeEn: |
+  Equipment frames were welded from steel plates, where weld heat causes distortion and stress concentration, followed by corrective machining. Weld fumes and process complexity also raised cost and lead time.
+solutionEn: |
+  TAC 8800 two-component epoxy structural adhesive was used for positional bonding with fixtures controlling assembly accuracy. The weld-free process avoids heat distortion, and the continuous bond line seals while absorbing stress.
+resultEn: |
+  Assembly steps reduced from 8 to 4, frame flatness improved from 0.8 mm to 0.2 mm, manufacturing cost fell about 12%, and weld rework was eliminated.
+bodyEn: |
+  ## Background
+
+  Industrial automation equipment frames were primarily welded from steel plate. Welding brought heat distortion, stress concentration and subsequent corrective machining time, while dust and process complexity constrained capacity.
+
+  ## Solution and validation
+
+  **TAC 8800 two-component epoxy structural adhesive** was selected to replace welding for structural connection:
+
+  1. Surface treatment: steel derusted, degreased and abraded to guarantee a clean bonding surface
+  2. Positioning: fixtures used to control the relative position and gap of each plate
+  3. Application: gap controlled at 0.3–1.0 mm to ensure a continuous, full bond line
+  4. Cure: room-temperature cure, with 60°C acceleration where needed to reach final strength
+
+  ## Value
+
+  Structural bonding replaced welding, completely eliminating heat distortion and stress concentration while improving frame precision. Weld and corrective-machining steps were reduced, shortening manufacturing cycle time and lowering cost.

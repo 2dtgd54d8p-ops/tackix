@@ -37,3 +37,34 @@ body: |
   - 医疗管路接头、注射器零部件粘接
   - 医用面罩、护目镜透明件粘接
   - 试剂盒、诊断卡壳体封装
+
+# ── 英文内容（T12）──
+nameEn: |
+  TAC UV-3600 Medical-Grade UV Adhesive
+excerptEn: |
+  Low-odour, low-migration UV-curable adhesive meeting medical biocompatibility requirements for disposable device assembly.
+bodyEn: |
+  ## Product Overview
+
+  TAC UV-3600 is a UV-curable adhesive for medical device manufacturing, combining fast cure
+  with **low odour and low monomer migration** to meet the biocompatibility and cleanliness
+  requirements of disposable medical devices. It cures in seconds under UV, improving line
+  throughput.
+
+  ## Key Features
+
+  - Seconds-level cure for automated high-speed assembly
+  - Low odour and low migration for medical-grade biocompatibility
+  - Clear bond line allowing light cure-through
+  - Resistant to medical sterilisation (EtO / gamma)
+  - Excellent adhesion to PC, PMMA and other clear substrates
+
+  > Requires a UV source (365 nm recommended). Cure conditions depend on bond line
+  > thickness; thick sections need extended exposure or a secondary cure.
+
+  ## Typical Applications
+
+  - IV set, catheter and infusion component assembly
+  - Medical tubing connectors and syringe parts
+  - Masks and goggles transparent-part bonding
+  - Diagnostic kit and test cartridge housings

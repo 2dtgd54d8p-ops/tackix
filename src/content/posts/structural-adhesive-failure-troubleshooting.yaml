@@ -71,3 +71,70 @@ body: |
 
   结构胶失效往往代价高昂（返工、停线、甚至安全风险）。与其事后排查，不如在工艺阶段就固化标准：
   明确表面处理等级、混合计量方式、涂布间隙范围与固化条件，并做首件验证。
+
+# ── 英文内容（T12）──
+titleEn: 'Seven Causes of Structural Adhesive Failure and How to Troubleshoot Them'
+excerptEn: |
+  Cracks, delamination, voids — a systematic look at surface preparation, mix ratio, cure conditions and joint design, with a fast diagnostic checklist.
+bodyEn: |
+  ## The right order for troubleshooting
+
+  When a bond fails, work through **interface → formulation → process → environment** in that order. Interface problems dominate and are the fastest to verify, so this sequence minimises trial and error.
+
+  ## 1. Interface: the adhesive never truly touched the substrate
+
+  The leading cause of structural adhesive failure, accounting for well over half of cases. The bead looks full, yet it peels off as a sheet.
+
+  ### 1.1 Inadequate surface preparation
+  Oil, dust, oxide and mould release agents isolate adhesive from substrate. **Diagnostic**: inspect the fracture surface — failure at the adhesive interface rather than in the substrate indicates this.
+
+  ### 1.2 Low substrate surface energy
+  PE and PP are non-polar with extremely low surface energy and resist wetting. **Fix**: corona discharge or plasma activation.
+
+  ### 1.3 Mould release agent migration
+  Silicone release agents transfer from tooling and fixtures onto the bond face — an invisible culprit. **Fix**: keep release agents away from bonding areas.
+
+  ## 2. Formulation: hidden variables in two-part systems
+
+  ### 2.4 Incorrect mix ratio
+  Deviation directly alters crosslink density, degrading toughness or strength. **Note**: do not add components by feel — use proper metering equipment.
+
+  ### 2.5 Pot-life wasted by repeated mixing
+  Two-part adhesives have a pot life; past it the viscosity climbs or the material gels. **Recommendation**: mix in batches sized to actual usage.
+
+  ## 3. Process: workmanship decides the outcome
+
+  ### 3.6 Excessive bond line thickness or incomplete cure
+  Exceeding the recommended thickness prevents full cure internally; low ambient temperature extends cure time. **Fix**: apply at the specified thickness and use heat-accelerated cure.
+
+  ### 3.7 Joint design ignores movement
+  A rigid adhesive in a joint that moves accumulates shear and peel stress under thermal cycling until it cracks. **Fix**: match the adhesive's movement capability to the joint, and size the joint accordingly.
+
+  ## Fast diagnostic checklist
+
+  | Symptom | Likely cause | First action |
+  |---|---|---|
+  | Peels off as a sheet | Contamination / low surface energy | Re-clean and activate |
+  | Honeycomb voids in bead | Air entrainment / poor outgassing | Vacuum degas and single-direction spread |
+  | Still soft after 24h | Ratio error / low temperature / thick bead | Verify ratio, apply heat cure |
+  | Cracks after thermal cycling | Rigid constraint / insufficient movement capability | Switch to elastic adhesive, widen joint |
+  | Consistently below spec | Wrong ratio or non-specified grade | Verify metering and grade |
+
+  > If the cause remains unclear, send us the duty cycle (substrate, load, temperature, failure morphology) and our technical engineers will help analyse it — or shortlist candidates in the [selector](/en/selector) first.
+
+  ## Prevention beats diagnosis
+
+  Structural adhesive failures are costly — rework, line stoppages, and potential safety risks. Rather than investigating after the fact, standardise the process up front: define surface preparation grade, metering method, bond line thickness range and cure conditions, then validate on first articles.
+faqEn:
+  - question: 'The adhesive was applied but peels right off — what is wrong?'
+    answer: |
+      The most common cause is inadequate surface preparation: oil, dust, oxide or mould release agent preventing direct contact, producing a "false bond". Second is low substrate surface energy (untreated PE/PP) leading to poor wetting. Clean thoroughly and activate low-surface-energy materials by corona or plasma.
+  - question: 'What do I do about bubbles in two-part epoxy?'
+    answer: |
+      Bubbles usually come from air introduced during mixing or an incorrect ratio. Vacuum degas after mixing; when mixing by hand with a gun, avoid fast agitation; and spreading in one direction with a spatula helps release air. If the joint is gap-filling by design, provide vent paths.
+  - question: 'The adhesive has cured but is still soft — is it under-cured?'
+    answer: |
+      Usually the bond line is too thick or ambient temperature is too low. Two-part epoxy at correct ratio typically needs 24 h at room temperature or manufacturer-specified heat acceleration. Exceeding the recommended thickness prevents full internal cure — apply in passes or heat cure.
+  - question: 'Why does the bond crack after thermal cycling?'
+    answer: |
+      Most often a mismatch in coefficient of thermal expansion between adhesive and substrate. If the joint is rigidly restrained, the adhesive carries continuous shear and peel as temperature cycles, eventually cracking. Use an adhesive with matching movement capability and size the joint on that basis.

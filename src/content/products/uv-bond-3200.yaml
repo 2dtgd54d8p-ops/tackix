@@ -32,3 +32,31 @@ body: |
   - 手机/平板摄像头模组固定
   - 玻璃盖板与金属中框粘接
   - PCB 元件保护与补强
+
+# ── 英文内容（T12）──
+nameEn: |
+  TAC UV-3200 UV-Curable Adhesive
+excerptEn: |
+  Low-shrinkage UV-curable adhesive offering high transparency and fast cure, ideal for precision optical and electronic assembly.
+bodyEn: |
+  ## Product Overview
+
+  TAC UV-3200 is a UV-curable adhesive formulated for precision assembly where both
+  **optical clarity** and **production throughput** matter. It cures in seconds under
+  365–405 nm radiation and cures through clear substrates, leaving a low-shrinkage,
+  high-transparency bond line.
+
+  ## Key Features
+
+  - Seconds-level cure, supporting high-speed automated lines
+  - Low shrinkage to minimise part displacement during cure
+  - High optical transparency — no haze, no clouding
+  - Cure-through capability for transparent parts
+  - Compatible with secondary moisture cure for shadowed areas
+
+  ## Typical Applications
+
+  - Smartphone camera module lens and VCM assembly
+  - Consumer electronics housing and lens bonding
+  - LED and optical component assembly
+  - Medical device transparent-part bonding

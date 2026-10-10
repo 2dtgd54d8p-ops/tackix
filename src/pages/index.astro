@@ -100,6 +100,11 @@ const jsonLd = {
 <Base
   title="首页"
   description={siteInfo.description || `${siteInfo.title} —— 记录技术、实践与思考的独立空间。`}
+  alternates={[
+    { lang: 'zh-CN', href: '/' },
+    { lang: 'en', href: '/en/' },
+    { lang: 'x-default', href: '/en/' },
+  ]}
 >
   <script type="application/ld+json" set:html={JSON.stringify(jsonLd)} />
 

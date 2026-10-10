@@ -52,7 +52,12 @@ const dataJson = JSON.stringify(
 );
 ---
 
-<Base title="产品选型">
+<Base title="产品选型"
+  alternates={[
+    { lang: 'zh-CN', href: '/selector/' },
+    { lang: 'en', href: '/en/selector/' },
+    { lang: 'x-default', href: '/en/selector/' },
+  ]}>
   <section>
     <div class="page-head">
       <h1>产品选型</h1>

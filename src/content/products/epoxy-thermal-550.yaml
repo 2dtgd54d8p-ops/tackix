@@ -37,3 +37,34 @@ body: |
   - 新能源电池模组、储能柜结构灌封
   - 充电桩、电控板电子模块封装
   - 电源模块、传感器组件灌封
+
+# ── 英文内容（T12）──
+nameEn: |
+  TAC EP-550 Thermal-Conductive Epoxy Potting Compound
+excerptEn: |
+  Two-component thermally conductive epoxy potting compound (1.5 W/m·K) combining excellent insulation with low thermal resistance for module encapsulation.
+bodyEn: |
+  ## Product Overview
+
+  TAC EP-550 is a two-component thermally conductive epoxy potting compound. It delivers
+  **effective heat conduction and electrical insulation** while maintaining good mechanical
+  strength, transferring heat from chips and power devices to the heat sink to lower
+  junction temperature and extend service life.
+
+  ## Key Features
+
+  - Thermal conductivity approximately 1.5 W/m·K, minimising interfacial thermal resistance
+  - Excellent electrical insulation for high-voltage isolation
+  - Low shrinkage, reducing stress on delicate components
+  - Flame-retardant rated, reliable at elevated temperatures
+  - Room-temperature cure or heat-accelerated
+
+  > Potting notes: control entrained air (vacuum degassing is recommended).
+  > For high-power devices, add thermal spreading paths to further reduce thermal resistance.
+
+  ## Typical Applications
+
+  - Power module, IGBT and LED device encapsulation
+  - New-energy battery module and storage cabinet potting
+  - EV charger and control board module packaging
+  - Power supply and sensor assembly potting

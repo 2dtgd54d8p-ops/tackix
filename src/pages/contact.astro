@@ -2,7 +2,12 @@
 import Base from '../layouts/Base.astro';
 ---
 
-<Base title="联系我">
+<Base title="联系我"
+  alternates={[
+    { lang: 'zh-CN', href: '/contact/' },
+    { lang: 'en', href: '/en/contact/' },
+    { lang: 'x-default', href: '/en/contact/' },
+  ]}>
   <section>
     <div class="page-head">
       <h1>联系我</h1>

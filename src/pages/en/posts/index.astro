@@ -1,0 +1,75 @@
+---
+/**
+ * 英文文章列表页 /en/posts（T12）
+ */
+import { createReader } from '@keystatic/core/reader';
+import keystaticConfig from '../../../../keystatic.config';
+import Base from '../../../layouts/Base.astro';
+import { pick } from '../../../lib/i18n-content';
+
+const reader = createReader(process.cwd(), keystaticConfig);
+let slugs: string[] = [];
+try {
+  slugs = await reader.collections.posts.list();
+} catch (e) {
+  console.warn('[build] 读取文章列表失败：', e);
+}
+
+const posts = (
+  await Promise.all(
+    slugs.map(async (slug) => {
+      try {
+        const p = await reader.collections.posts.read(slug);
+        return p && p.published !== false ? { slug, ...p } : null;
+      } catch {
+        return null;
+      }
+    })
+  )
+).filter(Boolean) as any[];
+
+posts.sort(
+  (a, b) =>
+    Number(b.featured ?? false) - Number(a.featured ?? false) ||
+    String(b.publishedAt ?? '').localeCompare(String(a.publishedAt ?? ''))
+);
+---
+
+<Base
+  title="Technical Articles"
+  description="Adhesive selection guides, failure troubleshooting and application notes for industrial adhesives and sealants."
+  alternates={[{ lang: 'zh-CN', href: '/posts/' }, { lang: 'en', href: '/en/posts/' }, { lang: 'x-default', href: '/en/posts/' }]}
+  locale="en_US"
+>
+  <section>
+    <div class="page-head">
+      <h1>Technical Articles</h1>
+      <p>{posts.length} articles on adhesive selection, failure analysis and industrial applications.</p>
+    </div>
+
+    {
+      posts.length === 0 ? (
+        <p class="empty">No articles published yet.</p>
+      ) : (
+        <div class="grid en-cards">
+          {posts.map((p) => (
+            <a class="card en-card" href={`/en/posts/${p.slug}/`}>
+              {p.publishedAt && <time class="en-card-date">{new Date(p.publishedAt).toISOString().slice(0, 10)}</time>}
+              <h3>{pick(p.title, p.titleEn)}</h3>
+              <p class="en-card-excerpt">{pick(p.excerpt, p.excerptEn)}</p>
+              <span class="sol-cta">Read article →</span>
+            </a>
+          ))}
+        </div>
+      )
+    }
+  </section>
+</Base>
+
+<style>
+  .en-cards { display: grid; gap: 20px; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); }
+  .en-card { display: flex; flex-direction: column; }
+  .en-card-date { font-size: 12px; color: var(--faint); margin-bottom: 8px; }
+  .en-card h3 { font-size: 18px; margin: 0 0 8px; line-height: 1.35; }
+  .en-card-excerpt { color: var(--muted); font-size: 14.5px; line-height: 1.7; margin: 0 0 14px; flex: 1; }
+</style>

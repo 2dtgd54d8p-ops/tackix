@@ -34,3 +34,31 @@ body: |
 
   UV 固化把单件固化时间从约 60s 压缩到 5s，显著提升节拍；同时低收缩特性把定位良率
   推到 99% 以上，帮助客户在微型化模组上获得稳定的量产良率。
+
+# ── 英文内容（T12）──
+titleEn: 'Precision UV Bonding for Consumer Electronics Camera Modules'
+excerptEn: |
+  Low-shrinkage UV adhesive secures lens and VCM assembly, achieving module slimming while improving long-term reliability.
+challengeEn: |
+  Camera modules require micron-level positioning accuracy while surviving drop and thermal cycling. The original hot-melt approach softened and crept at high temperature, causing focus drift and optical performance degradation.
+solutionEn: |
+  TAC UV-3200 UV-curable adhesive was dispensed to fix the lens and voice coil motor, curing in seconds to match high-speed line takt. The low-shrinkage, high-rigidity bond line maintains lens positional accuracy over time.
+resultEn: |
+  Module weight reduced by about 10%, passed 1.5 m drop and 85°C/85%RH high-temperature high-humidity testing, with markedly improved focus stability and a 30% shorter line cycle.
+bodyEn: |
+  ## Background
+
+  A camera module consists of lens barrel, lenses, cover glass and metal mid-frame. Assembly must achieve **micron-level positioning accuracy** while meeting **mass-production throughput**. The customer previously used heat-cure adhesive, which was slow to cure, prone to shrinkage displacement and energy intensive.
+
+  ## Solution
+
+  **TAC UV-3200 UV-curable adhesive** was specified with the following process alignment:
+
+  - Precise dispense control (0.02–0.5 mm bond line) to prevent adhesive contamination of optical surfaces
+  - 365–405 nm UV point source for seconds-level initial cure, allowing parts to flow inline immediately
+  - Low-shrinkage, high-transparency formulation preserving image quality with no haze or displacement
+  - Secondary moisture cure in shadowed areas to ensure full strength
+
+  ## Value
+
+  UV curing reduced single-part cure time from about 60 s to 5 s, significantly improving throughput. Low shrinkage pushed positioning yield above 99%, giving the customer stable mass-production yield on miniaturised modules.

@@ -238,6 +238,21 @@ export default config({
         // 注意：不要用 fields.document（已废弃且存结构化数组），也不要用
         // fields.markdoc（存 Markdoc AST 对象，需要换渲染器）。
         body: fields.mdx.inline({ label: '正文' }),
+        // ── 英文内容（T12 多语言）────────────────────────────────────────
+        titleEn: fields.text({ label: '标题(EN)', description: '留空则回退中文标题' }),
+        excerptEn: fields.text({ label: '摘要(EN)', multiline: true }),
+        bodyEn: fields.mdx.inline({ label: '正文(EN)' }),
+        // FAQ 英文译文：与 faq 同序，长度不一致时按索引安全取值（见 i18n-content.ts）
+        faqEn: fields.array(
+          fields.object(
+            {
+              question: fields.text({ label: '问题(EN)' }),
+              answer: fields.text({ label: '答案(EN)', multiline: true }),
+            },
+            { label: 'Q&A (EN)' }
+          ),
+          { label: 'FAQ(EN)' }
+        ),
       },
     }),
     // 产品库（B2B 核心模块）：参数化产品数据，前台做筛选/选型/询盘
@@ -290,6 +305,12 @@ export default config({
           publicPath: '/uploads/',
         }),
         body: fields.mdx.inline({ label: '产品描述' }),
+        // ── 英文内容（T12 多语言）────────────────────────────────────────
+        // 平行字段而非独立集合：改动最小、后台可编辑、无需迁移既有数据。
+        // 任一字段留空即回退中文原文（见 src/lib/i18n-content.ts 的 pick）。
+        nameEn: fields.text({ label: '产品名称(EN)', description: '留空则显示中文原名' }),
+        excerptEn: fields.text({ label: '一句话简介(EN)', multiline: true }),
+        bodyEn: fields.mdx.inline({ label: '产品描述(EN)' }),
       },
     }),
     // 案例库：行业成功案例，关联产品库，形成 内容 → 案例 → 产品 → 询盘 的闭环
@@ -324,6 +345,13 @@ export default config({
           publicPath: '/uploads/',
         }),
         body: fields.mdx.inline({ label: '正文' }),
+        // ── 英文内容（T12 多语言）────────────────────────────────────────
+        titleEn: fields.text({ label: '案例标题(EN)' }),
+        excerptEn: fields.text({ label: '一句话摘要(EN)', multiline: true }),
+        challengeEn: fields.text({ label: '挑战(EN)', multiline: true }),
+        solutionEn: fields.text({ label: '解决方案(EN)', multiline: true }),
+        resultEn: fields.text({ label: '成果(EN)', multiline: true }),
+        bodyEn: fields.mdx.inline({ label: '正文(EN)' }),
       },
     }),
   },

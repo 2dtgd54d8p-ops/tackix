@@ -6,8 +6,12 @@ import { LOCALES, I18N_EMBED_JSON } from '../lib/i18n';
 interface Props {
   title?: string;
   description?: string;
+  /** hreflang 多语言链接（T12）：由各语言页面传入，透传给 SEO 组件输出 */
+  alternates?: { lang: string; href: string }[];
+  /** 页面语种（og:locale），多语言页面传入 */
+  locale?: string;
 }
-const { title, description } = Astro.props;
+const { title, description, alternates, locale } = Astro.props;
 // 站名/描述/页脚统一读后台「站点信息」singleton，读不到自动回落默认值。
 const { site } = await loadSiteData();
 const siteTitle = site.title;
@@ -52,7 +56,7 @@ const showFloatContact =
         } catch (e) {}
       })();
     </script>
-    <SEO title={title} description={description} />
+    <SEO title={title} description={description} alternates={alternates} locale={locale} />
     <meta name="theme-color" content="#ffffff" media="(prefers-color-scheme: light)" />
     <meta name="theme-color" content="#12101c" media="(prefers-color-scheme: dark)" />
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />

@@ -41,7 +41,12 @@ const scenarioFilters = [
 ];
 ---
 
-<Base title="案例库">
+<Base title="案例库"
+  alternates={[
+    { lang: 'zh-CN', href: '/cases/' },
+    { lang: 'en', href: '/en/cases/' },
+    { lang: 'x-default', href: '/en/cases/' },
+  ]}>
   <section>
     <div class="page-head">
       <h1>客户案例</h1>

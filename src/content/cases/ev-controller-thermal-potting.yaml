@@ -35,3 +35,31 @@ body: |
 
   灌封胶替代硅脂后，热界面稳定性大幅提升，结温显著下降；同时胶层提供 IP67 级防护，
   兼顾散热与密封，减少了模块的故障返修。
+
+# ── 英文内容（T12）──
+titleEn: 'Thermally Conductive Potting for EV Control Modules'
+excerptEn: |
+  Thermally conductive epoxy potting replaces thermal grease and mechanical fixation, lowering power-device junction temperature and improving module reliability and protection.
+challengeEn: |
+  IGBT power devices in the control module generate substantial heat under sustained high current. The original thermal grease approach suffers pump-out and drying at high temperature, causing rising contact thermal resistance, excessive junction temperature and premature failure.
+solutionEn: |
+  TAC EP-550 thermally conductive epoxy was used for full potting, with the adhesive layer simultaneously performing heat transfer, insulation and structural fixing. Vacuum degassing eliminated bubbles to reduce local thermal resistance.
+resultEn: |
+  Device junction temperature dropped about 18°C, passing 1,000 thermal cycles and vibration testing. Module protection reached IP67, with a marked reduction in field failure and rework.
+bodyEn: |
+  ## Background
+
+  IGBT power devices are the core of an EV electric drive system, and their junction temperature directly determines lifetime and safety. Conventional thermal grease can pump out and dry under prolonged high temperature and vibration, raising contact thermal resistance.
+
+  ## Solution and validation
+
+  **TAC EP-550 thermally conductive epoxy** was selected to combine thermal conduction, insulation and structural fixing:
+
+  1. Surface treatment: substrate and device base degreased and dried
+  2. Potting: bond line thickness controlled, with spreading paths added where needed to reduce thermal resistance
+  3. Void control: vacuum degassing to remove internal voids and avoid local hot spots
+  4. Cure: room-temperature cure followed by 1,000 thermal cycles and vibration reliability validation
+
+  ## Value
+
+  Replacing grease with potting compound substantially improved thermal interface stability and reduced junction temperature. At the same time the bond line provides IP67-level protection, combining heat transfer and sealing to reduce module failures and rework.

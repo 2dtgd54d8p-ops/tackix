@@ -1,0 +1,142 @@
+---
+/**
+ * 英文文章详情页 /en/posts/[slug]（T12）
+ * FAQ 渲染 + FAQPage 结构化数据（英文），与中文页 SEO 面等价。
+ */
+import { createReader } from '@keystatic/core/reader';
+import keystaticConfig from '../../../../keystatic.config';
+import Base from '../../../layouts/Base.astro';
+import { marked } from 'marked';
+import { pick, pickArray } from '../../../lib/i18n-content';
+import { loadSiteData } from '../../../lib/site-data';
+
+export async function getStaticPaths() {
+  const reader = createReader(process.cwd(), keystaticConfig);
+  let slugs: string[] = [];
+  try {
+    slugs = await reader.collections.posts.list();
+  } catch (e) {
+    console.warn('[build] 读取文章列表失败：', e);
+  }
+  const entries = await Promise.all(
+    slugs.map(async (slug) => {
+      try {
+        const post = await reader.collections.posts.read(slug);
+        return post && post.published !== false ? { params: { slug }, props: { post } } : null;
+      } catch {
+        return null;
+      }
+    })
+  );
+  return entries.filter(Boolean) as any[];
+}
+
+const { post } = Astro.props;
+const slug = Astro.params.slug;
+
+// stageLabel 等标签函数由 loadSiteData() 返回（不是顶层导出）
+const { stageLabel } = await loadSiteData();
+
+const title = pick(post.title, post.titleEn);
+const excerpt = pick(post.excerpt, post.excerptEn);
+const bodyHtml = await marked.parse(pick(post.body, post.bodyEn));
+
+// FAQ：优先英文译文，缺失则回退中文；长度按索引安全对齐
+const zhFaq: { question: string; answer: string }[] = post.faq ?? [];
+const enFaq: { question: string; answer: string }[] = post.faqEn ?? [];
+const useEn = enFaq.length > 0;
+const faq = zhFaq.map((f, i) => ({
+  question: (useEn ? enFaq[i]?.question : f.question) ?? f.question,
+  answer: (useEn ? enFaq[i]?.answer : f.answer) ?? f.answer,
+})).filter((f) => f.question && f.answer);
+
+const alternates = [
+  { lang: 'zh-CN', href: `/posts/${slug}/` },
+  { lang: 'en', href: `/en/posts/${slug}/` },
+  { lang: 'x-default', href: `/en/posts/${slug}/` },
+];
+
+const dateStr = post.publishedAt ? new Date(post.publishedAt).toISOString() : '';
+---
+
+<Base title={title} description={excerpt} alternates={alternates} locale="en_US">
+  <Fragment slot="head">
+    {
+      faq.length > 0 && (
+        <script
+          type="application/ld+json"
+          set:html={JSON.stringify({
+            '@context': 'https://schema.org',
+            '@type': 'FAQPage',
+            mainEntity: faq.map((f) => ({
+              '@type': 'Question',
+              name: f.question,
+              acceptedAnswer: { '@type': 'Answer', text: f.answer },
+            })),
+          })}
+        />
+      )
+    }
+    <script
+      type="application/ld+json"
+      set:html={JSON.stringify({
+        '@context': 'https://schema.org',
+        '@type': 'BlogPosting',
+        headline: title,
+        description: excerpt,
+        datePublished: dateStr,
+        dateModified: dateStr,
+        inLanguage: 'en',
+        author: { '@type': 'Organization', name: 'Tackix' },
+        publisher: { '@type': 'Organization', name: 'Tackix' },
+        mainEntityOfPage: `https://tackix.pages.dev/en/posts/${slug}/`,
+      })}
+    />
+  </Fragment>
+
+  <section>
+    <a class="en-back" href="/en/posts/">← All Articles</a>
+
+    <article class="prose en-article">
+      <h1>{title}</h1>
+      {post.stage && <span class="tag">{stageLabel(post.stage)}</span>}
+      <p class="en-article-excerpt">{excerpt}</p>
+      <div set:html={bodyHtml} />
+
+      {
+        faq.length > 0 && (
+          <div class="faq-block">
+            <h2>Frequently Asked Questions</h2>
+            <div class="faq-list">
+              {faq.map((f) => (
+                <details class="faq-item">
+                  <summary>{f.question}</summary>
+                  <div class="faq-a">
+                    <p>{f.answer}</p>
+                  </div>
+                </details>
+              ))}
+            </div>
+          </div>
+        )
+      }
+    </article>
+
+    <div class="en-post-cta">
+      <a class="btn btn-primary" href="/en/contact">Discuss Your Application</a>
+      <a class="btn" href="/en/selector">Selection Tool</a>
+    </div>
+  </section>
+</Base>
+
+<style>
+  .en-back { display: inline-block; margin-bottom: 18px; font-size: 14px; color: var(--muted); }
+  .en-article { max-width: var(--readw); margin: 0 auto; }
+  .en-article h1 { font-size: 34px; line-height: 1.2; margin: 0 0 14px; }
+  .en-article-excerpt { color: var(--muted); font-size: 16.5px; line-height: 1.7; margin: 0 0 24px; }
+  .faq-block { margin-top: 40px; }
+  .faq-list { display: grid; gap: 10px; }
+  .faq-item summary { cursor: pointer; font-weight: 600; padding: 12px 14px; background: var(--surface-2); border-radius: var(--r-sm); }
+  .faq-a { padding: 12px 14px; color: var(--muted); }
+  .en-post-cta { max-width: var(--readw); margin: 40px auto 0; display: flex; gap: 12px; flex-wrap: wrap; }
+</style>

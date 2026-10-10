@@ -32,6 +32,7 @@ export async function getStaticPaths() {
 }
 
 const { post } = Astro.props;
+const slug = Astro.params.slug;   // 用于 hreflang 互指
 const html = marked(post.body ?? '');
 
 // 分类/标签/应用场景/决策阶段中文名从后台管理的 singleton 读取；读不到自动回落默认值。
@@ -91,6 +92,11 @@ const faqSchema =
   type="article"
   publishedTime={post.publishedAt}
   keywords={keywords}
+  alternates={[
+    { lang: 'zh-CN', href: `/posts/${slug}/` },
+    { lang: 'en', href: `/en/posts/${slug}/` },
+    { lang: 'x-default', href: `/en/posts/${slug}/` },
+  ]}
 >
   <Fragment slot="head">
     <script type="application/ld+json" set:html={JSON.stringify(articleSchema)} />

@@ -32,7 +32,12 @@ const { categories, categoryLabel, tagLabel } = await loadSiteData();
 const filterOptions = buildFilterOptions(posts, categories);
 ---
 
-<Base title="文章">
+<Base title="文章"
+  alternates={[
+    { lang: 'zh-CN', href: '/posts/' },
+    { lang: 'en', href: '/en/posts/' },
+    { lang: 'x-default', href: '/en/posts/' },
+  ]}>
   <section>
     <div class="page-head">
       <h1>全部文章</h1>

@@ -38,3 +38,34 @@ body: |
 
   结构粘接替代部分焊缝后，壳体在保持密封等级的同时实现了减重与工序精简，
   为后续电池包的平台化设计提供了可复用的连接方案。
+
+# ── 英文内容（T12）──
+titleEn: 'Structural Bonding of EV Battery Pack Housing'
+excerptEn: |
+  Two-component epoxy structural adhesive replaces selected welds and mechanical fasteners, improving sealing, fatigue life and weight efficiency of the battery pack housing.
+challengeEn: |
+  The lower housing and CFRP upper cover were assembled by aluminium profile welding, which caused heat distortion, poor sealing and high process energy consumption — while still needing to satisfy thermal conduction, insulation and long-term vibration reliability.
+solutionEn: |
+  ABRO 8800 two-component epoxy structural adhesive was used for bonding profiles to the cover, combined with spot-weld positioning. Bond line thickness was tuned to absorb assembly tolerance, and room-temperature cure produced a continuous impact- and oil-resistant layer serving both sealing and structural load paths.
+resultEn: |
+  Two assembly operations were eliminated, housing gas-tightness pass rate rose to 99.5%, weight was reduced by about 8%, and the pack passed 3 million cycles of vibration fatigue validation.
+bodyEn: |
+  ## Background
+
+  In EV battery pack manufacturing, the sealing and structural integrity of the housing (lower box plus upper cover) directly affect battery system safety and lifetime. The customer previously relied on welding plus mechanical fastening, facing several pain points:
+
+  - Welding aluminium alloy to CFRP is difficult and heat input distorts the profiles
+  - Sealant application around welds is complex, driving a high gas-tightness rework rate
+  - Many assembly steps and high energy consumption, hurting takt time and cost control
+
+  ## Solution and validation
+
+  The technical team selected **ABRO 8800 two-component epoxy structural adhesive** based on the duty cycle (long-term vibration, -40 to 85°C thermal cycling, resistance to electrolyte media) and implemented it as a hybrid joint with spot welding:
+
+  1. Surface treatment: anodised aluminium profiles degreased and abraded for activation
+  2. Application: gap controlled at 0.5–1.0 mm to ensure a continuous, void-free bond line
+  3. Cure: 24 h room-temperature initial set, then 60°C / 30 min acceleration to final strength
+
+  ## Value
+
+  By replacing selected welds with structural bonding, the housing achieved weight reduction and process simplification while maintaining sealing performance, providing a reusable connection approach for future platform designs.

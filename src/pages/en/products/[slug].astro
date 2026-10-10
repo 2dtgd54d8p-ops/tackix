@@ -1,0 +1,189 @@
+---
+/**
+ * 英文产品详情页 /en/products/[slug]（T12）
+ * 与中文页共用参数表渲染逻辑，文案走 en 平行字段，缺失则回退中文。
+ */
+import { createReader } from '@keystatic/core/reader';
+// ⚠️ src/pages/en/products/ 是四层深（products → en → pages → src）
+import keystaticConfig from '../../../../keystatic.config';
+import Base from '../../../layouts/Base.astro';
+import { marked } from 'marked';
+import { loadSiteData } from '../../../lib/site-data';
+import { pick } from '../../../lib/i18n-content';
+
+/**
+ * ⚠️ 静态站必须在 getStaticPaths 内自建 reader —— frontmatter 顶层创建的
+ *    reader 在 getStaticPaths 作用域不可见（沿用中文详情页的做法）。
+ */
+export async function getStaticPaths() {
+  const reader = createReader(process.cwd(), keystaticConfig);
+  let slugs: string[] = [];
+  try {
+    slugs = await reader.collections.products.list();
+  } catch (e) {
+    console.warn('[build] 读取产品列表失败：', e);
+  }
+  const entries = await Promise.all(
+    slugs.map(async (slug) => {
+      try {
+        const product = await reader.collections.products.read(slug);
+        return product && product.published !== false ? { params: { slug }, props: { product } } : null;
+      } catch {
+        return null;
+      }
+    })
+  );
+  return entries.filter(Boolean) as any[];
+}
+
+const { product } = Astro.props;
+const slug = Astro.params.slug;
+
+const { productCategoryLabel, scenarioLabel, cureLabel, certLabel } = await loadSiteData();
+
+// 英文技术标签
+const T: Record<string, string> = {
+  model: 'Model',
+  baseMaterial: 'Substrates',
+  displacement: 'Gap / Bond Line',
+  tempRange: 'Temperature Range',
+  viscosity: 'Viscosity',
+  category: 'Chemistry',
+  scenario: 'Application',
+  cureType: 'Cure Mechanism',
+  certifications: 'Certifications',
+  overview: 'Technical Data',
+  download: 'Documents',
+  inquiry: 'Request Quotation',
+  tds: 'TDS',
+  sds: 'SDS',
+  back: '← All Products',
+  wa: 'Chat on WhatsApp',
+  contact: 'Contact Sales',
+  none: 'Not specified',
+};
+
+const name = pick(product.name, product.nameEn);
+const excerpt = pick(product.excerpt, product.excerptEn);
+const bodyHtml = await marked.parse(pick(product.body, product.bodyEn));
+
+// 仅渲染有值的字段
+const specs = [
+  ['model', product.model],
+  ['category', product.category ? productCategoryLabel(product.category) : ''],
+  ['scenario', product.scenario ? scenarioLabel(product.scenario) : ''],
+  ['baseMaterial', product.baseMaterial],
+  ['displacement', product.displacement],
+  ['tempRange', product.tempRange],
+  ['cureType', product.cureType ? cureLabel(product.cureType) : ''],
+  ['viscosity', product.viscosity],
+].filter(([, v]) => !!v);
+
+const certs: string[] = product.certifications ?? [];
+
+const alternates = [
+  { lang: 'zh-CN', href: `/products/${product.slug ?? slug}/` },
+  { lang: 'en', href: `/en/products/${product.slug ?? slug}/` },
+  { lang: 'x-default', href: `/en/products/${product.slug ?? slug}/` },
+];
+---
+
+<Base title={name} description={excerpt} alternates={alternates} locale="en_US">
+  <section>
+    <a class="en-back" href="/en/products/">{T.back}</a>
+
+    <div class="en-detail-head">
+      <h1>{name}</h1>
+      <p class="en-detail-sub">{excerpt}</p>
+    </div>
+
+    <div class="en-detail-grid">
+      <div class="en-detail-main">
+        <h2 class="section-title">{T.overview}</h2>
+        <div class="prose en-prose" set:html={bodyHtml} />
+
+        {
+          (product.tds || product.sds) && (
+            <div class="en-downloads">
+              <h2 class="section-title">{T.download}</h2>
+              <div class="en-download-btns">
+                {product.tds && (
+                  <a class="btn" href={`/uploads/${product.tds}`} download>
+                    {T.tds} ↓
+                  </a>
+                )}
+                {product.sds && (
+                  <a class="btn" href={`/uploads/${product.sds}`} download>
+                    {T.sds} ↓
+                  </a>
+                )}
+              </div>
+            </div>
+          )
+        }
+      </div>
+
+      <aside class="en-detail-side">
+        <div class="spec-table">
+          <h2 class="section-title">{T.overview}</h2>
+          <table>
+            <tbody>
+              {
+                specs.map(([k, v]) => (
+                  <tr>
+                    <th>{T[k as string] ?? k}</th>
+                    <td>{v}</td>
+                  </tr>
+                ))
+              }
+              {
+                certs.length > 0 && (
+                  <tr>
+                    <th>{T.certifications}</th>
+                    <td>
+                      <span class="en-certs">
+                        {certs.map((c) => (
+                          <span class="tag">{certLabel(c)}</span>
+                        ))}
+                      </span>
+                    </td>
+                  </tr>
+                )
+              }
+            </tbody>
+          </table>
+        </div>
+
+        <div class="quote-block">
+          <h3>{T.inquiry}</h3>
+          <p>Contact us for quotation — TDS/SDS and technical support available on request.</p>
+          <div class="en-download-btns">
+            <a class="btn btn-primary" href="/en/contact">{T.contact}</a>
+          </div>
+        </div>
+      </aside>
+    </div>
+  </section>
+</Base>
+
+<style>
+  .en-back { display: inline-block; margin-bottom: 18px; font-size: 14px; color: var(--muted); }
+  .en-detail-head { margin-bottom: 32px; }
+  .en-detail-head h1 { font-size: 34px; line-height: 1.2; margin: 0 0 12px; }
+  .en-detail-sub { color: var(--muted); font-size: 16px; line-height: 1.7; max-width: 720px; }
+
+  .en-detail-grid { display: grid; gap: 40px; grid-template-columns: minmax(0, 1fr) 320px; align-items: start; }
+  @media (max-width: 900px) { .en-detail-grid { grid-template-columns: 1fr; } }
+
+  .en-prose { margin-bottom: 32px; }
+  .en-downloads { margin-top: 32px; }
+  .en-download-btns { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 12px; }
+
+  .spec-table table { width: 100%; border-collapse: collapse; font-size: 14px; }
+  .spec-table th, .spec-table td { text-align: left; padding: 10px 12px; border-bottom: 1px solid var(--border); vertical-align: top; }
+  .spec-table th { color: var(--muted); font-weight: 600; width: 40%; }
+  .en-certs { display: flex; gap: 6px; flex-wrap: wrap; }
+  .quote-block { margin-top: 24px; padding: 20px; background: var(--surface-2); border-radius: var(--r-md); border: 1px solid var(--border); }
+  .quote-block h3 { margin: 0 0 8px; font-size: 17px; }
+  .quote-block p { color: var(--muted); font-size: 14px; line-height: 1.7; margin: 0; }
+</style>

@@ -92,3 +92,85 @@ body: |
   > 若需要针对具体器件做选型评估，欢迎把器件型号、功耗、封装尺寸与工作温度范围
   > 发给我们，技术工程师可给出具体型号与工艺建议；也可先在[选型工具](/selector)
   > 按场景与基材筛选候选产品。
+
+# ── 英文内容（T12）──
+titleEn: 'Electronic Packaging: Balancing Thermal Performance and Reliability from Epoxy Potting to UV Bonding'
+excerptEn: |
+  How to balance thermal conduction, insulation, bond strength and cycle time in electronics packaging — and where epoxy potting and UV bonding each fit.
+bodyEn: |
+  ## The core tension in electronics packaging
+
+  Electronic module packaging is a balancing act between several **mutually competing objectives**:
+
+  - **Heat transfer** — remove heat from the die quickly, or junction temperature rises and life shortens
+  - **Insulation** — high-power devices need electrical isolation
+  - **Bond strength** — components must not shed under vibration or thermal cycling
+  - **Low stress** — adhesive shrinkage must not damage die and solder joints
+  - **Cycle time** — the line will not stop to wait for a cure
+
+  A product that is strongest on one property often sacrifices another, so selection hinges on **knowing which conflict dominates your process step**.
+
+  ## Route 1: Thermally conductive epoxy — the workhorse for power
+
+  Thermally conductive epoxy potting is the mainstream choice for power devices (IGBT, LED, power modules). [TAC EP-550](/en/products/epoxy-thermal-550) offers around 1.5 W/m·K while combining insulation with structural fixing.
+
+  ### Where it fits
+
+  - High heat flux requiring sustained heat removal (EV drivetrain, chargers, PV inverters)
+  - Simultaneous heat transfer, insulation and structural fixing
+  - Complex-shaped components needing full encapsulation
+
+  ### Process notes
+
+  1. **Dry and clean** — the substrate and device base must be dry and clean; bubbles and moisture significantly raise thermal resistance
+  2. **Vacuum degas** — internal voids are the root cause of local hot spots
+  3. **Control bond line thickness** — too thick increases thermal resistance and cost, too thin leaves gaps; add spreading paths where necessary
+  4. **Cure conditions** — room temperature or heat-accelerated per specification, avoiding over-temperature damage to devices
+
+  ## Route 2: UV bonding — the cycle-time answer for precision
+
+  UV-curable adhesives cure in seconds and suit high-speed automated lines and precision positioning, such as [TAC UV-3600](/en/products/uv-medical-3600) (low odour, low migration) and [TAC UV-3200](/en/products/uv-bond-3200) (high transparency, low shrinkage).
+
+  ### Where it fits
+
+  - Precision small-part positioning (camera modules, medical consumables)
+  - Cycle-time sensitive lines that need "dispense and go"
+  - Solvent-free or low-odour requirements, or cure-through needs
+
+  ### Shadow areas must be solved
+
+  UV cure depends on light penetration, so occluded regions never fully cure. **All engineering UV adhesives therefore use a hybrid cure system**: UV for rapid initial set and positioning, then moisture or thermal cure to complete crosslinking in shadowed areas. Map the shadowed regions for your part and ensure secondary cure conditions can reach them.
+
+  ## Comparing the two routes
+
+  | Dimension | Thermally conductive epoxy | UV bonding |
+  |---|---|---|
+  | Cure speed | Hours (room temp) or minutes (heated) | Seconds |
+  | Thermal performance | Strong (1–3 W/m·K) | Weak; typically a thermal interface aid |
+  | Electrical insulation | Excellent | Good |
+  | Shadow areas | Not an issue | Requires hybrid cure |
+  | Bond line thickness | Relatively thick (potted) | Thin (dispensed) |
+  | Typical use | Power modules, storage, e-mobility | Precision modules, medical, sensors |
+
+  ## Practical approach: work backwards from heat
+
+  1. **Set the junction temperature budget** — define maximum allowable junction temperature, which caps permissible interfacial thermal resistance
+  2. **Map the heat source** — concentrated heat (single IGBT) points to potting; distributed precision heat (sensors) points to dispensing
+  3. **Check insulation and fixing needs** — when structural fixing is required alongside thermal transfer, potting compounds are more capable
+  4. **Fit the process window** — match line takt and cure equipment (fluorescent lamps, UV sources, hot runners)
+  5. **Close the loop with reliability testing** — temperature cycling, humidity and drop/vibration before productionising the process
+
+  > For device-specific assessment, send us the part number, power draw, package dimensions and operating temperature range and our engineers can recommend a specific grade and process; you can also shortlist candidates in the [selector](/en/selector) by scenario and substrate.
+faqEn:
+  - question: 'What is the difference between thermal potting compound and ordinary epoxy?'
+    answer: |
+      The difference is the thermally conductive filler. Ordinary epoxy typically conducts at only 0.2–0.5 W/m·K, while thermal potting compounds filled with aluminium nitride, alumina or diamond reach 1–3 W/m·K, substantially lowering the thermal resistance between device and heat sink. Potting compounds are also formulated for low shrinkage and low ion residues to protect the device from stress and moisture.
+  - question: 'Does potting affect optical components or sensors?'
+    answer: |
+      Bead bubbles and refractive index are the key concerns. Low-stress low-shrinkage formulations avoid mechanical damage. For optical applications, choose an optical-grade adhesive and control bubbles; UV curing shortens flow time in the cavity, reducing settling and void entrapment.
+  - question: 'How do you handle shadow areas with UV adhesives?'
+    answer: |
+      UV cure relies on light penetration, so occluded regions cannot cure fully. The standard approach is a UV + moisture hybrid system: UV sets and positions rapidly, then moisture cure completes crosslinking in shadow areas — balancing cycle time with overall strength.
+  - question: 'Does flame rating matter for electronics packaging?'
+    answer: |
+      Yes, significantly — especially for consumer and automotive electronics. UL94 V-0 is a common requirement, with materials needing flame certification at the specified thickness. Automotive electronics also typically demands AEC-Q related reliability qualification.

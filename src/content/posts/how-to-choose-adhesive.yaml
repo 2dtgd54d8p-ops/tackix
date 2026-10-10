@@ -108,3 +108,100 @@ body: |
   1. **「越强越好」** —— 强度过高反而可能因热膨胀系数不匹配而开裂
   2. **「免处理也能粘」** —— 表面处理带来的强度提升往往超过换一款更贵的胶
   3. **「混合比例差不多就行」** —— 双组分胶的混合比例直接影响交联密度与最终性能
+
+# ── 英文内容（T12）──
+titleEn: 'Epoxy vs Polyurethane vs Silicone: A Practical Guide to Industrial Adhesive Selection'
+excerptEn: |
+  How the eight major adhesive chemistries map to real working conditions — a systematic framework to narrow your shortlist and avoid the wrong glue.
+bodyEn: |
+  ## Why selection matters more than brand
+
+  Engineers often start by comparing brands and price, but what actually determines success is whether the **adhesive chemistry matches the working condition**. The same adhesive can be a reliable joint or a costly rework. Below is a reusable selection framework.
+
+  ## Step 1: Start from the condition, not the product
+
+  Four questions must be answered before any product shortlist is meaningful:
+
+  1. **What are the substrates?** Metal, plastic, glass and rubber differ hugely in surface energy
+  2. **Does the joint carry load?** Structural and electronics assembly need entirely different products
+  3. **Is there movement or deformation?** Thermal expansion is the hidden killer in adhesive selection
+  4. **What is the environment?** Temperature, humidity, chemical media, UV exposure
+
+  ## Step 2: Build chemical-system awareness
+
+  ### Epoxy
+  High stiffness, low shrinkage, excellent chemical resistance, usable above 120°C. Brittle — prone to cracking under impact and peel. **Suited to** metal structural bonding, composite joining, electronics potting, automotive structural parts.
+
+  ### Polyurethane
+  Elastic, strong in impact and peel, deforms with the substrate. Excellent weather and UV resistance, but lower ultimate strength than epoxy. **Suited to** body panels, curtain wall joints, vibration and movement joints.
+
+  ### Silicone sealant
+  Best weatherability — no chalking or cracking outdoors. Movement capability up to ±25%. Primarily a *sealant*; structural bonding requires a structurally certified grade. **Suited to** curtain walls, windows, stone joints, waterproofing.
+
+  ### UV-curable adhesive
+  Cures in seconds with no volatiles, optically clear and haze-free, but cannot cure in shadowed areas (usually combined with a secondary moisture cure). **Suited to** consumer electronics, medical devices, transparent-part dispensing.
+
+  ### Cyanoacrylate (instant adhesive)
+  Seconds cure, colourless, but brittle, limited heat resistance and prone to whitening over time. **Suited to** small-area fast fixing and precision repair.
+
+  ### Anaerobic adhesive
+  Cures automatically when air is excluded, forming a high-strength anti-loosening film; available in removable and permanent strengths. **Suited to** thread locking and micro-leak sealing.
+
+  ### Acrylic
+  Fast bond strength, primer-free on many substrates, low odour. **Suited to** plastic housing assembly, appliance trim, non-structural fast fixing.
+
+  ### Hot melt
+  Melts and bonds, solvent-free, automation-friendly and economical; limited heat and weather resistance. **Suited to** carton sealing, woodworking, light industrial work.
+
+  ## Step 3: Eliminate the wrong options with movement capability
+
+  This is the most frequently overlooked yet most failure-prone judgement. Where joints experience thermal movement or structural deformation:
+
+  - **Rigid adhesives** (epoxy, cyanoacrylate) cannot follow the deformation and **crack or delaminate**
+  - **Elastic adhesives** (polyurethane, silicone) absorb movement through elastic deformation
+
+  > Rule of thumb: **if the joint moves, use an adhesive that can "give".**
+
+  ## Step 4: Never skip surface preparation
+
+  Bond strength comes from the interface, not from the adhesive itself. Oil, dust, oxide layers and mould release agents isolate the adhesive from the substrate and cause dramatic strength loss — typically presenting as "false bonding": it looks attached but peels off clean.
+
+  Common treatments:
+
+  - **Metals**: derust → degrease → abrade/activate; anodised aluminium benefits from activation
+  - **Plastics**: degrease → corona or plasma activation where required (mandatory for PE, PP)
+  - **Glass / stone**: clean → primer if needed
+  - **Rubber**: avoid solvents that swell or plasticise the elastomer
+
+  ## Quick decision table
+
+  | Condition | Prefer |
+  |---|---|
+  | Static load, high temperature, rigid | Epoxy |
+  | Movement, vibration, impact resistance | Polyurethane |
+  | Long-term outdoor, deforming joints | Silicone sealant |
+  | Small area, seconds cure | Cyanoacrylate |
+  | Thread locking, leak sealing | Anaerobic |
+  | Transparent parts, fast line, no volatiles | UV-curable |
+  | Carton sealing, woodworking, automation | Hot melt |
+
+  > Unsure? Use the [selector](/en/selector) to shortlist by scenario, cure mechanism and substrate, and our engineers can advise against your specific duty cycle.
+
+  ## Common mistakes
+
+  1. **"Stronger is better"** — excessive stiffness can cause cracking from CTE mismatch
+  2. **"It bonds without preparation"** — proper surface treatment often outperforms switching to a pricier adhesive
+  3. **"The mix ratio is roughly right"** — for two-part systems the ratio directly affects crosslink density and final performance
+faqEn:
+  - question: 'Which is stronger, epoxy or polyurethane?'
+    answer: |
+      Neither is universally better. Epoxy is rigid, heat and chemically resistant — suited to static load-bearing and rigid structures. Polyurethane is elastic and impact/peel resistant — suited to joints with thermal movement, vibration or deformation. The choice depends on whether the duty is rigid-stable or dynamically deforming.
+  - question: 'Can silicone sealant be used for structural bonding?'
+    answer: |
+      Not directly. In building and curtain wall work, structural silicone sealant must be distinguished from weatherproof sealant. For load-bearing structural use, select a product with structural certification (e.g. ASTM C1184 / EN 12100) and apply joint dimensions per the manufacturer data. Standard weatherproof sealant is only for non-structural joints.
+  - question: 'Can instant (cyanoacrylate) adhesive be used over large areas?'
+    answer: |
+      No. Cyanoacrylates are brittle, have limited heat resistance and tend to whiten over time. They suit small-area fast fixing, not large-area structural bonding or long-term high-temperature service.
+  - question: 'Why is surface preparation essential?'
+    answer: |
+      Bond strength derives mainly from interfacial adhesion rather than the adhesive bulk. Oil, dust, oxide and mould release agents prevent direct contact between adhesive and substrate, drastically reducing interface strength and producing apparent "false bonds" that peel off easily.

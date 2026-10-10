@@ -21,6 +21,8 @@ interface Props {
   noindex?: boolean;
   /** hreflang 备用语言链接，多语言（T10）启用后由页面传入 */
   alternates?: { lang: string; href: string }[];
+  /** 页面语种（og:locale），多语言页面传入对应 BCP-47，如 'en_US' */
+  locale?: string;
 }
 
 const {
@@ -33,6 +35,7 @@ const {
   keywords,
   noindex = false,
   alternates,
+  locale,
 } = Astro.props;
 
 const { site } = await loadSiteData();
@@ -63,6 +66,7 @@ const kw = Array.isArray(keywords) && keywords.length ? keywords.filter(Boolean)
   ))
 }
 <meta property="og:type" content={type} />
+{locale && <meta property="og:locale" content={locale} />}
 <meta property="og:title" content={fullTitle} />
 <meta property="og:description" content={desc} />
 <meta property="og:site_name" content={siteTitle} />

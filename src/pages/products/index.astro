@@ -46,7 +46,12 @@ const scenarioFilters = [
 ];
 ---
 
-<Base title="产品库">
+<Base title="产品库"
+  alternates={[
+    { lang: 'zh-CN', href: '/products/' },
+    { lang: 'en', href: '/en/products/' },
+    { lang: 'x-default', href: '/en/products/' },
+  ]}>
   <section>
     <div class="page-head">
       <h1>产品库</h1>

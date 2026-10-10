@@ -1,0 +1,152 @@
+---
+/**
+ * 英文案例详情页 /en/cases/[slug]（T12）
+ * 挑战 / 方案 / 成果 三段式 + 关联产品 + 询盘 CTA（英文闭环）。
+ */
+import { createReader } from '@keystatic/core/reader';
+import keystaticConfig from '../../../../keystatic.config';
+import Base from '../../../layouts/Base.astro';
+import { marked } from 'marked';
+import { pick } from '../../../lib/i18n-content';
+import { loadSiteData } from '../../../lib/site-data';
+
+export async function getStaticPaths() {
+  const reader = createReader(process.cwd(), keystaticConfig);
+  let slugs: string[] = [];
+  try {
+    slugs = await reader.collections.cases.list();
+  } catch (e) {
+    console.warn('[build] 读取案例列表失败：', e);
+  }
+  const entries = await Promise.all(
+    slugs.map(async (slug) => {
+      try {
+        const c = await reader.collections.cases.read(slug);
+        return c && c.published !== false ? { params: { slug }, props: { caseData: c } } : null;
+      } catch {
+        return null;
+      }
+    })
+  );
+  return entries.filter(Boolean) as any[];
+}
+
+const { caseData } = Astro.props;
+const slug = Astro.params.slug;
+const { scenarioLabel } = await loadSiteData();
+
+const title = pick(caseData.title, caseData.titleEn);
+const excerpt = pick(caseData.excerpt, caseData.excerptEn);
+const bodyHtml = await marked.parse(pick(caseData.body, caseData.bodyEn));
+
+// ⚠️ multiRelationship 返回 string[]；防御性解析（沿用中文页做法）
+const relatedSlugs: string[] = Array.isArray(caseData.products)
+  ? caseData.products
+  : caseData.products
+    ? [caseData.products]
+    : [];
+
+const reader = createReader(process.cwd(), keystaticConfig);
+const related = (
+  await Promise.all(
+    relatedSlugs.map(async (s) => {
+      try {
+        const p = await reader.collections.products.read(s);
+        return p && p.published !== false ? { slug: s, ...p } : null;
+      } catch {
+        return null;
+      }
+    })
+  )
+).filter(Boolean) as any[];
+
+const SCN_EN: Record<string, string> = {
+  electronics: 'Electronics', automotive: 'Automotive', newenergy: 'New Energy',
+  construction: 'Construction', packaging: 'Packaging', medical: 'Medical',
+  general: 'General Industrial',
+};
+
+const alternates = [
+  { lang: 'zh-CN', href: `/cases/${slug}/` },
+  { lang: 'en', href: `/en/cases/${slug}/` },
+  { lang: 'x-default', href: `/en/cases/${slug}/` },
+];
+---
+
+<Base title={title} description={excerpt} alternates={alternates} locale="en_US">
+  <section>
+    <a class="en-back" href="/en/cases/">← All Case Studies</a>
+
+    <div class="en-detail-head">
+      {caseData.scenario && <span class="tag">{SCN_EN[caseData.scenario] ?? scenarioLabel(caseData.scenario)}</span>}
+      <h1>{title}</h1>
+      <p class="en-detail-sub">{excerpt}</p>
+    </div>
+
+    <div class="en-csr">
+      <div class="en-csr-item">
+        <h2>Challenge</h2>
+        <p>{pick(caseData.challenge, caseData.challengeEn)}</p>
+      </div>
+      <div class="en-csr-item">
+        <h2>Solution</h2>
+        <p>{pick(caseData.solution, caseData.solutionEn)}</p>
+      </div>
+      <div class="en-csr-item">
+        <h2>Result</h2>
+        <p>{pick(caseData.result, caseData.resultEn)}</p>
+      </div>
+    </div>
+
+    <div class="prose en-prose" set:html={bodyHtml} />
+
+    {
+      related.length > 0 && (
+        <div class="en-related">
+          <h2 class="section-title">Products used in this project</h2>
+          <div class="en-related-list">
+            {related.map((p) => (
+              <a class="related-item" href={`/en/products/${p.slug}/`}>
+                {pick(p.name, p.nameEn)}
+              </a>
+            ))}
+          </div>
+        </div>
+      )
+    }
+
+    <div class="quote-block">
+      <h3>Have a similar application?</h3>
+      <p>Share your substrate, load and temperature conditions — our engineers will recommend a grade and process.</p>
+      <div class="en-download-btns">
+        <a class="btn btn-primary" href="/en/contact">Contact Sales</a>
+        <a class="btn" href="/en/selector">Selection Tool</a>
+      </div>
+    </div>
+  </section>
+</Base>
+
+<style>
+  .en-back { display: inline-block; margin-bottom: 18px; font-size: 14px; color: var(--muted); }
+  .en-detail-head { margin-bottom: 32px; }
+  .en-detail-head h1 { font-size: 32px; line-height: 1.2; margin: 10px 0 12px; }
+  .en-detail-sub { color: var(--muted); font-size: 16px; line-height: 1.7; max-width: 760px; }
+
+  .en-csr { display: grid; gap: 18px; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); margin-bottom: 36px; }
+  .en-csr-item { padding: 20px; background: var(--surface); border: 1px solid var(--border); border-radius: var(--r-md); }
+  .en-csr-item h2 { font-size: 15px; text-transform: uppercase; letter-spacing: 0.05em; color: var(--accent); margin: 0 0 10px; }
+  .en-csr-item p { color: var(--muted); font-size: 14.5px; line-height: 1.75; margin: 0; }
+
+  .en-prose { margin-bottom: 36px; }
+  .en-related { margin-bottom: 32px; }
+  .en-related-list { display: flex; gap: 10px; flex-wrap: wrap; }
+  .related-item {
+    display: inline-block; padding: 10px 16px; background: var(--surface-2);
+    border: 1px solid var(--border); border-radius: var(--r-pill); font-size: 14px;
+  }
+  .related-item:hover { border-color: var(--accent); text-decoration: none; }
+  .quote-block { padding: 24px; background: var(--surface-2); border-radius: var(--r-md); border: 1px solid var(--border); }
+  .quote-block h3 { margin: 0 0 8px; font-size: 18px; }
+  .quote-block p { color: var(--muted); font-size: 14.5px; margin: 0; }
+  .en-download-btns { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 14px; }
+</style>

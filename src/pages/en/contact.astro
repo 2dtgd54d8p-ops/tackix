@@ -1,0 +1,111 @@
+---
+/**
+ * 英文联系/询盘页 /en/contact（T12）
+ * 复用中文页的 /api/contact 接口（字段名一致：name/email/message）。
+ */
+import Base from '../../layouts/Base.astro';
+import { loadSiteData } from '../../lib/site-data';
+
+const { site } = await loadSiteData();
+const whatsapp = (site.whatsapp ?? '').trim();
+---
+
+<Base
+  title="Contact Sales"
+  description="Request a quotation for industrial adhesives and sealants. Send your substrate, load and temperature conditions for a tailored recommendation, TDS and SDS available on request."
+  alternates={[{ lang: 'zh-CN', href: '/contact/' }, { lang: 'en', href: '/en/contact/' }, { lang: 'x-default', href: '/en/contact/' }]}
+  locale="en_US"
+>
+  <section>
+    <div class="page-head">
+      <h1>Contact Sales</h1>
+      <p>
+        Tell us the substrate, load, temperature and cure conditions you are working with —
+        our engineers will recommend a grade and process. Pricing is quoted per enquiry.
+      </p>
+    </div>
+
+    <div class="en-contact-grid">
+      <form id="contact-form" class="contact-form" novalidate>
+        <div class="field">
+          <label for="name">Your name *</label>
+          <input id="name" name="name" type="text" required maxlength="60" autocomplete="name" />
+        </div>
+        <div class="field">
+          <label for="email">Business email *</label>
+          <input id="email" name="email" type="email" required maxlength="120" autocomplete="email" />
+        </div>
+        <div class="field">
+          <label for="message">Your application *</label>
+          <textarea id="message" name="message" required rows="6" maxlength="2000"
+            placeholder="e.g. Bonding aluminium to FRP in an EV battery pack housing, continuous vibration, -40 to 85°C, gap 0.5 mm."></textarea>
+        </div>
+        <button type="submit" class="btn btn-primary" id="submit-btn">Send Enquiry</button>
+        <p class="status" id="form-status" hidden></p>
+      </form>
+
+      <aside class="en-contact-side">
+        <div class="quote-block">
+          <h3>What to include</h3>
+          <ul class="en-tips">
+            <li>Substrates (e.g. aluminium, steel, PC, FRP)</li>
+            <li>Load type and joint movement</li>
+            <li>Operating temperature range</li>
+            <li>Cure preference and line takt</li>
+            <li>Any certification requirements (RoHS, REACH, UL)</li>
+          </ul>
+        </div>
+
+        {
+          whatsapp && (
+            <a class="btn btn-primary" href={`https://wa.me/${whatsapp.replace(/[^0-9]/g, '')}?text=${encodeURIComponent('Hello, I would like a quotation for industrial adhesives.')}`} target="_blank" rel="noopener">
+              Chat on WhatsApp
+            </a>
+          )
+        }
+      </aside>
+    </div>
+  </section>
+</Base>
+
+<script>
+  const form = document.getElementById('contact-form') as HTMLFormElement | null;
+  const btn = document.getElementById('submit-btn') as HTMLButtonElement | null;
+  const status = document.getElementById('form-status');
+
+  form?.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    if (!status || !btn) return;
+    const data = Object.fromEntries(new FormData(form).entries());
+    btn.disabled = true;
+    status.hidden = false;
+    status.className = 'status';
+    status.textContent = 'Sending…';
+    try {
+      const res = await fetch('/api/contact', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(data),
+      });
+      if (res.ok) {
+        form.reset();
+        status.className = 'status ok';
+        status.textContent = 'Thank you — your enquiry has been received. We will reply shortly.';
+      } else {
+        status.className = 'status err';
+        status.textContent = 'Submission failed. Please try again or contact us by email.';
+      }
+    } catch {
+      status.className = 'status err';
+      status.textContent = 'Network error. Please try again later.';
+    } finally {
+      btn.disabled = false;
+    }
+  });
+</script>
+
+<style>
+  .en-contact-grid { display: grid; gap: 36px; grid-template-columns: minmax(0, 1fr) 300px; align-items: start; }
+  @media (max-width: 900px) { .en-contact-grid { grid-template-columns: 1fr; } }
+  .en-tips { margin: 0; padding-left: 18px; color: var(--muted); font-size: 14px; line-height: 1.9; }
+</style>

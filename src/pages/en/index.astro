@@ -1,0 +1,212 @@
+---
+/**
+ * 英文首页 /en（T12）
+ * ---------------------------------------------------------------
+ * 面向东南亚 B2B 买家的英文落地页。与中文首页共用 Base 外壳，
+ * 但使用**英文文案 + en 平行字段**，并在 SEO 层输出 hreflang
+ * （zh-CN / en 互指，x-default → /en）。
+ *
+ * 为什么先做 en：东南亚市场实际采购语言以英文为主，英文页是海外
+ * 流量的真实入口；vi / th 待按市场优先级补译。
+ */
+import { createReader } from '@keystatic/core/reader';
+// ⚠️ src/pages/en/ 是三层深（en → pages → src），须用 ../../../；
+//    相对导入层级算错会报 "Could not resolve ... from ..."，构建直接失败。
+import keystaticConfig from '../../../keystatic.config';
+import Base from '../../layouts/Base.astro';
+import { pick } from '../../lib/i18n-content';
+
+const reader = createReader(process.cwd(), keystaticConfig);
+
+async function readAll(col: 'products' | 'cases' | 'posts') {
+  let slugs: string[] = [];
+  try {
+    slugs = await reader.collections[col].list();
+  } catch {
+    return [];
+  }
+  const out = await Promise.all(
+    slugs.map(async (slug) => {
+      try {
+        const d = await reader.collections[col].read(slug);
+        return d && d.published !== false ? { slug, ...d } : null;
+      } catch {
+        return null;
+      }
+    })
+  );
+  return out.filter(Boolean) as any[];
+}
+
+const products = (await readAll('products')).sort(
+  (a, b) => Number(b.featured ?? false) - Number(a.featured ?? false)
+);
+const cases = await readAll('cases');
+const posts = await readAll('posts');
+posts.sort((a, b) => String(b.publishedAt ?? '').localeCompare(String(a.publishedAt ?? '')));
+
+// hreflang：仅声明真实存在的语种，避免软 404
+const alternates = [
+  { lang: 'zh-CN', href: '/' },
+  { lang: 'en', href: '/en/' },
+  { lang: 'x-default', href: '/en/' },
+];
+
+const featuredProducts = products.slice(0, 4);
+const featuredCases = cases.filter((c) => c.featured).slice(0, 3);
+const latestPosts = posts.slice(0, 3);
+
+// 分类英文标签（与 site-data 的 DEFAULT_PRODUCT_CATEGORIES 对齐）
+const CAT_EN: Record<string, string> = {
+  epoxy: 'Epoxy',
+  polyurethane: 'Polyurethane',
+  acrylic: 'Acrylic',
+  silicone: 'Silicone',
+  cyanoacrylate: 'Cyanoacrylate',
+  uv: 'UV-Curable',
+  anaerobic: 'Anaerobic',
+  hotmelt: 'Hot Melt',
+};
+---
+
+<Base
+  title="Industrial Adhesives & Sealants"
+  description="B2B platform for industrial adhesives and sealants in Southeast Asia: product database, selection tool, technical articles and case studies with online quotation."
+  alternates={alternates}
+  locale="en_US"
+>
+  <section>
+    <!-- Hero -->
+    <div class="hero en-hero">
+      <div class="hero-inner">
+        <span class="eyebrow">Industrial Adhesives & Sealants</span>
+        <h1 class="hero-title">Select the right adhesive for your assembly</h1>
+        <p class="hero-sub">
+          A technical platform for Southeast Asian contractors, fabricators and procurement teams —
+          covering epoxy, polyurethane, silicone, UV, anaerobic and hot-melt systems with
+          full parameter data and engineering support.
+        </p>
+        <div class="hero-cta">
+          <a class="btn btn-primary" href="/en/products">Browse Products</a>
+          <a class="btn" href="/en/selector">Selection Tool</a>
+          <a class="btn" href="/en/contact">Request a Quotation</a>
+        </div>
+      </div>
+    </div>
+
+    <!-- Featured products -->
+    <div class="section-head">
+      <h2 class="section-title">Product Database</h2>
+      <p>
+        {products.length} industrial adhesives and sealants across eight chemistry families,
+        with substrates, gap, temperature range, cure mechanism and certifications.
+      </p>
+    </div>
+    <div class="grid en-cards">
+      {
+        featuredProducts.map((p) => (
+          <a class="card en-card" href={`/en/products/${p.slug}/`}>
+            <div class="en-card-cat">{CAT_EN[p.category] ?? p.category}</div>
+            <h3>{pick(p.name, p.nameEn)}</h3>
+            <p class="en-card-excerpt">{pick(p.excerpt, p.excerptEn)}</p>
+            <span class="sol-cta">View technical data →</span>
+          </a>
+        ))
+      }
+    </div>
+    <div class="en-more">
+      <a class="btn btn-outline" href="/en/products">View all {products.length} products →</a>
+    </div>
+
+    <!-- Selection tool -->
+    <div class="band">
+      <div class="band-inner">
+        <h2 class="section-title">Not sure which adhesive to use?</h2>
+        <p>
+          Answer three questions — application scenario, cure mechanism and substrate — and our
+          selection tool ranks matching products for you.
+        </p>
+        <a class="btn btn-primary" href="/en/selector">Open the Selection Tool</a>
+      </div>
+    </div>
+
+    <!-- Cases -->
+    <div class="section-head">
+      <h2 class="section-title">Application Case Studies</h2>
+      <p>Engineering solutions across automotive, electronics, construction, packaging and more.</p>
+    </div>
+    <div class="grid en-cards">
+      {
+        featuredCases.map((c) => (
+          <a class="card en-card" href={`/en/cases/${c.slug}/`}>
+            <h3>{pick(c.title, c.titleEn)}</h3>
+            <p class="en-card-excerpt">{pick(c.excerpt, c.excerptEn)}</p>
+            <span class="sol-cta">Read the case study →</span>
+          </a>
+        ))
+      }
+    </div>
+
+    <!-- Articles -->
+    <div class="section-head">
+      <h2 class="section-title">Technical Articles</h2>
+      <p>Selection guides, failure troubleshooting and application notes.</p>
+    </div>
+    <ul class="en-post-list">
+      {
+        latestPosts.map((p) => (
+          <li>
+            <a href={`/en/posts/${p.slug}/`}>
+              <strong>{pick(p.title, p.titleEn)}</strong>
+              <span>{pick(p.excerpt, p.excerptEn)}</span>
+            </a>
+          </li>
+        ))
+      }
+    </ul>
+
+    <!-- CTA -->
+    <div class="band">
+      <div class="band-inner">
+        <h2 class="section-title">Need a recommendation?</h2>
+        <p>
+          Send us your substrate, load, temperature and cure conditions — our engineers will
+          recommend a grade and process, and provide TDS/SDS documentation on request.
+        </p>
+        <div class="hero-cta">
+          <a class="btn btn-primary" href="/en/contact">Contact Sales</a>
+          <a class="btn" href="/en/posts">Browse Technical Articles</a>
+        </div>
+      </div>
+    </div>
+  </section>
+</Base>
+
+<style>
+  /* ── 英文站：字体度量更宽，行高与字号略放大以保证可读性 ── */
+  .en-hero .hero-title { font-size: 42px; line-height: 1.15; }
+  .en-hero .hero-sub { max-width: 640px; }
+
+  .en-cards { display: grid; gap: 20px; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); }
+  .en-card { display: flex; flex-direction: column; }
+  .en-card-cat {
+    font-size: 12px; font-weight: 600; letter-spacing: 0.04em; text-transform: uppercase;
+    color: var(--accent); margin-bottom: 8px;
+  }
+  .en-card h3 { font-size: 18px; margin: 0 0 8px; line-height: 1.35; }
+  .en-card-excerpt {
+    color: var(--muted); font-size: 14.5px; line-height: 1.7;
+    margin: 0 0 14px; flex: 1;
+  }
+  .en-more { text-align: center; margin: 28px 0 8px; }
+
+  .en-post-list { list-style: none; padding: 0; margin: 0; display: grid; gap: 14px; }
+  .en-post-list a {
+    display: flex; flex-direction: column; gap: 4px; padding: 16px 18px;
+    background: var(--surface); border: 1px solid var(--border); border-radius: var(--r-md);
+    transition: border-color var(--dur) var(--ease), transform var(--dur) var(--ease);
+  }
+  .en-post-list a:hover { border-color: var(--accent); transform: translateY(-2px); text-decoration: none; }
+  .en-post-list strong { color: var(--fg); font-size: 16px; }
+  .en-post-list span { color: var(--muted); font-size: 14px; line-height: 1.65; }
+</style>
