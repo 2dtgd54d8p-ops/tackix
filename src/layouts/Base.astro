@@ -39,6 +39,8 @@ function isActive(href: string) {
           if (t === 'light' || t === 'dark') {
             document.documentElement.setAttribute('data-theme', t);
           }
+          var a = localStorage.getItem('accent');
+          if (a) document.documentElement.setAttribute('data-accent', a);
         } catch (e) {}
       })();
     </script>
@@ -95,6 +97,13 @@ function isActive(href: string) {
           <svg class="icon icon-moon" viewBox="0 0 24 24" width="20" height="20" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z" /></svg>
           <svg class="icon icon-sun" viewBox="0 0 24 24" width="20" height="20" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="4.2" /><path d="M12 2v2.5M12 19.5V22M4.22 4.22l1.77 1.77M18.01 18.01l1.77 1.77M2 12h2.5M19.5 12H22M4.22 19.78l1.77-1.77M18.01 5.99l1.77-1.77" /></svg>
         </button>
+        <div class="accent-swatches" role="group" aria-label="主题色切换">
+          <button class="swatch is-active" type="button" data-accent="violet" style="--sw:#7c4df0" aria-label="紫色主题" aria-pressed="true"></button>
+          <button class="swatch" type="button" data-accent="blue" style="--sw:#3a7bff" aria-label="蓝色主题" aria-pressed="false"></button>
+          <button class="swatch" type="button" data-accent="green" style="--sw:#18a06a" aria-label="绿色主题" aria-pressed="false"></button>
+          <button class="swatch" type="button" data-accent="amber" style="--sw:#f0883e" aria-label="橙色主题" aria-pressed="false"></button>
+          <button class="swatch" type="button" data-accent="rose" style="--sw:#e0529c" aria-label="粉色主题" aria-pressed="false"></button>
+        </div>
       </div>
     </header>
     <main class="container">
@@ -130,6 +139,27 @@ function isActive(href: string) {
         if (mq.addEventListener) mq.addEventListener('change', function () {
           if (!root.getAttribute('data-theme')) paint();
         });
+
+        // 强调色切换
+        var swatches = document.querySelectorAll('.swatch');
+        function paintAccent() {
+          var a = root.getAttribute('data-accent') || 'violet';
+          swatches.forEach(function (b) {
+            var on = b.getAttribute('data-accent') === a;
+            b.classList.toggle('is-active', on);
+            b.setAttribute('aria-pressed', on ? 'true' : 'false');
+          });
+        }
+        swatches.forEach(function (b) {
+          b.addEventListener('click', function () {
+            var a = b.getAttribute('data-accent');
+            root.setAttribute('data-accent', a);
+            try { localStorage.setItem('accent', a); } catch (e) {}
+            paintAccent();
+          });
+        });
+        paintAccent();
+
         paint();
       })();
     </script>
@@ -148,11 +178,16 @@ function isActive(href: string) {
         --muted: #73737e;
         --faint: #9a9aa6;
 
-        /* 主题色：紫罗兰（对齐参考站 module5） */
+        /* 主题色：紫罗兰（对齐参考站 module5，默认强调色） */
         --accent: #7c4df0;
         --accent-strong: #5f2ed8;
         --accent-soft: #f1ebfe;
         --on-accent: #ffffff;
+        /* 暗色模式下的强调色（随 data-accent 变化） */
+        --accent-d: #a880ff;
+        --accent-strong-d: #c0a4ff;
+        --accent-soft-d: #241a3d;
+        --on-accent-d: #12101c;
 
         /* 参考站签名四色（顶栏渐变条 / 彩色卡） */
         --g1: #17c3c3; /* 青 */
@@ -202,6 +237,44 @@ function isActive(href: string) {
         --dur: 0.18s;
       }
 
+      /* ===== 强调色主题（data-accent）：切换整套主题色 ===== */
+      :root[data-accent='blue'] {
+        --accent: #3a7bff; --accent-strong: #255fe0; --accent-soft: #e8efff; --on-accent: #ffffff;
+        --accent-d: #7aa6ff; --accent-strong-d: #a9c4ff; --accent-soft-d: #16243f; --on-accent-d: #0c1426;
+        --g3: #4a90f0;
+        --hero-grad: radial-gradient(120% 120% at 80% 0%, #3a7bff 0%, transparent 55%),
+          radial-gradient(90% 90% at 0% 100%, #255fe0 0%, transparent 55%),
+          linear-gradient(135deg, #142a5e 0%, #1f3f8a 55%, #2f5fc0 100%);
+        --shadow-accent: 0 10px 26px rgba(58, 123, 255, 0.28);
+      }
+      :root[data-accent='green'] {
+        --accent: #18a06a; --accent-strong: #128055; --accent-soft: #e3f7ee; --on-accent: #ffffff;
+        --accent-d: #4fd39a; --accent-strong-d: #74e0b3; --accent-soft-d: #103024; --on-accent-d: #07140e;
+        --g3: #18a06a;
+        --hero-grad: radial-gradient(120% 120% at 80% 0%, #18a06a 0%, transparent 55%),
+          radial-gradient(90% 90% at 0% 100%, #128055 0%, transparent 55%),
+          linear-gradient(135deg, #0f3a2a 0%, #155c40 55%, #1f7d57 100%);
+        --shadow-accent: 0 10px 26px rgba(24, 160, 106, 0.28);
+      }
+      :root[data-accent='amber'] {
+        --accent: #f0883e; --accent-strong: #cf6a23; --accent-soft: #fdeee2; --on-accent: #2a1700;
+        --accent-d: #ffb070; --accent-strong-d: #ffc393; --accent-soft-d: #3a2412; --on-accent-d: #1c1106;
+        --g3: #f0883e;
+        --hero-grad: radial-gradient(120% 120% at 80% 0%, #f0883e 0%, transparent 55%),
+          radial-gradient(90% 90% at 0% 100%, #cf6a23 0%, transparent 55%),
+          linear-gradient(135deg, #5e2f12 0%, #8a4a1f 55%, #b5662a 100%);
+        --shadow-accent: 0 10px 26px rgba(240, 136, 62, 0.28);
+      }
+      :root[data-accent='rose'] {
+        --accent: #e0529c; --accent-strong: #c23885; --accent-soft: #fde4f1; --on-accent: #ffffff;
+        --accent-d: #ff8fc4; --accent-strong-d: #ffaed4; --accent-soft-d: #3a1630; --on-accent-d: #1f0b18;
+        --g3: #e0529c;
+        --hero-grad: radial-gradient(120% 120% at 80% 0%, #e0529c 0%, transparent 55%),
+          radial-gradient(90% 90% at 0% 100%, #c23885 0%, transparent 55%),
+          linear-gradient(135deg, #5e1240 0%, #8a1f5e 55%, #b62f80 100%);
+        --shadow-accent: 0 10px 26px rgba(224, 82, 156, 0.28);
+      }
+
       /* 系统偏好为暗、且用户未显式选浅色时生效（自动模式） */
       @media (prefers-color-scheme: dark) {
         :root:not([data-theme='light']) {
@@ -216,14 +289,14 @@ function isActive(href: string) {
           --muted: #9c97ab;
           --faint: #6f6a80;
 
-          --accent: #a880ff;
-          --accent-strong: #c0a4ff;
-          --accent-soft: #241a3d;
-          --on-accent: #12101c;
+          --accent: var(--accent-d);
+          --accent-strong: var(--accent-strong-d);
+          --accent-soft: var(--accent-soft-d);
+          --on-accent: var(--on-accent-d);
 
-          --hero-grad: radial-gradient(120% 120% at 80% 0%, #7c4df0 0%, transparent 55%),
-            radial-gradient(90% 90% at 0% 100%, #4a2597 0%, transparent 55%),
-            linear-gradient(135deg, #1a0f3d 0%, #2c1a66 55%, #452090 100%);
+          --hero-grad: radial-gradient(120% 120% at 80% 0%, var(--accent) 0%, transparent 55%),
+            radial-gradient(90% 90% at 0% 100%, var(--accent-strong) 0%, transparent 55%),
+            linear-gradient(135deg, color-mix(in srgb, var(--accent-strong) 55%, #000) 0%, color-mix(in srgb, var(--accent) 45%, #1a0f3d) 55%, color-mix(in srgb, var(--accent) 70%, #000) 100%);
 
           --success: #4ec585;
           --success-bg: #14261b;
@@ -253,14 +326,14 @@ function isActive(href: string) {
         --muted: #9c97ab;
         --faint: #6f6a80;
 
-        --accent: #a880ff;
-        --accent-strong: #c0a4ff;
-        --accent-soft: #241a3d;
-        --on-accent: #12101c;
+        --accent: var(--accent-d);
+        --accent-strong: var(--accent-strong-d);
+        --accent-soft: var(--accent-soft-d);
+        --on-accent: var(--on-accent-d);
 
-        --hero-grad: radial-gradient(120% 120% at 80% 0%, #7c4df0 0%, transparent 55%),
-          radial-gradient(90% 90% at 0% 100%, #4a2597 0%, transparent 55%),
-          linear-gradient(135deg, #1a0f3d 0%, #2c1a66 55%, #452090 100%);
+        --hero-grad: radial-gradient(120% 120% at 80% 0%, var(--accent) 0%, transparent 55%),
+          radial-gradient(90% 90% at 0% 100%, var(--accent-strong) 0%, transparent 55%),
+          linear-gradient(135deg, color-mix(in srgb, var(--accent-strong) 55%, #000) 0%, color-mix(in srgb, var(--accent) 45%, #1a0f3d) 55%, color-mix(in srgb, var(--accent) 70%, #000) 100%);
 
         --success: #4ec585;
         --success-bg: #14261b;
@@ -355,6 +428,31 @@ function isActive(href: string) {
       .theme-toggle .icon-sun { display: none; }
       .theme-toggle.is-dark .icon-moon { display: none; }
       .theme-toggle.is-dark .icon-sun { display: block; }
+
+      /* 强调色切换（色板） */
+      .accent-swatches {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        padding-left: 6px;
+        margin-left: 2px;
+        border-left: 1px solid var(--border);
+      }
+      .swatch {
+        width: 18px;
+        height: 18px;
+        padding: 0;
+        border-radius: 50%;
+        border: 2px solid var(--surface);
+        background: var(--sw);
+        cursor: pointer;
+        box-shadow: 0 0 0 1px var(--border-strong);
+        transition: transform var(--dur) var(--ease), box-shadow var(--dur) var(--ease);
+        flex: none;
+      }
+      .swatch:hover { transform: scale(1.14); }
+      .swatch.is-active { box-shadow: 0 0 0 2px var(--bg), 0 0 0 4px var(--accent); }
+      .swatch:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
 
       /* 主题切换时的平滑过渡 */
       body { transition: background-color 0.2s var(--ease), color 0.2s var(--ease); }
