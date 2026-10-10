@@ -770,6 +770,15 @@ const showFloatContact =
       .btn-outline-light { background: transparent; border-color: rgba(255, 255, 255, 0.55); color: #fff; }
       .btn-outline-light:hover { background: rgba(255, 255, 255, 0.14); border-color: #fff; color: #fff; }
 
+      /* 正文(.prose)内的按钮链接：防止 article.prose a（accent 色 + 下划线，特异性 0,1,2）
+         覆盖 .btn/.btn-primary（0,1,0）的配色 —— 否则强调色实心按钮会出现
+         「文字颜色 == 背景色」导致按钮文案不可见，且被加上下划线。
+         置于全局样式表，post/product 等任何以 .prose 包裹正文的页面均受保护。 */
+      article.prose a.btn { color: var(--fg-soft); text-decoration: none; }
+      article.prose a.btn:hover { color: var(--accent); }
+      article.prose a.btn-primary,
+      article.prose a.btn-primary:hover { color: var(--on-accent); text-decoration: none; }
+
       /* ---------- 彩色渐变瓷砖（参考站特色） ---------- */
       .tile {
         position: relative;
