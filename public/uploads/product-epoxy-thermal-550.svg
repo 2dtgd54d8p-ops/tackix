@@ -1,0 +1,67 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 600" width="800" height="600" role="img" aria-label="导热环氧灌封胶 TAC-EP-550 产品占位图">
+  <title>导热环氧灌封胶（TAC-EP-550）产品图</title>
+  <defs>
+    <linearGradient id="g-epoxy-thermal-550" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#241009"/>
+      <stop offset="55%" stop-color="#9A3412"/>
+      <stop offset="100%" stop-color="#F97316"/>
+    </linearGradient>
+    <pattern id="dots-g-epoxy-thermal-550" width="26" height="26" patternUnits="userSpaceOnUse">
+      <circle cx="2" cy="2" r="1.5" fill="#FFFFFF" fill-opacity="0.07"/>
+    </pattern>
+  </defs>
+
+  <style>
+    .cn { font-family: "PingFang SC","Noto Sans SC","Microsoft YaHei",sans-serif; }
+    .en { font-family: "SF Pro Text","Helvetica Neue",Arial,sans-serif; }
+    .mono { font-family: "SF Mono","JetBrains Mono",Menlo,monospace; }
+    .lbl { font-family: "PingFang SC","Noto Sans SC",sans-serif; }
+  </style>
+  <rect width="800" height="600" fill="url(#g-epoxy-thermal-550)"/>
+  <rect width="800" height="600" fill="url(#dots-g-epoxy-thermal-550)"/>
+
+  <!-- 化学体系色带：顶部实色条 + 左下角体系标签 -->
+  <rect x="0" y="0" width="800" height="10" fill="#F97316"/>
+
+  <!-- 胶层意象：底部交叠的半透明圆，代表胶体铺展 -->
+  <g opacity="0.11">
+    <circle cx="690" cy="150" r="96" fill="#FFFFFF"/>
+    <circle cx="742" cy="196" r="72" fill="#FFFFFF"/>
+    <circle cx="672" cy="212" r="58" fill="#FFFFFF"/>
+  </g>
+
+  <!-- 右上角型号牌 -->
+  <g>
+    <rect x="586" y="42" width="164" height="42" rx="21" fill="#000000" fill-opacity="0.26" stroke="#FFFFFF" stroke-opacity="0.30"/>
+    <text x="668" y="70" font-size="20" font-weight="600" fill="#FFFFFF" text-anchor="middle" class="mono">TAC-EP-550</text>
+  </g>
+
+    <text x="60" y="196" font-size="42" font-weight="700" fill="#FFFFFF" class="cn">导热环氧灌封胶</text>
+  <text x="60" y="264" font-size="19" fill="#FFFFFF" fill-opacity="0.86" class="en" letter-spacing="0.6">Thermal Epoxy Potting</text>
+
+  <!-- 体系标签 -->
+  <g transform="translate(60, 356)">
+    <rect x="0" y="0" width="172" height="34" rx="17" fill="#FFFFFF" fill-opacity="0.16" stroke="#FFFFFF" stroke-opacity="0.30"/>
+    <text x="86" y="23" font-size="15" font-weight="600" fill="#FFFFFF" text-anchor="middle" letter-spacing="1.1" font-family="'SF Pro Text','Helvetica Neue',Arial,sans-serif">THERMAL</text>
+  </g>
+  <text x="60" y="418" font-size="14" fill="#FFFFFF" fill-opacity="0.55" class="en">产品图为示意图· 实际规格以 TDS 为准</text>
+
+    <g transform="translate(60,452)">
+      <rect x="0" y="0" width="210" height="76" rx="10" fill="#FFFFFF" fill-opacity="0.10" stroke="#FFFFFF" stroke-opacity="0.22"/>
+      <text x="16" y="27" font-size="15" fill="#FFFFFF" fill-opacity="0.70" class="lbl">耐温范围</text>
+      <text x="16" y="57" font-size="23" font-weight="600" fill="#FFFFFF" class="lbl">-40~150℃</text>
+    </g>
+    <g transform="translate(300,452)">
+      <rect x="0" y="0" width="210" height="76" rx="10" fill="#FFFFFF" fill-opacity="0.10" stroke="#FFFFFF" stroke-opacity="0.22"/>
+      <text x="16" y="27" font-size="15" fill="#FFFFFF" fill-opacity="0.70" class="lbl">间隙 / 涂布</text>
+      <text x="16" y="57" font-size="23" font-weight="600" fill="#FFFFFF" class="lbl">0.2–6 mm</text>
+    </g>
+    <g transform="translate(540,452)">
+      <rect x="0" y="0" width="210" height="76" rx="10" fill="#FFFFFF" fill-opacity="0.10" stroke="#FFFFFF" stroke-opacity="0.22"/>
+      <text x="16" y="27" font-size="15" fill="#FFFFFF" fill-opacity="0.70" class="lbl">固化方式</text>
+      <text x="16" y="57" font-size="23" font-weight="600" fill="#FFFFFF" class="lbl">双组分</text>
+    </g>
+
+  <!-- 页脚品牌 -->
+  <text x="740" y="574" font-size="16" font-weight="600" fill="#FFFFFF" fill-opacity="0.62" text-anchor="end" class="en">Tackix</text>
+</svg>
