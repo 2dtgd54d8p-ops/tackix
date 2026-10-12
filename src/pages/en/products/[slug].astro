@@ -63,7 +63,11 @@ const T: Record<string, string> = {
   none: 'Not specified',
 };
 
+// 产品示意图（P0-1）：缺省时回退中文原名，保证 alt 始终有值
 const name = pick(product.name, product.nameEn);
+const coverUrl = product.cover
+  ? (product.cover.startsWith('/') ? product.cover : `/uploads/${product.cover}`)
+  : '';
 const excerpt = pick(product.excerpt, product.excerptEn);
 const bodyHtml = await marked.parse(pick(product.body, product.bodyEn));
 
@@ -98,6 +102,7 @@ const productSchema = {
   sku: product.model || slug || undefined,
   category: product.category ? productCategoryLabel(product.category) : undefined,
   url: `https://tackix.pages.dev/en/products/${slug}/`,
+  ...(coverUrl ? { image: new URL(coverUrl, 'https://tackix.pages.dev').href } : {}),
   ...(certs.length ? { certification: certs.map((c) => certLabel(c)).filter(Boolean) } : {}),
   additionalProperty: [
     product.baseMaterial && { propertyID: 'substrates', name: 'Substrates', value: product.baseMaterial },
@@ -135,6 +140,7 @@ const productSchema = {
 
     <div class="en-detail-grid">
       <div class="en-detail-main">
+        {coverUrl && <img class="en-cover" src={coverUrl} alt={name} loading="lazy" />}
         <h2 class="section-title">{T.overview}</h2>
         <div class="prose en-prose" set:html={bodyHtml} />
 
@@ -211,6 +217,10 @@ const productSchema = {
   .en-detail-grid { display: grid; gap: 40px; grid-template-columns: minmax(0, 1fr) 320px; align-items: start; }
   @media (max-width: 900px) { .en-detail-grid { grid-template-columns: 1fr; } }
 
+  .en-cover {
+    width: 100%; height: auto; display: block; border-radius: var(--r-md);
+    border: 1px solid var(--border); margin-bottom: 28px;
+  }
   .en-prose { margin-bottom: 32px; }
   .en-downloads { margin-top: 32px; }
   .en-download-btns { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 12px; }
