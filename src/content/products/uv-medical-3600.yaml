@@ -17,6 +17,8 @@ certifications:
 # 产品示意图（P0-1）：SVG 按化学体系配色，含型号与3 项关键参数。
 # 替换实拍图时只需改这一行，无需改版式。
 cover: 'product-uv-medical-3600.svg'
+tds: 'tackix-tds-uv-medical-3600.pdf'
+sds: 'tackix-sds-uv-medical-3600.pdf'
 
 body: |
   ## 产品概述
