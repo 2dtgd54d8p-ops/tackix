@@ -9,7 +9,7 @@
 
 # ── 预上线：全站禁止收录 ────────────────────────────────────────
 /*
-  X-Robots-Tag: noindex, nofollow, noarchive
+X-Robots-Tag: noindex, nofollow, noarchive
 
 # 静态资源长缓存
 /_astro/*
