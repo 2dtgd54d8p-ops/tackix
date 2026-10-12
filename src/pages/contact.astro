@@ -54,7 +54,7 @@ const ICON = {
       <p>提供基材、载荷、温度与固化条件，我们的工程师会给出选型建议与报价。</p>
     </div>
 
-    <div class="contact-grid">
+    <div class:list={['contact-grid', !hasContact && 'contact-grid--single']}>
       {
         hasContact && (
           <div class="contact-info">
@@ -172,6 +172,11 @@ const ICON = {
     display: grid; gap: 40px; align-items: start;
     grid-template-columns: minmax(0, 320px) minmax(0, 1fr);
   }
+  /* 无联系方式可显示时，退化为单栏：否则 grid 会保留空的 320px 左列，
+     把右侧表单压到半幅宽，视觉上像是"内容丢了" */
+  .contact-grid--single { grid-template-columns: minmax(0, 1fr); }
+  .contact-grid--single .contact-form { max-width: 100%; }
+
   @media (max-width: 820px) { .contact-grid { grid-template-columns: 1fr; } }
 
   .contact-info { display: grid; gap: 10px; align-content: start; }
