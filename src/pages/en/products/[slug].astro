@@ -68,6 +68,15 @@ const name = pick(product.name, product.nameEn);
 const coverUrl = product.cover
   ? (product.cover.startsWith('/') ? product.cover : `/uploads/${product.cover}`)
   : '';
+
+// 文件下载链接：Keystatic 的文件字段存的是相对于 publicPath 的文件名，
+// 与中文详情页统一用 toPublicUrl 处理（兼容带/不带 / 前缀两种存储方式）。
+function toPublicUrl(v: unknown): string {
+  if (!v || typeof v !== 'string') return '';
+  return v.startsWith('/') ? v : `/uploads/${v}`;
+}
+const tdsUrl = toPublicUrl(product.tds);
+const sdsUrl = toPublicUrl(product.sds);
 const excerpt = pick(product.excerpt, product.excerptEn);
 const bodyHtml = await marked.parse(pick(product.body, product.bodyEn));
 
@@ -145,18 +154,18 @@ const productSchema = {
         <div class="prose en-prose" set:html={bodyHtml} />
 
         {
-          (product.tds || product.sds) && (
+          (tdsUrl || sdsUrl) && (
             <div class="en-downloads">
               <h2 class="section-title">{T.download}</h2>
               <div class="en-download-btns">
-                {product.tds && (
-                  <a class="btn" href={`/uploads/${product.tds}`} download>
-                    {T.tds} ↓
+                {tdsUrl && (
+                  <a class="btn" href={tdsUrl} target="_blank" rel="noopener noreferrer" download>
+                    Download {T.tds} (PDF)
                   </a>
                 )}
-                {product.sds && (
-                  <a class="btn" href={`/uploads/${product.sds}`} download>
-                    {T.sds} ↓
+                {sdsUrl && (
+                  <a class="btn" href={sdsUrl} target="_blank" rel="noopener noreferrer" download>
+                    Download {T.sds} (PDF)
                   </a>
                 )}
               </div>

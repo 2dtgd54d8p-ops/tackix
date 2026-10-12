@@ -1,13 +1,47 @@
 ---
 /**
- * 英文联系/询盘页 /en/contact（T12）
- * 复用中文页的 /api/contact 接口（字段名一致：name/email/message）。
+ * 英文联系/询盘页 /en/contact（P0-3 英文版补齐）
+ * ---------------------------------------------------------------
+ * 与中文联系页保持功能对等：
+ * 1. **联系方式优先于表单**——B2B 买家看完参数表后的下一步是「找谁问」。
+ *    预上线期表单被闸门关闭，联系方式是唯一转化入口，必须放最上面。
+ * 2. 所有字段留空即隐藏对应入口，不留空链接（与中文版一致）。
+ * 3. 预上线期在表单区明确提示状态，避免英文访客反复提交却收不到回复。
+ * 4. **修复假成功**：提交后必须读 API 返回的 `prelaunch` 标记——
+ *    预上线时 API 返回 200 + {prelaunch:true}，旧逻辑只看 res.ok 会误报成功。
  */
 import Base from '../../layouts/Base.astro';
 import { loadSiteData } from '../../lib/site-data';
+import { isPreLaunch } from '../../lib/prelaunch';
 
 const { site } = await loadSiteData();
-const whatsapp = (site.whatsapp ?? '').trim();
+const prelaunch = isPreLaunch();
+
+const email = (site.email ?? '').trim();
+const company = (site.company ?? '').trim();
+const phone = (site.phone ?? '').trim();
+const address = (site.address ?? '').trim();
+const hours = (site.hours ?? '').trim();
+const whatsapp = (site.whatsapp ?? '').replace(/[^0-9]/g, '');
+const waText = encodeURIComponent(
+  (site.whatsappPrefill ?? '').trim() ||
+    'Hello, I would like a quotation for industrial adhesives. Could you share TDS/SDS and technical support?'
+);
+
+// 任一联系方式存在才渲染该区块
+const hasContact = !!(email || whatsapp || phone || address || company || hours);
+const telHref = phone ? `tel:${phone.replace(/[^\d+]/g, '')}` : '';
+const mailHref = email
+  ? `mailto:${email}?subject=${encodeURIComponent('Quotation inquiry · ' + (company || 'Tackix'))}`
+  : '';
+
+const ICON = {
+  mail: '<rect x="2.5" y="4.5" width="19" height="15" rx="2.5"/><path d="m3 6 9 6.5L21 6"/>',
+  phone: '<path d="M6.5 3h3l1.5 4-2 1.5a12 12 0 0 0 5.5 5.5L16 12l4 1.5v3a2 2 0 0 1-2.2 2A16.5 16.5 0 0 1 4.5 5.2 2 2 0 0 1 6.5 3Z"/>',
+  pin: '<path d="M12 21s7-5.3 7-11a7 7 0 1 0-14 0c0 5.7 7 11 7 11Z"/><circle cx="12" cy="10" r="2.5"/>',
+  clock: '<circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/>',
+  building: '<path d="M3 21h18M5 21V7l7-4 7 4v14M9 10h2m-2 4h2m2-4h2m-2 4h2"/>',
+};
 ---
 
 <Base
@@ -25,27 +59,116 @@ const whatsapp = (site.whatsapp ?? '').trim();
       </p>
     </div>
 
-    <div class="en-contact-grid">
-      <form id="contact-form" class="contact-form" novalidate>
-        <div class="field">
-          <label for="name">Your name *</label>
-          <input id="name" name="name" type="text" required maxlength="60" autocomplete="name" />
-        </div>
-        <div class="field">
-          <label for="email">Business email *</label>
-          <input id="email" name="email" type="email" required maxlength="120" autocomplete="email" />
-        </div>
-        <div class="field">
-          <label for="message">Your application *</label>
-          <textarea id="message" name="message" required rows="6" maxlength="2000"
-            placeholder="e.g. Bonding aluminium to FRP in an EV battery pack housing, continuous vibration, -40 to 85°C, gap 0.5 mm."></textarea>
-        </div>
-        <button type="submit" class="btn btn-primary" id="submit-btn">Send Enquiry</button>
-        <p class="status" id="form-status" hidden></p>
-      </form>
+    <div class:list={['en-contact-grid', !hasContact && 'en-contact-grid--single']}>
+      {
+        hasContact && (
+          <div class="contact-info">
+            <h2 class="section-title">Contact Information</h2>
 
-      <aside class="en-contact-side">
-        <div class="quote-block">
+            {email && (
+              <a class="contact-item" href={mailHref}>
+                <span class="ci-icon" aria-hidden="true">
+                  <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" set:html={ICON.mail} />
+                </span>
+                <span class="ci-body">
+                  <span class="ci-label">Email</span>
+                  <span class="ci-value">{email}</span>
+                </span>
+              </a>
+            )}
+
+            {whatsapp && (
+              <a class="contact-item" href={`https://wa.me/${whatsapp}?text=${waText}`} target="_blank" rel="noopener">
+                <span class="ci-icon" aria-hidden="true">
+                  <svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor"><path d="M12 2a10 10 0 0 0-8.6 15L2 22l5.2-1.4A10 10 0 1 0 12 2Zm5.8 14.2c-.2.7-1.3 1.3-2 1.4-.5.1-1.2.1-1.9-.1-.4-.1-1-.3-1.8-.7-3-1.3-4.9-4.3-5-4.5-.2-.2-1.2-1.6-1.2-3s.8-2.1 1-2.4c.3-.3.6-.3.8-.3h.6c.2 0 .4 0 .7.5l.9 2.2c.1.2.1.4 0 .6l-.4.6-.3.3c-.1.1-.3.3-.1.6.2.3.8 1.3 1.7 2.1 1.1 1 2 1.3 2.3 1.4.3.2.5.1.7-.1l.8-1c.2-.2.4-.2.6-.1l2.1 1c.3.1.5.2.5.3.1.2.1.7-.1 1.3Z"/></svg>
+                </span>
+                <span class="ci-body">
+                  <span class="ci-label">WhatsApp</span>
+                  <span class="ci-value">+{whatsapp}</span>
+                </span>
+              </a>
+            )}
+
+            {phone && (
+              <a class="contact-item" href={telHref}>
+                <span class="ci-icon" aria-hidden="true">
+                  <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" set:html={ICON.phone} />
+                </span>
+                <span class="ci-body">
+                  <span class="ci-label">Phone</span>
+                  <span class="ci-value">{phone}</span>
+                </span>
+              </a>
+            )}
+
+            {company && (
+              <div class="contact-item contact-item-static">
+                <span class="ci-icon" aria-hidden="true">
+                  <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" set:html={ICON.building} />
+                </span>
+                <span class="ci-body">
+                  <span class="ci-label">Company</span>
+                  <span class="ci-value">{company}</span>
+                </span>
+              </div>
+            )}
+
+            {address && (
+              <div class="contact-item contact-item-static">
+                <span class="ci-icon" aria-hidden="true">
+                  <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" set:html={ICON.pin} />
+                </span>
+                <span class="ci-body">
+                  <span class="ci-label">Address</span>
+                  <span class="ci-value">{address}</span>
+                </span>
+              </div>
+            )}
+
+            {hours && (
+              <div class="contact-item contact-item-static">
+                <span class="ci-icon" aria-hidden="true">
+                  <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" set:html={ICON.clock} />
+                </span>
+                <span class="ci-body">
+                  <span class="ci-label">Business Hours</span>
+                  <span class="ci-value">{hours}</span>
+                </span>
+              </div>
+            )}
+          </div>
+        )
+      }
+
+      <div class="contact-form-wrap">
+        <h2 class="section-title">Send us a message</h2>
+        {
+          prelaunch && (
+            <div class="notice">
+              <strong>This site is not yet live</strong>
+              <p>The online form is temporarily closed to avoid mixing test data with real enquiries. Please reach us directly by email or WhatsApp.</p>
+            </div>
+          )
+        }
+        <form id="contact-form" class="contact-form" novalidate>
+          <div class="field">
+            <label for="name">Your name *</label>
+            <input id="name" name="name" type="text" required maxlength="60" autocomplete="name" />
+          </div>
+          <div class="field">
+            <label for="email">Business email *</label>
+            <input id="email" name="email" type="email" required maxlength="120" autocomplete="email" />
+          </div>
+          <div class="field">
+            <label for="message">Your application *</label>
+            <textarea id="message" name="message" required rows="6" maxlength="2000"
+              placeholder="e.g. Bonding aluminium to FRP in an EV battery pack housing, continuous vibration, -40 to 85°C, gap 0.5 mm."></textarea>
+          </div>
+          <button type="submit" class="btn btn-primary" id="submit-btn">Send Enquiry</button>
+          <p class="status" id="form-status" hidden></p>
+        </form>
+
+        <div class="en-tips-box">
           <h3>What to include</h3>
           <ul class="en-tips">
             <li>Substrates (e.g. aluminium, steel, PC, FRP)</li>
@@ -55,23 +178,83 @@ const whatsapp = (site.whatsapp ?? '').trim();
             <li>Any certification requirements (RoHS, REACH, UL)</li>
           </ul>
         </div>
-
-        {
-          whatsapp && (
-            <a class="btn btn-primary" href={`https://wa.me/${whatsapp.replace(/[^0-9]/g, '')}?text=${encodeURIComponent('Hello, I would like a quotation for industrial adhesives.')}`} target="_blank" rel="noopener">
-              Chat on WhatsApp
-            </a>
-          )
-        }
-      </aside>
+      </div>
     </div>
   </section>
 </Base>
 
+<style>
+  .en-contact-grid {
+    display: grid; gap: 40px; align-items: start;
+    grid-template-columns: minmax(0, 320px) minmax(0, 1fr);
+  }
+  /* 无联系方式时退化为单栏，避免空 320px 左列把表单压成半幅 */
+  .en-contact-grid--single { grid-template-columns: minmax(0, 1fr); }
+  .en-contact-grid--single .contact-form { max-width: 100%; }
+
+  @media (max-width: 820px) { .en-contact-grid { grid-template-columns: 1fr; } }
+
+  .contact-info { display: grid; gap: 10px; align-content: start; }
+  .contact-item {
+    display: flex; gap: 12px; align-items: flex-start;
+    padding: 13px 15px; border-radius: var(--r-md);
+    background: var(--surface); border: 1px solid var(--border);
+    color: inherit; text-decoration: none;
+    transition: border-color var(--dur) var(--ease), background var(--dur) var(--ease);
+  }
+  a.contact-item:hover { border-color: var(--accent); background: var(--surface-2); text-decoration: none; }
+
+  .ci-icon { color: var(--accent); flex-shrink: 0; margin-top: 2px; }
+  .ci-body { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+  .ci-label { font-size: 12px; color: var(--faint); letter-spacing: 0.03em; }
+  .ci-value { font-size: 14.5px; color: var(--fg); word-break: break-word; line-height: 1.5; }
+
+  .notice {
+    padding: 13px 16px; border-radius: var(--r-md); margin-bottom: 18px;
+    font-size: 14px; line-height: 1.7;
+    background: var(--surface-2); border: 1px solid var(--border); color: var(--fg-soft);
+  }
+  .notice strong { display: block; margin-bottom: 4px; color: var(--fg); }
+  .notice p { margin: 0; }
+
+  .contact-form {
+    display: flex; flex-direction: column; gap: 18px;
+    max-width: 560px;
+    padding: 26px 24px;
+    border: 1px solid var(--border);
+    border-radius: var(--r-lg);
+    background: var(--surface);
+    box-shadow: var(--shadow-sm);
+  }
+  .contact-form .field { display: flex; flex-direction: column; gap: 6px; }
+  .contact-form .field label { font-size: 13px; font-weight: 600; color: var(--fg-soft); }
+  .contact-form .field input,
+  .contact-form .field textarea {
+    padding: 11px 13px; border: 1px solid var(--border-strong); border-radius: var(--r-md);
+    background: var(--surface); color: var(--fg); font: inherit; font-size: 14.5px;
+    transition: border-color var(--dur) var(--ease), box-shadow var(--dur) var(--ease);
+  }
+  .contact-form .field input:focus,
+  .contact-form .field textarea:focus {
+    outline: none; border-color: var(--accent);
+    box-shadow: 0 0 0 3px var(--accent-soft);
+  }
+  .contact-form .btn { align-self: flex-start; }
+  .contact-form .status { text-align: left; }
+
+  .en-tips-box {
+    margin-top: 22px; padding: 18px 20px;
+    border: 1px solid var(--border); border-radius: var(--r-md);
+    background: var(--surface);
+  }
+  .en-tips-box h3 { margin: 0 0 10px; font-size: 15px; color: var(--fg); }
+  .en-tips { margin: 0; padding-left: 18px; color: var(--muted); font-size: 14px; line-height: 1.9; }
+</style>
+
 <script>
   const form = document.getElementById('contact-form') as HTMLFormElement | null;
   const btn = document.getElementById('submit-btn') as HTMLButtonElement | null;
-  const status = document.getElementById('form-status');
+  const status = document.getElementById('form-status') as HTMLElement | null;
 
   form?.addEventListener('submit', async (e) => {
     e.preventDefault();
@@ -87,13 +270,20 @@ const whatsapp = (site.whatsapp ?? '').trim();
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(data),
       });
-      if (res.ok) {
+      const json = await res.json();
+      // 关键修复：预上线期 API 返回 200 + {prelaunch:true}，只读 res.ok 会误报成功。
+      // 必须显式判断 json.prelaunch，把「已收下但暂不处理」和「真正成功」区分开。
+      if (res.ok && json.ok && !json.prelaunch) {
         form.reset();
         status.className = 'status ok';
         status.textContent = 'Thank you — your enquiry has been received. We will reply shortly.';
+      } else if (json.prelaunch) {
+        status.className = 'status err';
+        status.textContent =
+          json.error || 'This site is not yet live for enquiries. Please contact us by email or WhatsApp.';
       } else {
         status.className = 'status err';
-        status.textContent = 'Submission failed. Please try again or contact us by email.';
+        status.textContent = 'Submission failed: ' + (json.error || 'unknown error');
       }
     } catch {
       status.className = 'status err';
@@ -103,9 +293,3 @@ const whatsapp = (site.whatsapp ?? '').trim();
     }
   });
 </script>
-
-<style>
-  .en-contact-grid { display: grid; gap: 36px; grid-template-columns: minmax(0, 1fr) 300px; align-items: start; }
-  @media (max-width: 900px) { .en-contact-grid { grid-template-columns: 1fr; } }
-  .en-tips { margin: 0; padding-left: 18px; color: var(--muted); font-size: 14px; line-height: 1.9; }
-</style>
