@@ -21,6 +21,13 @@ const siteTitle = site.title;
 const footerText = site.footer ? `Powered by ${site.footer}` : `Powered by ${siteTitle}`;
 // WhatsApp 号码（来自后台「站点信息」）；为空则不显示 WhatsApp 悬浮按钮
 const whatsappNumber = (site.whatsapp ?? '').trim();
+// 联系方式（P0-3）：页脚每页可达，是预上线期最主要的转化入口。
+// 任一为空即不渲染该项，避免出现空链接。
+const contactEmail = (site.email ?? '').trim();
+const contactPhone = (site.phone ?? '').trim();
+const contactCompany = (site.company ?? '').trim();
+// WhatsApp 预填话术：后台可配，避免所有入口共用一句硬编码文案
+const waPrefill = (site.whatsappPrefill ?? '').trim() || '您好，我想咨询工业胶粘剂/密封剂产品与选型。';
 
 // 导航当前页高亮
 const path = Astro.url.pathname;
@@ -180,6 +187,17 @@ const showFloatContact =
       <slot />
     </main>
     <footer class="site-footer">
+      {
+        (contactEmail || contactPhone || contactCompany) && (
+          <div class="footer-contact">
+            {contactCompany && <span class="fc-company">{contactCompany}</span>}
+            {contactEmail && (
+              <a href={`mailto:${contactEmail}`}>{contactEmail}</a>
+            )}
+            {contactPhone && <a href={`tel:${contactPhone.replace(/[^\d+]/g, '')}`}>{contactPhone}</a>}
+          </div>
+        )
+      }
       <span>{footerText}</span>
       <a class="footer-admin" href="/keystatic" data-i18n="footer.admin" data-i18n-zh="管理后台">管理后台</a>
     </footer>
@@ -189,7 +207,7 @@ const showFloatContact =
           whatsappNumber && (
             <a
               class="float-wa"
-              href={`https://wa.me/${whatsappNumber}?text=` + encodeURIComponent('您好，我想咨询工业胶粘剂/密封剂产品与选型。')}
+              href={`https://wa.me/${whatsappNumber}?text=` + encodeURIComponent(waPrefill)}
               target="_blank"
               rel="noopener noreferrer"
               aria-label="通过 WhatsApp 联系我们"
@@ -786,6 +804,15 @@ const showFloatContact =
         color: var(--fg-soft);
       }
       .prelaunch-bar strong { color: var(--accent); font-weight: 600; }
+
+      /* 页脚联系方式（P0-3）：预上线期表单关闭，这是每页可达的转化入口 */
+      .footer-contact {
+        display: flex; flex-wrap: wrap; justify-content: center; gap: 6px 18px;
+        margin-bottom: 10px; font-size: 13px;
+      }
+      .footer-contact a { color: var(--muted); }
+      .footer-contact a:hover { color: var(--accent); }
+      .fc-company { color: var(--fg-soft); font-weight: 600; margin-right: 4px; }
       .brand {
         display: inline-flex;
         align-items: center;
