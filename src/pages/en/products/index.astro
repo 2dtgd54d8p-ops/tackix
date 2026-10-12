@@ -88,6 +88,11 @@ const scnFilters = [
       {
         products.map((p) => (
           <a class="card en-card" href={`/en/products/${p.slug}/`} data-category={p.category ?? ''} data-scenario={p.scenario ?? ''}>
+            {p.cover && (
+              <div class="en-card-media">
+                <img src={p.cover.startsWith('/') ? p.cover : `/uploads/${p.cover}`} alt={pick(p.name, p.nameEn)} loading="lazy" />
+              </div>
+            )}
             <div class="en-card-cat">{CAT_EN[p.category] ?? p.category}</div>
             <h3>{pick(p.name, p.nameEn)}</h3>
             <p class="en-card-excerpt">{pick(p.excerpt, p.excerptEn)}</p>
@@ -140,6 +145,8 @@ const scnFilters = [
 <style>
   .en-cards { display: grid; gap: 20px; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); }
   .en-card { display: flex; flex-direction: column; }
+  .en-card-media { margin: -20px -20px 14px; border-radius: var(--r-md) var(--r-md) 0 0; overflow: hidden; }
+  .en-card-media img { width: 100%; height: auto; display: block; aspect-ratio: 4 / 3; object-fit: cover; }
   .en-card-cat {
     font-size: 12px; font-weight: 600; letter-spacing: 0.04em; text-transform: uppercase;
     color: var(--accent); margin-bottom: 8px;
