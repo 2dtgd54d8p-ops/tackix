@@ -80,7 +80,14 @@ export const DEFAULT_SITE = {
   description:
     'Tackix 是面向工业胶粘剂与密封剂行业的垂直平台，提供产品数据库、选型工具、技术文章与案例库，支持多语言与在线询盘。',
   tagline: '工业胶粘剂与密封剂 · 选型 · 技术 · 询盘',
+  // 联系方式（P0-3）：默认值全为空，前台会隐藏对应入口，需在后台「站点信息」填写
+  email: '',
+  company: '',
+  phone: '',
+  address: '',
+  hours: '',
   whatsapp: '',
+  whatsappPrefill: '',
 };
 
 const UNCATEGORIZED_LABEL = '未分类';
@@ -107,11 +114,21 @@ export async function loadSiteData() {
     if (tagItems?.length) tags = tagItems.map((t) => ({ label: t.label, value: t.value }));
 
     if (s) {
+      // ⚠️ 这里必须**逐字段列出** singleton 的所有字段：Keystatic 的 read()
+      // 返回的就是 YAML 原样，新增字段若不显式透传就会被静默丢弃
+      // （P0-3 加联系字段时踩过：只有 whatsapp 生效，email/phone 等全部为 undefined）。
       site = {
         title: s.title || DEFAULT_SITE.title,
         description: s.description || DEFAULT_SITE.description,
         tagline: s.tagline || DEFAULT_SITE.tagline,
+        // 联系方式（P0-3）：留空即为空串，前台据此隐藏对应入口
+        email: s.email || '',
+        company: s.company || '',
+        phone: s.phone || '',
+        address: s.address || '',
+        hours: s.hours || '',
         whatsapp: s.whatsapp || '',
+        whatsappPrefill: s.whatsappPrefill || '',
       };
     }
   } catch (e) {
