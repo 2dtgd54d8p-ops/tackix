@@ -366,10 +366,37 @@ export default config({
         tagline: fields.text({ label: '首页标语' }),
         // 全站页脚署名（留空则只显示站点标题）
         footer: fields.text({ label: '页脚文字' }),
+        // ── 联系方式（P0-3）────────────────────────────────────────────
+        // B2B 买家看完参数表的下一个动作必然是「找谁问」。预上线期询盘表单关闭，
+        // 因此联系方式是这段时间唯一可用的转化入口，正式上线后与表单并行。
+        // 全部留空则前台自动隐藏对应入口，不会渲染出空链接或占位符。
+
+        // 商务邮箱（询盘主通道，兼顾 Gmail/Outlook/企业邮箱）
+        email: fields.text({
+          label: '商务邮箱',
+          description: '如 sales@tackix.com。留空则页脚与联系页不显示邮件入口。',
+          validation: { pattern: { regex: /^[^\s@]+@[^\s@]+\.[^\s@]+$/, message: '邮箱格式不正确' } },
+        }),
+        // 公司全称：用于页脚署名与联系页主体信息，影响 B2B 买家的商业信任判断
+        company: fields.text({ label: '公司名称', description: '如 Tackix Materials Co., Ltd.' }),
+        // 办公电话（含国家码，用于电话咨询与部分地区的采购流程要求）
+        phone: fields.text({
+          label: '联系电话',
+          description: '含国家码，如 +65 6xxx xxxx。留空则不显示电话入口。',
+        }),
+        // 办公地址（部分工程/采购流程需要登记供应商地址，影响资质审核）
+        address: fields.text({ label: '办公地址', multiline: true, description: '留空则不显示地址' }),
+        // 营业时间：海外买家判断能否及时回复的参考
+        hours: fields.text({ label: '营业时间', description: '如 Mon-Fri 09:00-18:00 (GMT+8)' }),
         // 全站 WhatsApp 号码（仅数字，含国家码，如 8613800138000）；留空则前台不显示 WhatsApp 悬浮按钮
         whatsapp: fields.text({
           label: 'WhatsApp 号码',
           description: '仅数字，含国家码。留空则不显示 WhatsApp 悬浮入口。',
+        }),
+        // WhatsApp 预填话术：不同页面入口用不同引导语，提升回复率
+        whatsappPrefill: fields.text({
+          label: 'WhatsApp 默认话术',
+          description: '买家点开对话框时的预填内容，留空则用通用文案。',
         }),
       },
     },
