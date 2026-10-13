@@ -21,7 +21,36 @@ import { createElement } from 'react';
 // h2(n) 生成 n 对 [6,6]，即「中文 / EN 左右并排」，用于把后台长页面压成两列。
 const h2 = (n: number): number[] => Array.from({ length: n * 2 }, () => 6);
 
-const useLocal = typeof process !== 'undefined' && process.env?.KEYSTATIC_USE_LOCAL === '1';
+/**
+ * 安全读取环境变量（仅服务端使用）。
+ * ⚠️ 本文件会被打进浏览器端（/keystatic 后台的 astro-island 会 `import config from
+ *   "/keystatic.config.ts"`），而**浏览器里没有 `process` 全局量**。此前第 76/77 行
+ *   直接写 `process.env.PUBLIC_GITHUB_OWNER`，在浏览器求值时抛
+ *   `ReferenceError: process is not defined` → 整个 config 模块加载失败 →
+ *   astro-island 报错、/keystatic 后台**白屏**（本地预览与线上 github 模式都会中招）。
+ *   故所有 env 读取必须走本函数做 typeof 短路保护。
+ */
+const env = (key: string): string | undefined => {
+  try {
+    return typeof process !== 'undefined' ? process.env?.[key] : undefined;
+  } catch {
+    return undefined;
+  }
+};
+
+/**
+ * 是否 local 模式。
+ * ⚠️ 不能在浏览器端用 env() 判断：浏览器没有 process，读不到 KEYSTATIC_USE_LOCAL，
+ *   会一律得到 false → 本地 dev 也被当成 github 模式渲染「Log in with GitHub」。
+ *   所以改用 __KEYSTATIC_USE_LOCAL__ 这个**构建期常量**：
+ *   - 服务端：由下方 astro.config.mjs 的 vite.define 注入 process.env 的真实值；
+ *   - 浏览器端：同样被 define 替换，值在构建那一刻就已确定。
+ */
+declare const __KEYSTATIC_USE_LOCAL__: boolean;
+const useLocal =
+  typeof __KEYSTATIC_USE_LOCAL__ !== 'undefined'
+    ? __KEYSTATIC_USE_LOCAL__
+    : env('KEYSTATIC_USE_LOCAL') === '1';
 
 // 文章分类下拉的可选项（Keystatic select 仅支持静态数组）。
 // 与后台「分类管理」singleton 保持一致：增删分类时两处都要改。
@@ -111,8 +140,8 @@ const storage = useLocal
       kind: 'github' as const,
       repo: {
         // 兜底写死（非机密）；若运行时配了同名的公开变量则优先用它
-        owner: process.env.PUBLIC_GITHUB_OWNER || '2dtgd54d8p-ops',
-        name: process.env.PUBLIC_GITHUB_REPO || 'tackix',
+owner: env('PUBLIC_GITHUB_OWNER') || '2dtgd54d8p-ops',
+    name: env('PUBLIC_GITHUB_REPO') || 'tackix',
       },
     } as const);
 

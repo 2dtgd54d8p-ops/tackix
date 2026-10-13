@@ -30,6 +30,15 @@ export default defineConfig({
     keystatic(), // 注入 /keystatic 后台与 /api/keystatic/* 接口
   ],
   vite: {
+    // ⚠️ 必须注入 __KEYSTATIC_USE_LOCAL__：keystatic.config.ts 同时跑在浏览器端
+    //（/keystatic 的 astro-island 会 import 它），而浏览器没有 process，读不到
+    // KEYSTATIC_USE_LOCAL → 本地 dev 会被误判成 github 模式并渲染登录按钮。
+    // 用 define 在构建期把真实值写死进产物，浏览器/服务端一致。
+    define: {
+      __KEYSTATIC_USE_LOCAL__: JSON.stringify(
+        process.env.KEYSTATIC_USE_LOCAL === '1'
+      ),
+    },
     optimizeDeps: {
       // 只排除 @keystatic/astro：它内部 import 'astro:env/server'（Astro 虚拟模块），
       // 会被 Vite 的 esbuild 预构建器误扫描而报 "Could not resolve 'astro:env/server'"。
