@@ -99,6 +99,7 @@ const ICON = {
                   <span class="ci-label">微信</span>
                   <span class="ci-value">{wechat}</span>
                 </span>
+                <button type="button" class="ci-copy" data-wechat={wechat} aria-label="复制微信号">复制</button>
               </div>
             )}
 
@@ -217,6 +218,15 @@ const ICON = {
   .ci-body { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
   .ci-label { font-size: 12px; color: var(--faint); letter-spacing: 0.03em; }
   .ci-value { font-size: 14.5px; color: var(--fg); word-break: break-word; line-height: 1.5; }
+  .ci-copy {
+    margin-left: auto; align-self: center;
+    font: inherit; font-size: 12px; line-height: 1;
+    padding: 6px 10px; border-radius: var(--r-sm);
+    border: 1px solid var(--border); background: var(--surface-2); color: var(--fg-soft);
+    cursor: pointer; transition: border-color var(--dur) var(--ease), color var(--dur) var(--ease);
+  }
+  .ci-copy:hover { border-color: var(--accent); color: var(--accent); }
+  .ci-copy.copied { border-color: var(--accent); color: var(--accent); }
 
   .notice {
     padding: 13px 16px; border-radius: var(--r-md); margin-bottom: 18px;
@@ -252,6 +262,23 @@ const ICON = {
     const form = document.getElementById('contact-form');
     const status = document.getElementById('contact-status');
     if (!form) return;
+
+    // 微信号一键复制
+    document.querySelectorAll('.ci-copy[data-wechat]').forEach((btn) => {
+      btn.addEventListener('click', async function () {
+        const id = btn.getAttribute('data-wechat') || '';
+        try {
+          await navigator.clipboard.writeText(id);
+          const old = btn.textContent;
+          btn.textContent = '已复制';
+          btn.classList.add('copied');
+          setTimeout(() => { btn.textContent = old; btn.classList.remove('copied'); }, 1500);
+        } catch {
+          btn.textContent = '复制失败';
+          setTimeout(() => { btn.textContent = '复制'; }, 1500);
+        }
+      });
+    });
 
     form.addEventListener('submit', async function (e) {
       e.preventDefault();

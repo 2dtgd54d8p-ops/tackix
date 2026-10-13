@@ -13,16 +13,34 @@ import { createReader } from '@keystatic/core/reader';
 import keystaticConfig from '../../keystatic.config';
 
 export const DEFAULT_CATEGORIES = [
-  { label: '技术', value: 'tech' },
-  { label: '产品', value: 'product' },
-  { label: '随笔', value: 'notes' },
+  { label: '技术', labelEn: 'Technology', value: 'tech' },
+  { label: '产品', labelEn: 'Products', value: 'product' },
+  { label: '随笔', labelEn: 'Notes', value: 'notes' },
 ];
 
+// 与后台「标签管理」singleton 对齐（原为博客默认值 astro/cloudflare/keystatic/tutorial，
+// 已更正为真实标签，避免 singleton 为空时回退到错误标签）。
 export const DEFAULT_TAGS = [
-  { label: 'Astro', value: 'astro' },
-  { label: 'Cloudflare', value: 'cloudflare' },
-  { label: 'Keystatic', value: 'keystatic' },
-  { label: '教程', value: 'tutorial' },
+  { label: '选型指南', labelEn: 'Selection Guide', value: 'selection-guide' },
+  { label: '环氧胶', labelEn: 'Epoxy', value: 'epoxy' },
+  { label: '聚氨酯胶', labelEn: 'Polyurethane', value: 'polyurethane' },
+  { label: '硅酮密封胶', labelEn: 'Silicone Sealant', value: 'silicone-sealant' },
+  { label: 'UV 固化胶', labelEn: 'UV Adhesive', value: 'uv-adhesive' },
+  { label: '瞬干胶', labelEn: 'Cyanoacrylate', value: 'cyanoacrylate' },
+  { label: '厌氧胶', labelEn: 'Anaerobic', value: 'anaerobic' },
+  { label: '热熔胶', labelEn: 'Hot Melt', value: 'hotmelt' },
+  { label: '基材粘接', labelEn: 'Substrate Bonding', value: 'substrate' },
+  { label: '表面处理', labelEn: 'Surface Treatment', value: 'surface-treatment' },
+  { label: '结构粘接', labelEn: 'Structural Bonding', value: 'structural-bonding' },
+  { label: '密封防水', labelEn: 'Sealing & Waterproofing', value: 'sealing' },
+  { label: '耐温耐候', labelEn: 'Heat & Weather Resistance', value: 'temperature-weather' },
+  { label: '电子封装', labelEn: 'Electronics Encapsulation', value: 'electronics' },
+  { label: '汽车制造', labelEn: 'Automotive', value: 'automotive' },
+  { label: '新能源', labelEn: 'New Energy', value: 'new-energy' },
+  { label: '建筑工程', labelEn: 'Construction', value: 'construction' },
+  { label: '包装印刷', labelEn: 'Packaging & Printing', value: 'packaging' },
+  { label: '医疗器械', labelEn: 'Medical Devices', value: 'medical' },
+  { label: '常见问题', labelEn: 'FAQ', value: 'faq' },
 ];
 
 // 应用场景（胶粘剂/密封剂典型行业）—— 与 keystatic.config 的 SCENARIO_OPTIONS 保持一致
@@ -152,10 +170,12 @@ export async function loadSiteData() {
     ]);
 
     const catItems = cat?.items?.filter((c) => c?.value && c?.label);
-    if (catItems?.length) categories = catItems.map((c) => ({ label: c.label, value: c.value }));
+    if (catItems?.length)
+      categories = catItems.map((c) => ({ label: c.label, labelEn: c.labelEn || c.label, value: c.value }));
 
     const tagItems = tag?.items?.filter((t) => t?.value && t?.label);
-    if (tagItems?.length) tags = tagItems.map((t) => ({ label: t.label, value: t.value }));
+    if (tagItems?.length)
+      tags = tagItems.map((t) => ({ label: t.label, labelEn: t.labelEn || t.label, value: t.value }));
 
     if (s) {
       // ⚠️ 这里必须**逐字段列出** singleton 的所有字段：Keystatic 的 read()
@@ -181,7 +201,9 @@ export async function loadSiteData() {
   }
 
   const categoryMap = new Map(categories.map((c) => [c.value, c.label]));
+  const categoryEnMap = new Map(categories.map((c) => [c.value, c.labelEn]));
   const tagMap = new Map(tags.map((t) => [t.value, t.label]));
+  const tagEnMap = new Map(tags.map((t) => [t.value, t.labelEn]));
   const scenarioMap = new Map(DEFAULT_SCENARIOS.map((c) => [c.value, c.label]));
   const stageMap = new Map(DEFAULT_STAGES.map((c) => [c.value, c.label]));
   const productCategoryMap = new Map(DEFAULT_PRODUCT_CATEGORIES.map((c) => [c.value, c.label]));
@@ -203,7 +225,12 @@ export async function loadSiteData() {
       const key = v ?? 'uncategorized';
       return key === 'uncategorized' ? UNCATEGORIZED_LABEL : categoryMap.get(key) ?? UNCATEGORIZED_LABEL;
     },
+    categoryLabelEn: (v: string | undefined) => {
+      const key = v ?? 'uncategorized';
+      return key === 'uncategorized' ? 'Uncategorized' : categoryEnMap.get(key) || categoryMap.get(key) || 'Uncategorized';
+    },
     tagLabel: (v: string) => tagMap.get(v) ?? v,
+    tagLabelEn: (v: string) => tagEnMap.get(v) || tagMap.get(v) || v,
     /** 应用场景值 -> 中文名（空值返回空串，便于调用方判断是否有值） */
     scenarioLabel: (v: string | undefined) => (v ? scenarioMap.get(v) ?? '' : ''),
     /** 决策阶段值 -> 中文名 */

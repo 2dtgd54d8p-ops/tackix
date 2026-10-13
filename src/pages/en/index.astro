@@ -70,12 +70,12 @@ const CAT_EN: Record<string, string> = {
 };
 
 // 标签与化学体系计数：用于首页「热门标签」「按化学体系浏览」两个导流模块
-const { tagLabel } = await loadSiteData();
+const { tagLabelEn } = await loadSiteData();
 // 首页文案来自后台「首页内容」singleton（可编辑、前后端贯通），en 路径取 .en
 const L = await loadContent();
 const t = (b: { zh: string; en: string }) => b.en;
 const usedTags = [...new Set(posts.flatMap((p) => (p.tags ?? []) as string[]))];
-const tagItems = usedTags.map((t) => ({ value: t, label: tagLabel(t) || t }));
+const tagItems = usedTags.map((t) => ({ value: t, label: tagLabelEn(t) || t }));
 const chemCounts: Record<string, number> = {};
 products.forEach((p) => {
   const k = p.category ?? 'uncategorized';

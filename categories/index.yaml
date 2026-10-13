@@ -1,7 +1,10 @@
 items:
   - label: 技术
+    labelEn: Technology
     value: tech
   - label: 产品
+    labelEn: Products
     value: product
   - label: 随笔
+    labelEn: Notes
     value: notes

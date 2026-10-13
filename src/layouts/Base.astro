@@ -208,7 +208,7 @@ const showFloatContact =
             {contactEmail && (
               <a href={`mailto:${contactEmail}`}>{contactEmail}</a>
             )}
-            {contactWechat && <span class="fc-wechat">微信：{contactWechat}</span>}
+            {contactWechat && <span class="fc-wechat">{localePrefix ? 'WeChat: ' : '微信：'}{contactWechat}</span>}
             {contactPhone && <a href={`tel:${contactPhone.replace(/[^\d+]/g, '')}`}>{contactPhone}</a>}
           </div>
         )

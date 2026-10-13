@@ -364,9 +364,9 @@ export default config({
         description: fields.text({ label: '站点描述', multiline: true }),
         // 首页 Hero 区那句主标语，留空则回落到默认文案
         tagline: fields.text({ label: '首页标语' }),
-        // 全站页脚署名（留空则只显示站点标题）
-        footer: fields.text({ label: '页脚文字' }),
         // ── 联系方式（P0-3）────────────────────────────────────────────
+        // 注：页脚署名统一由「全局界面文案」singleton 的 footerText/footerTextEn 驱动
+        // （见 ui singleton + Base.astro），此处不再单独设 footer 字段，避免双源冗余。
         // B2B 买家看完参数表的下一个动作必然是「找谁问」。预上线期询盘表单关闭，
         // 因此联系方式是这段时间唯一可用的转化入口，正式上线后与表单并行。
         // 全部留空则前台自动隐藏对应入口，不会渲染出空链接或占位符。
@@ -423,6 +423,10 @@ export default config({
                 label: '显示名称',
                 description: '前台筛选条与文章卡片上显示的文字，如「技术」',
               }),
+              labelEn: fields.text({
+                label: '显示名称(EN)',
+                description: '英文站显示的文字，如 Technology。留空则回退中文名。',
+              }),
               value: fields.text({
                 label: '标识',
                 description:
@@ -443,6 +447,7 @@ export default config({
           fields.object(
             {
               label: fields.text({ label: '显示名称', description: '前台显示的文字，如「教程」' }),
+              labelEn: fields.text({ label: '显示名称(EN)', description: '英文站显示的文字，如 Tutorial。留空则回退中文名。' }),
               value: fields.text({
                 label: '标识',
                 description: '英文唯一标识，写入文章 frontmarker，如 tutorial',
