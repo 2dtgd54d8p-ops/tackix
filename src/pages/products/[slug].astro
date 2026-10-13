@@ -3,7 +3,7 @@ import { createReader } from '@keystatic/core/reader';
 import { marked } from 'marked';
 import keystaticConfig from '../../../keystatic.config';
 import Base from '../../layouts/Base.astro';
-import { loadSiteData } from '../../lib/site-data';
+import { loadSiteData, loadContent } from '../../lib/site-data';
 
 export async function getStaticPaths() {
   const reader = createReader(process.cwd(), keystaticConfig);
@@ -35,6 +35,9 @@ const slug = Astro.params.slug;   // 用于 hreflang 中英互指
 const html = marked(product.body ?? '');
 
 const { site, productCategoryLabel, scenarioLabel, certLabel, cureLabel } = await loadSiteData();
+// 详情页区块标题来自后台「详情页区块标题」singleton（可编辑、前后端贯通）
+const L = await loadContent();
+const t = (b: { zh: string; en: string }) => b.zh;
 const siteTitle = site.title;
 const whatsappNumber = (site.whatsapp ?? '').trim();
 const base = Astro.site ?? new URL('https://tackix.pages.dev');
@@ -144,8 +147,8 @@ const productSchema = {
 
     {
       paramRows.length > 0 && (
-        <section class="spec-block" aria-label="技术参数">
-          <h2>技术参数</h2>
+        <section class="spec-block" aria-label={t(L.detail.productSpecsTitle)}>
+          <h2>{t(L.detail.productSpecsTitle)}</h2>
           <table class="spec-table">
             <tbody>
               {paramRows.map((r) => (
@@ -162,8 +165,8 @@ const productSchema = {
 
     {
       html && (
-        <section class="desc-block" aria-label="产品描述">
-          <h2>产品描述</h2>
+        <section class="desc-block" aria-label={t(L.detail.productDescTitle)}>
+          <h2>{t(L.detail.productDescTitle)}</h2>
           <div set:html={html} />
         </section>
       )
@@ -171,8 +174,8 @@ const productSchema = {
 
     {
       (tdsUrl || sdsUrl) && (
-        <section class="doc-block" aria-label="技术文档下载">
-          <h2>技术文档</h2>
+        <section class="doc-block" aria-label={t(L.detail.productDocsTitle)}>
+          <h2>{t(L.detail.productDocsTitle)}</h2>
           <div class="doc-btns">
             {tdsUrl && (
               <a class="btn" href={tdsUrl} target="_blank" rel="noopener noreferrer" download>
@@ -190,11 +193,11 @@ const productSchema = {
     }
 
     <!-- B2B 不标价：引导询盘（WhatsApp + 联系页） -->
-    <section class="quote-block" aria-label="询盘报价">
+    <section class="quote-block" aria-label={t(L.detail.productQuoteTitle)}>
       <div class="quote-inner">
         <div class="quote-text">
-          <h2>获取报价与技术支持</h2>
-          <p>本平台为工业胶粘剂与密封剂 B2B 渠道，所有产品按订单与规格报价。请留下需求，我们的技术团队将在 1 个工作日内回复。</p>
+          <h2>{t(L.detail.productQuoteTitle)}</h2>
+          <p>{t(L.detail.productQuoteCopy)}</p>
         </div>
         <div class="quote-actions">
           {

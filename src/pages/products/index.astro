@@ -2,7 +2,7 @@
 import { createReader } from '@keystatic/core/reader';
 import keystaticConfig from '../../../keystatic.config';
 import Base from '../../layouts/Base.astro';
-import { loadSiteData } from '../../lib/site-data';
+import { loadSiteData, loadContent } from '../../lib/site-data';
 
 const reader = createReader(process.cwd(), keystaticConfig);
 let slugs: string[] = [];
@@ -32,6 +32,10 @@ products.sort(
 );
 
 const { productCategoryLabel, scenarioLabel, certLabel } = await loadSiteData();
+// 列表页标题/副标题来自后台「列表页标题」singleton（可编辑、前后端贯通）
+const L = await loadContent();
+const t = (b: { zh: string; en: string }) => b.zh;
+const productsSub = t(L.pages.productsSub).replace('{n}', String(products.length));
 
 // 双维度筛选：类型 + 场景（仅出现有产品的选项）
 const catSet = new Set(products.map((p) => p.category).filter(Boolean));
@@ -54,8 +58,8 @@ const scenarioFilters = [
   ]}>
   <section>
     <div class="page-head">
-      <h1>产品库</h1>
-      <p>共 {products.length} 款工业胶粘剂与密封剂 · 按类型与场景筛选，支持 TDS/SDS 下载与在线询盘</p>
+      <h1>{t(L.pages.productsTitle)}</h1>
+      <p>{productsSub}</p>
     </div>
 
     <nav class="filters" id="cat-filter" aria-label="按类型筛选">

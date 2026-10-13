@@ -2,7 +2,7 @@
 import { createReader } from '@keystatic/core/reader';
 import keystaticConfig from '../../../keystatic.config';
 import Base from '../../layouts/Base.astro';
-import { loadSiteData, DEFAULT_SCENARIOS, DEFAULT_CURE } from '../../lib/site-data';
+import { loadSiteData, DEFAULT_SCENARIOS, DEFAULT_CURE, loadContent } from '../../lib/site-data';
 
 const reader = createReader(process.cwd(), keystaticConfig);
 let slugs: string[] = [];
@@ -39,6 +39,9 @@ const products = (
 ).filter(Boolean) as any[];
 
 const { scenarioLabel, cureLabel, productCategoryLabel } = await loadSiteData();
+// 列表页标题/副标题来自后台「列表页标题」singleton（可编辑、前后端贯通）
+const L = await loadContent();
+const t = (b: { zh: string; en: string }) => b.zh;
 
 const scenarioOpts = DEFAULT_SCENARIOS;
 const cureOpts = [{ label: '不限', value: '' }, ...DEFAULT_CURE];
@@ -60,8 +63,8 @@ const dataJson = JSON.stringify(
   ]}>
   <section>
     <div class="page-head">
-      <h1>产品选型</h1>
-      <p>按应用场景、固化方式与适用基材，为您推荐匹配的工业胶粘剂与密封剂。</p>
+      <h1>{t(L.pages.selectorTitle)}</h1>
+      <p>{t(L.pages.selectorSub)}</p>
     </div>
 
     <form class="selector-form" id="selector-form" aria-label="产品选型">
@@ -101,7 +104,7 @@ const dataJson = JSON.stringify(
     <p class="hint" id="form-hint" hidden>请先选择「应用场景」，然后点击「开始选型」。</p>
 
     <div class="results-head" id="results-head" hidden>
-      <h2>推荐结果</h2>
+      <h2>{t(L.pages.selectorResult)}</h2>
       <span class="results-count" id="results-count"></span>
     </div>
 

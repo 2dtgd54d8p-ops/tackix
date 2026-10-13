@@ -4,7 +4,7 @@ import { marked } from 'marked';
 import keystaticConfig from '../../../keystatic.config';
 import Base from '../../layouts/Base.astro';
 import Comments from '../../components/Comments.astro';
-import { loadSiteData } from '../../lib/site-data';
+import { loadSiteData, loadContent } from '../../lib/site-data';
 
 export async function getStaticPaths() {
   const reader = createReader(process.cwd(), keystaticConfig);
@@ -37,6 +37,9 @@ const html = marked(post.body ?? '');
 
 // 分类/标签/应用场景/决策阶段中文名从后台管理的 singleton 读取；读不到自动回落默认值。
 const { site, categoryLabel, tagLabel, scenarioLabel, stageLabel } = await loadSiteData();
+// 详情页区块标题来自后台「详情页区块标题」singleton（可编辑、前后端贯通）
+const L = await loadContent();
+const t = (b: { zh: string; en: string }) => b.zh;
 const siteTitle = site.title;
 const base = Astro.site ?? new URL('https://tackix.pages.dev');
 const canonical = new URL(Astro.url.pathname, base).href;
@@ -126,8 +129,8 @@ const faqSchema =
     <div set:html={html} />
     {
       post.faq && post.faq.length > 0 && (
-        <section class="post-faq" aria-label="常见问题">
-          <h2>常见问题（FAQ）</h2>
+        <section class="post-faq" aria-label={t(L.detail.faqTitle)}>
+          <h2>{t(L.detail.faqTitle)}</h2>
           <div class="faq-list">
             {post.faq.map((f: { question?: string; answer?: string }) => (
               <details class="faq-item">

@@ -1,5 +1,5 @@
 ---
-import { loadSiteData } from '../lib/site-data';
+import { loadSiteData, loadContent } from '../lib/site-data';
 import SEO from '../components/SEO.astro';
 import { LOCALES, I18N_EMBED_JSON } from '../lib/i18n';
 
@@ -18,7 +18,6 @@ const prelaunchNotice = prelaunchBanner();
 // 站名/描述/页脚统一读后台「站点信息」singleton，读不到自动回落默认值。
 const { site } = await loadSiteData();
 const siteTitle = site.title;
-const footerText = site.footer ? `Powered by ${site.footer}` : `Powered by ${siteTitle}`;
 // WhatsApp 号码（来自后台「站点信息」）；为空则不显示 WhatsApp 悬浮按钮
 const whatsappNumber = (site.whatsapp ?? '').trim();
 // 联系方式（P0-3）：页脚每页可达，是预上线期最主要的转化入口。
@@ -29,20 +28,36 @@ const contactCompany = (site.company ?? '').trim();
 // WhatsApp 预填话术：后台可配，避免所有入口共用一句硬编码文案
 const waPrefill = (site.whatsappPrefill ?? '').trim() || '您好，我想咨询工业胶粘剂/密封剂产品与选型。';
 
-// 导航当前页高亮
+// 导航当前页高亮 + 语言感知：在 /en /vi /th 路径下，导航/品牌链接自动加对应前缀，
+// 保证切换语言后站内跳转保持在同语种（前端展示与 /en 内容路由贯通）。
 const path = Astro.url.pathname;
-const navItems = [
-  { href: '/', label: '首页', i18n: 'nav.home' },
-  { href: '/products', label: '产品', i18n: 'nav.products' },
-  { href: '/selector', label: '选型', i18n: 'nav.selector' },
-  { href: '/cases', label: '案例', i18n: 'nav.cases' },
-  { href: '/posts', label: '文章', i18n: 'nav.posts' },
-  { href: '/contact', label: '联系', i18n: 'nav.contact' },
-];
+const localeMatch = path.match(/^\/(en|vi|th)(?=\/|$)/);
+const localePrefix = localeMatch ? '/' + localeMatch[1] : '';
+/** 把裸路径拼上当前语种前缀（首页特殊处理） */
+function navHref(href: string): string {
+  if (href === '/') return localePrefix ? localePrefix + '/' : '/';
+  return localePrefix + href;
+}
+// 主导航与页脚署名来自后台「全局界面文案」singleton（可编辑、前后端贯通）。
+// 任一语种路径前缀（/en /vi /th）下显示 en 标签；中文路径下显示 zh 标签。
+// 后台未配置时回退 keystatic.config 的 UI_NAV_DEFAULT（与既有导航一致）。
+const uiContent = await loadContent();
+const navItems = uiContent.ui.navItems.map((n) => ({
+  href: n.href,
+  label: localePrefix ? n.label.en : n.label.zh,
+}));
+const fb = uiContent.ui.footerText;
+const footerText = (localePrefix ? fb.en : fb.zh) || `Powered by ${siteTitle}`;
+// 全局搜索框占位符（后台「列表页标题」singleton 可编辑）
+const searchPlaceholder = (localePrefix ? uiContent.pages.searchPlaceholder.en : uiContent.pages.searchPlaceholder.zh);
+/** 归一化路径（去尾斜杠）用于高亮比对，避免 /en/products 与 /en/products/ 不一致 */
+function norm(p: string) { return p.replace(/\/+$/, '') || '/'; }
 function isActive(href: string) {
-  if (href === '/') return path === '/';
+  const h = norm(navHref(href));
+  const cur = norm(path);
   if (href === '/keystatic') return path.startsWith('/keystatic') || path.startsWith('/admin');
-  return path === href || path.startsWith(href + '/');
+  if (h === '/') return cur === '/';
+  return cur === h || cur.startsWith(h + '/');
 }
 // 右下角悬浮「联系我」：联系页自身与后台区不显示，避免冗余
 const showFloatContact =
@@ -84,7 +99,7 @@ const showFloatContact =
   </head>
   <body>
     <header class="site-header">
-      <a href="/" class="brand" aria-label={`${siteTitle} 首页`}>
+      <a href={localePrefix || '/'} class="brand" aria-label={`${siteTitle} 首页`}>
         <img src="/favicon.svg" alt="" width="26" height="26" />
         <span>{siteTitle}</span>
       </a>
@@ -93,17 +108,15 @@ const showFloatContact =
           <button type="submit" class="hs-submit" aria-label="搜索">
             <svg class="hs-icon" viewBox="0 0 24 24" width="16" height="16" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7" /><path d="M21 21l-4.35-4.35" /></svg>
           </button>
-          <input class="hs-input" type="search" name="q" placeholder="搜索…" aria-label="站内搜索" enterkeyhint="search" data-i18n="search.placeholder" data-i18n-zh="搜索…" />
+          <input class="hs-input" type="search" name="q" placeholder={searchPlaceholder} aria-label="站内搜索" enterkeyhint="search" />
         </form>
         <nav aria-label="主导航">
           {
             navItems.map((item) => (
               <a
-                href={item.href}
+                href={navHref(item.href)}
                 class={isActive(item.href) ? 'is-active' : ''}
                 aria-current={isActive(item.href) ? 'page' : undefined}
-                data-i18n={item.i18n}
-                data-i18n-zh={item.label}
               >
                 {item.label}
               </a>
@@ -317,8 +330,10 @@ const showFloatContact =
     </script>
     <script is:inline type="application/json" id="i18n-data" set:html={I18N_EMBED_JSON}></script>
     <script is:inline>
-      // 多语言外壳切换（T10）：从 localStorage.lang 读取偏好，替换 [data-i18n] 文案。
-      // 当前静态站仅有中文内容页，切换器先本地化界面外壳（导航/搜索/外观/页脚/悬浮）。
+      // 多语言切换：T10 外壳本地化 + T12 内容路由跳转。
+      // - 外壳文案跟随「当前路径语种」优先，其次用户历史选择（localStorage.lang）；
+      // - 选中 zh-CN/en 时真正跳转到对应语种路由（/en 内容树由 T12 生成）；
+      // - vi/th 暂无独立内容路由，按 T12 设计回退到 /en，仅做外壳切换。
       (function () {
         var dataEl = document.getElementById('i18n-data');
         var I18N = dataEl ? JSON.parse(dataEl.textContent || '{}') : {};
@@ -334,22 +349,36 @@ const showFloatContact =
           });
           document.documentElement.setAttribute('lang', htmlLang || (lang === 'zh-CN' ? 'zh-CN' : lang));
         }
+        // 当前语种：路径前缀优先（/en /vi /th），否则读用户历史选择
+        function currentLocale() {
+          var m = location.pathname.match(/^\/(en|vi|th)(?=\/|$)/);
+          if (m) return m[1];
+          try { return localStorage.getItem('lang') || 'zh-CN'; } catch (e) { return 'zh-CN'; }
+        }
         function paintLang() {
-          var cur = localStorage.getItem('lang') || 'zh-CN';
+          var cur = currentLocale();
           document.querySelectorAll('.lang-opt').forEach(function (b) {
             var on = b.getAttribute('data-lang') === cur;
             b.classList.toggle('is-active', on);
             b.setAttribute('aria-checked', on ? 'true' : 'false');
           });
         }
-        // 初次应用：若用户之前选过非默认语言，直接替换外壳文案
-        var saved = (function () { try { return localStorage.getItem('lang'); } catch (e) { return null; } })();
-        if (saved && saved !== 'zh-CN') {
-          var savedBtn = document.querySelector('.lang-opt[data-lang="' + saved + '"]');
-          var savedHtml = savedBtn ? savedBtn.getAttribute('data-html') : saved;
-          applyI18n(saved, savedHtml);
+        // 初次应用：根据当前语种替换外壳文案（英文页外壳直接英化）
+        var initLang = currentLocale();
+        if (initLang && initLang !== 'zh-CN') {
+          var initBtn = document.querySelector('.lang-opt[data-lang="' + initLang + '"]');
+          var initHtml = initBtn ? initBtn.getAttribute('data-html') : initLang;
+          applyI18n(initLang, initHtml);
         }
         paintLang();
+
+        // 路径按语种互转：zh-CN 去前缀；en/vi/th 加 /en 前缀（vi/th 暂回退到 /en 内容树）
+        function stripLocale(p) { return p.replace(/^\/(en|vi|th)(?=\/|$)/, '') || '/'; }
+        function toLocalePath(target, current) {
+          var base = stripLocale(current);
+          if (target === 'zh-CN') return base;
+          return '/en' + (base === '/' ? '/' : base);
+        }
 
         // 切换器交互
         var langBtn = document.getElementById('lang-btn');
@@ -373,6 +402,13 @@ const showFloatContact =
               applyI18n(code, html);
               paintLang();
               closeLang();
+              // 仅 zh-CN / en 有真实内容路由才跳转；vi/th 暂无独立路由，保持外壳切换
+              if (code === 'zh-CN' || code === 'en') {
+                var target = toLocalePath(code, location.pathname);
+                if (target && target !== location.pathname) {
+                  window.location.pathname = target;
+                }
+              }
             });
           });
         }

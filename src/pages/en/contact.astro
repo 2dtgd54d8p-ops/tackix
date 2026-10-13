@@ -11,11 +11,16 @@
  *    预上线时 API 返回 200 + {prelaunch:true}，旧逻辑只看 res.ok 会误报成功。
  */
 import Base from '../../layouts/Base.astro';
-import { loadSiteData } from '../../lib/site-data';
+import { loadSiteData, loadContent } from '../../lib/site-data';
 import { isPreLaunch } from '../../lib/prelaunch';
 
 const { site } = await loadSiteData();
 const prelaunch = isPreLaunch();
+// 联系页文案来自后台「联系页文案」singleton（可编辑、前后端贯通）
+const L = await loadContent();
+const t = (b: { zh: string; en: string }) => b.en;
+const successMsg = t(L.contact.success);
+const prelaunchMsg = t(L.contact.prelaunchBody);
 
 const email = (site.email ?? '').trim();
 const company = (site.company ?? '').trim();
@@ -52,18 +57,15 @@ const ICON = {
 >
   <section>
     <div class="page-head">
-      <h1>Contact Sales</h1>
-      <p>
-        Tell us the substrate, load, temperature and cure conditions you are working with —
-        our engineers will recommend a grade and process. Pricing is quoted per enquiry.
-      </p>
+      <h1>{t(L.contact.pageTitle)}</h1>
+      <p>{t(L.contact.pageSub)}</p>
     </div>
 
     <div class:list={['en-contact-grid', !hasContact && 'en-contact-grid--single']}>
       {
         hasContact && (
           <div class="contact-info">
-            <h2 class="section-title">Contact Information</h2>
+            <h2 class="section-title">{t(L.contact.contactInfoTitle)}</h2>
 
             {email && (
               <a class="contact-item" href={mailHref}>
@@ -141,41 +143,37 @@ const ICON = {
       }
 
       <div class="contact-form-wrap">
-        <h2 class="section-title">Send us a message</h2>
+        <h2 class="section-title">{t(L.contact.formSectionTitle)}</h2>
         {
           prelaunch && (
             <div class="notice">
-              <strong>This site is not yet live</strong>
-              <p>The online form is temporarily closed to avoid mixing test data with real enquiries. Please reach us directly by email or WhatsApp.</p>
+              <strong>{t(L.contact.prelaunchTitle)}</strong>
+              <p>{t(L.contact.prelaunchBody)}</p>
             </div>
           )
         }
         <form id="contact-form" class="contact-form" novalidate>
           <div class="field">
-            <label for="name">Your name *</label>
+            <label for="name">{t(L.contact.formName)} *</label>
             <input id="name" name="name" type="text" required maxlength="60" autocomplete="name" />
           </div>
           <div class="field">
-            <label for="email">Business email *</label>
+            <label for="email">{t(L.contact.formEmail)} *</label>
             <input id="email" name="email" type="email" required maxlength="120" autocomplete="email" />
           </div>
           <div class="field">
-            <label for="message">Your application *</label>
+            <label for="message">{t(L.contact.formMsg)} *</label>
             <textarea id="message" name="message" required rows="6" maxlength="2000"
               placeholder="e.g. Bonding aluminium to FRP in an EV battery pack housing, continuous vibration, -40 to 85°C, gap 0.5 mm."></textarea>
           </div>
-          <button type="submit" class="btn btn-primary" id="submit-btn">Send Enquiry</button>
-          <p class="status" id="form-status" hidden></p>
+          <button type="submit" class="btn btn-primary" id="submit-btn">{t(L.contact.submit)}</button>
+          <p class="status" id="form-status" hidden data-success={successMsg} data-prelaunch={prelaunchMsg}></p>
         </form>
 
         <div class="en-tips-box">
-          <h3>What to include</h3>
+          <h3>{t(L.contact.tipsTitle)}</h3>
           <ul class="en-tips">
-            <li>Substrates (e.g. aluminium, steel, PC, FRP)</li>
-            <li>Load type and joint movement</li>
-            <li>Operating temperature range</li>
-            <li>Cure preference and line takt</li>
-            <li>Any certification requirements (RoHS, REACH, UL)</li>
+            {L.contact.tipsItems.map((tip) => <li>{t(tip)}</li>)}
           </ul>
         </div>
       </div>
@@ -276,11 +274,10 @@ const ICON = {
       if (res.ok && json.ok && !json.prelaunch) {
         form.reset();
         status.className = 'status ok';
-        status.textContent = 'Thank you — your enquiry has been received. We will reply shortly.';
+        status.textContent = status.dataset.success || 'Thank you — your enquiry has been received.';
       } else if (json.prelaunch) {
         status.className = 'status err';
-        status.textContent =
-          json.error || 'This site is not yet live for enquiries. Please contact us by email or WhatsApp.';
+        status.textContent = json.error || status.dataset.prelaunch || 'This site is not yet live for enquiries.';
       } else {
         status.className = 'status err';
         status.textContent = 'Submission failed: ' + (json.error || 'unknown error');

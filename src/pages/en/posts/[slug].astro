@@ -8,7 +8,7 @@ import keystaticConfig from '../../../../keystatic.config';
 import Base from '../../../layouts/Base.astro';
 import { marked } from 'marked';
 import { pick, pickArray } from '../../../lib/i18n-content';
-import { loadSiteData } from '../../../lib/site-data';
+import { loadSiteData, loadContent } from '../../../lib/site-data';
 
 export async function getStaticPaths() {
   const reader = createReader(process.cwd(), keystaticConfig);
@@ -36,6 +36,9 @@ const slug = Astro.params.slug;
 
 // stageLabel 等标签函数由 loadSiteData() 返回（不是顶层导出）
 const { stageLabel } = await loadSiteData();
+// 详情页区块标题来自后台「详情页区块标题」singleton（可编辑、前后端贯通）
+const L = await loadContent();
+const t = (b: { zh: string; en: string }) => b.en;
 
 const title = pick(post.title, post.titleEn);
 const excerpt = pick(post.excerpt, post.excerptEn);
@@ -106,7 +109,7 @@ const dateStr = post.publishedAt ? new Date(post.publishedAt).toISOString() : ''
       {
         faq.length > 0 && (
           <div class="faq-block">
-            <h2>Frequently Asked Questions</h2>
+            <h2>{t(L.detail.faqTitle)}</h2>
             <div class="faq-list">
               {faq.map((f) => (
                 <details class="faq-item">

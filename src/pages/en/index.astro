@@ -15,7 +15,7 @@ import { createReader } from '@keystatic/core/reader';
 import keystaticConfig from '../../../keystatic.config';
 import Base from '../../layouts/Base.astro';
 import { pick } from '../../lib/i18n-content';
-import { loadSiteData } from '../../lib/site-data';
+import { loadSiteData, loadContent } from '../../lib/site-data';
 
 const reader = createReader(process.cwd(), keystaticConfig);
 
@@ -71,6 +71,9 @@ const CAT_EN: Record<string, string> = {
 
 // 标签与化学体系计数：用于首页「热门标签」「按化学体系浏览」两个导流模块
 const { tagLabel } = await loadSiteData();
+// 首页文案来自后台「首页内容」singleton（可编辑、前后端贯通），en 路径取 .en
+const L = await loadContent();
+const t = (b: { zh: string; en: string }) => b.en;
 const usedTags = [...new Set(posts.flatMap((p) => (p.tags ?? []) as string[]))];
 const tagItems = usedTags.map((t) => ({ value: t, label: tagLabel(t) || t }));
 const chemCounts: Record<string, number> = {};
@@ -94,8 +97,9 @@ const chemTiles = Object.keys(CAT_EN).map((k) => ({
   <section>
     <!-- Hero -->
     <div class="hero en-hero">
+      <div class="hero-glow" aria-hidden="true"></div>
       <div class="hero-inner">
-        <span class="eyebrow">Industrial Adhesives & Sealants</span>
+        <span class="eyebrow">{t(L.home.heroEyebrow)}</span>
         <h1 class="hero-title">Select the right adhesive for your assembly</h1>
         <p class="hero-sub">
           A technical platform for Southeast Asian contractors, fabricators and procurement teams —
@@ -107,47 +111,53 @@ const chemTiles = Object.keys(CAT_EN).map((k) => ({
           <a class="btn" href="/en/selector">Selection Tool</a>
           <a class="btn" href="/en/contact">Request a Quotation</a>
         </div>
+        <div class="hero-stats">
+          <div class="stat"><strong>{products.length}</strong><span>Products</span></div>
+          <div class="stat"><strong>{cases.length}</strong><span>Case Studies</span></div>
+          <div class="stat"><strong>4</strong><span>Solution Modules</span></div>
+          <div class="stat"><strong>EN</strong><span>Multi-language</span></div>
+        </div>
       </div>
     </div>
 
     <!-- Solutions grid：串联 产品→选型→案例→询盘 内链闭环（对齐中文首页「解决方案」） -->
     <section class="block">
       <div class="section-head">
-        <h2 class="section-title">How we help</h2>
-        <p>From product selection to on-site application — one platform for your adhesive decisions.</p>
+        <h2 class="section-title">{t(L.home.solutionsTitle)}</h2>
+        <p>{t(L.home.solutionsSub)}</p>
       </div>
       <div class="sol-cards">
-        <a class="sol-card" href="/en/products">
+        <a class="sol-card" href={`/en${L.home.solutionCards[0].href}`}>
           <span class="sol-icon" style="--sol:#7c4df0" aria-hidden="true">
             <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z" /><path d="M3.27 6.96 12 12.01l8.73-5.05M12 22.08V12" /></svg>
           </span>
-          <h3>Product Database</h3>
-          <p>Browse industrial adhesives and sealants by chemistry, cure method and certification, with full parameter data.</p>
-          <span class="sol-cta">Browse {products.length} products →</span>
+          <h3>{t(L.home.solutionCards[0].title)}</h3>
+          <p>{t(L.home.solutionCards[0].desc)}</p>
+          <span class="sol-cta">{t(L.home.solutionCards[0].cta)} →</span>
         </a>
-        <a class="sol-card" href="/en/selector">
+        <a class="sol-card" href={`/en${L.home.solutionCards[1].href}`}>
           <span class="sol-icon" style="--sol:#18a06a" aria-hidden="true">
             <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="4" y1="21" x2="4" y2="14" /><line x1="4" y1="10" x2="4" y2="3" /><line x1="12" y1="21" x2="12" y2="12" /><line x1="12" y1="8" x2="12" y2="3" /><line x1="20" y1="21" x2="20" y2="16" /><line x1="20" y1="12" x2="20" y2="3" /><line x1="1" y1="14" x2="7" y2="14" /><line x1="9" y1="8" x2="15" y2="8" /><line x1="17" y1="16" x2="23" y2="16" /></svg>
           </span>
-          <h3>Selection Tool</h3>
-          <p>Answer a few questions — application, cure and substrate — and get ranked product matches.</p>
-          <span class="sol-cta">Open the Selection Tool →</span>
+          <h3>{t(L.home.solutionCards[1].title)}</h3>
+          <p>{t(L.home.solutionCards[1].desc)}</p>
+          <span class="sol-cta">{t(L.home.solutionCards[1].cta)} →</span>
         </a>
-        <a class="sol-card" href="/en/cases">
+        <a class="sol-card" href={`/en${L.home.solutionCards[2].href}`}>
           <span class="sol-icon" style="--sol:#f0883e" aria-hidden="true">
             <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9H4.5a2.5 2.5 0 0 1 0-5H6m0 5h12m0 0h1.5a2.5 2.5 0 0 0 0-5H18m0 5v3a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2V9m0 0V6a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v3" /><path d="M9 17l3 3 3-3" /></svg>
           </span>
-          <h3>Case Studies</h3>
-          <p>See how peers in EV, electronics and construction deployed adhesives and the results.</p>
-          <span class="sol-cta">View {cases.length} case studies →</span>
+          <h3>{t(L.home.solutionCards[2].title)}</h3>
+          <p>{t(L.home.solutionCards[2].desc)}</p>
+          <span class="sol-cta">{t(L.home.solutionCards[2].cta)} →</span>
         </a>
-        <a class="sol-card" href="/en/contact">
+        <a class="sol-card" href={`/en${L.home.solutionCards[3].href}`}>
           <span class="sol-icon" style="--sol:#3a7bff" aria-hidden="true">
             <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 11.5a8.4 8.4 0 0 1-9 8.4 9.7 9.7 0 0 1-2.8-.4L4 21l1.4-4.2A8.4 8.4 0 0 1 3 11.5 8.4 8.4 0 0 1 12 3a8.4 8.4 0 0 1 9 8.5z" /><path d="M8.5 10.4h7M8.5 13.4h4" /></svg>
           </span>
-          <h3>Request a Quotation</h3>
-          <p>Send your application requirements and get a targeted recommendation, samples and TDS/SDS.</p>
-          <span class="sol-cta">Contact our engineers →</span>
+          <h3>{t(L.home.solutionCards[3].title)}</h3>
+          <p>{t(L.home.solutionCards[3].desc)}</p>
+          <span class="sol-cta">{t(L.home.solutionCards[3].cta)} →</span>
         </a>
       </div>
     </section>
@@ -278,9 +288,92 @@ const chemTiles = Object.keys(CAT_EN).map((k) => ({
 </Base>
 
 <style>
-  /* ── 英文站：字体度量更宽，行高与字号略放大以保证可读性 ── */
-  .en-hero .hero-title { font-size: 42px; line-height: 1.15; }
-  .en-hero .hero-sub { max-width: 640px; }
+  /* ── 英文站 Hero：与中文首页一致的「大气」处理（补全背景/出血/纹理）── */
+  .en-hero {
+    position: relative;
+    overflow: hidden;
+    background: var(--hero-grad);
+    color: #fff;
+    text-align: center;
+    margin-top: -44px;
+    margin-left: calc(50% - 50vw);
+    margin-right: calc(50% - 50vw);
+    padding: 128px 24px 132px;
+  }
+  .en-hero::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background-image: radial-gradient(rgba(255, 255, 255, 0.1) 1px, transparent 1px);
+    background-size: 26px 26px;
+    -webkit-mask-image: radial-gradient(ellipse 80% 70% at 50% 32%, #000 38%, transparent 100%);
+    mask-image: radial-gradient(ellipse 80% 70% at 50% 32%, #000 38%, transparent 100%);
+    pointer-events: none;
+  }
+  .en-hero .hero-glow {
+    position: absolute;
+    left: 50%;
+    top: -230px;
+    width: 900px;
+    height: 900px;
+    transform: translateX(-50%);
+    background: radial-gradient(circle, rgba(255, 255, 255, 0.2), transparent 62%);
+    pointer-events: none;
+  }
+  /* 右下角辅助光晕，丰富纵深（对齐中文首页 .hero::after） */
+  .en-hero::after {
+    content: "";
+    position: absolute;
+    right: -180px;
+    bottom: -260px;
+    width: 620px;
+    height: 620px;
+    background: radial-gradient(circle, rgba(255, 255, 255, 0.14), transparent 62%);
+    pointer-events: none;
+  }
+  .en-hero .hero-inner { position: relative; max-width: 900px; margin: 0 auto; }
+  .en-hero .eyebrow {
+    display: inline-block;
+    margin-bottom: 22px;
+    padding: 7px 18px;
+    border: 1px solid rgba(255, 255, 255, 0.4);
+    border-radius: var(--r-pill);
+    font-size: 13.5px;
+    letter-spacing: 0.16em;
+    color: rgba(255, 255, 255, 0.92);
+  }
+  .en-hero .hero-title {
+    margin: 0 0 22px;
+    font-family: var(--font-display);
+    font-size: clamp(2.6rem, 5.5vw, 4.4rem);
+    font-weight: 800;
+    line-height: 1.12;
+    letter-spacing: -0.03em;
+    color: #fff;
+    text-shadow: 0 2px 30px rgba(0, 0, 0, 0.22);
+  }
+  .en-hero .hero-sub { max-width: 640px; margin: 0 auto 36px; font-size: 18px; line-height: 1.85; color: rgba(255, 255, 255, 0.86); }
+  .en-hero .hero-cta { display: flex; gap: 16px; flex-wrap: wrap; justify-content: center; }
+  .en-hero .btn { padding: 14px 32px; font-size: 15.5px; font-weight: 600; }
+  .hero-stats {
+    display: flex;
+    gap: 36px;
+    flex-wrap: wrap;
+    justify-content: center;
+    margin-top: 56px;
+    padding-top: 34px;
+    border-top: 1px solid rgba(255, 255, 255, 0.18);
+  }
+  .hero-stats .stat { display: flex; flex-direction: column; align-items: center; gap: 4px; }
+  .hero-stats strong {
+    font-family: var(--font-display);
+    font-size: 34px;
+    font-weight: 800;
+    line-height: 1;
+    letter-spacing: -0.02em;
+    color: #fff;
+  }
+  .hero-stats span { font-size: 13px; letter-spacing: 0.08em; color: rgba(255, 255, 255, 0.72); }
 
   .en-cards { display: grid; gap: 20px; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); }
   .en-card { display: flex; flex-direction: column; }
@@ -352,4 +445,13 @@ const chemTiles = Object.keys(CAT_EN).map((k) => ({
   .en-post-list a:hover { border-color: var(--accent); transform: translateY(-2px); text-decoration: none; }
   .en-post-list strong { color: var(--fg); font-size: 16px; }
   .en-post-list span { color: var(--muted); font-size: 14px; line-height: 1.65; }
+
+  /* 移动端：Hero 缩放与中文首页保持一致 */
+  @media (max-width: 700px) {
+    .en-hero { margin-top: -24px; padding: 84px 18px 88px; }
+    .en-hero .hero-title { font-size: 32px; }
+    .en-hero .hero-sub { font-size: 16px; }
+    .en-hero .hero-stats { gap: 22px; margin-top: 40px; padding-top: 26px; }
+    .en-hero .hero-stats strong { font-size: 26px; }
+  }
 </style>

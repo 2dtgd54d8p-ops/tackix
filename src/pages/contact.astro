@@ -10,11 +10,15 @@
  * 3. 预上线期在表单区明确说明状态，避免买家反复提交却收不到回复。
  */
 import Base from '../layouts/Base.astro';
-import { loadSiteData } from '../lib/site-data';
+import { loadSiteData, loadContent } from '../lib/site-data';
 import { isPreLaunch } from '../lib/prelaunch';
 
 const { site } = await loadSiteData();
 const prelaunch = isPreLaunch();
+// 联系页文案来自后台「联系页文案」singleton（可编辑、前后端贯通）
+const L = await loadContent();
+const t = (b: { zh: string; en: string }) => b.zh;
+const successMsg = t(L.contact.success);
 
 const email = (site.email ?? '').trim();
 const company = (site.company ?? '').trim();
@@ -50,15 +54,15 @@ const ICON = {
   ]}>
   <section>
     <div class="page-head">
-      <h1>联系我们</h1>
-      <p>提供基材、载荷、温度与固化条件，我们的工程师会给出选型建议与报价。</p>
+      <h1>{t(L.contact.pageTitle)}</h1>
+      <p>{t(L.contact.pageSub)}</p>
     </div>
 
     <div class:list={['contact-grid', !hasContact && 'contact-grid--single']}>
       {
         hasContact && (
           <div class="contact-info">
-            <h2 class="section-title">联系方式</h2>
+            <h2 class="section-title">{t(L.contact.contactInfoTitle)}</h2>
 
             {email && (
               <a class="contact-item" href={mailHref}>
@@ -136,32 +140,38 @@ const ICON = {
       }
 
       <div class="contact-form-wrap">
-        <h2 class="section-title">在线留言</h2>
+        <h2 class="section-title">{t(L.contact.formSectionTitle)}</h2>
         {
           prelaunch && (
             <div class="notice">
-              <strong>本站尚未正式发布</strong>
-              <p>在线表单暂未开放，以免测试数据混入真实询盘。请直接用邮件或 WhatsApp 联系我们。</p>
+              <strong>{t(L.contact.prelaunchTitle)}</strong>
+              <p>{t(L.contact.prelaunchBody)}</p>
             </div>
           )
         }
         <form id="contact-form" class="contact-form" novalidate>
           <label class="field">
-            <span>姓名</span>
+            <span>{t(L.contact.formName)}</span>
             <input name="name" type="text" required maxlength="60" autocomplete="name" />
           </label>
           <label class="field">
-            <span>邮箱</span>
+            <span>{t(L.contact.formEmail)}</span>
             <input name="email" type="email" required maxlength="120" autocomplete="email" />
           </label>
           <label class="field">
-            <span>留言</span>
+            <span>{t(L.contact.formMsg)}</span>
             <textarea name="message" required rows="5" maxlength="2000"
               placeholder="例如：铝合金与 FRP 粘接，长期振动，-40~85℃，间隙 0.5mm，需提供 TDS。"></textarea>
           </label>
-          <button type="submit" class="btn btn-primary">提交留言</button>
-          <p id="contact-status" class="status" role="status" aria-live="polite"></p>
+          <button type="submit" class="btn btn-primary">{t(L.contact.submit)}</button>
+          <p id="contact-status" class="status" role="status" aria-live="polite" data-success={successMsg}></p>
         </form>
+        <div class="tips-box">
+          <h3>{t(L.contact.tipsTitle)}</h3>
+          <ul class="tips-list">
+            {L.contact.tipsItems.map((tip) => <li>{t(tip)}</li>)}
+          </ul>
+        </div>
       </div>
     </div>
   </section>
@@ -213,6 +223,14 @@ const ICON = {
   }
   .contact-form .btn { align-self: flex-start; }
   .contact-form .status { text-align: left; }
+
+  .tips-box {
+    margin-top: 22px; padding: 18px 20px;
+    border: 1px solid var(--border); border-radius: var(--r-md);
+    background: var(--surface);
+  }
+  .tips-box h3 { margin: 0 0 10px; font-size: 15px; color: var(--fg); }
+  .tips-list { margin: 0; padding-left: 18px; color: var(--muted); font-size: 14px; line-height: 1.9; }
 </style>
 
 <script is:inline>
@@ -235,7 +253,7 @@ const ICON = {
         });
         const json = await res.json();
         if (res.ok && json.ok) {
-          status.textContent = '提交成功，谢谢你的留言！';
+          status.textContent = status.dataset.success || '提交成功，谢谢你的留言！';
           status.className = 'status ok';
           form.reset();
         } else {

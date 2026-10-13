@@ -3,7 +3,7 @@ import { createReader } from '@keystatic/core/reader';
 import { marked } from 'marked';
 import keystaticConfig from '../../../keystatic.config';
 import Base from '../../layouts/Base.astro';
-import { loadSiteData } from '../../lib/site-data';
+import { loadSiteData, loadContent } from '../../lib/site-data';
 
 export async function getStaticPaths() {
   // ⚠️ reader 必须在 getStaticPaths 内部创建：frontmatter 顶层语句会被编译进
@@ -34,6 +34,9 @@ const slug = Astro.params.slug;   // 用于 hreflang 互指
 const html = marked(item.body ?? '');
 
 const { site, scenarioLabel } = await loadSiteData();
+// 详情页区块标题来自后台「详情页区块标题」singleton（可编辑、前后端贯通）
+const L = await loadContent();
+const t = (b: { zh: string; en: string }) => b.zh;
 // 组件作用域内的 reader：用于解析关联产品（与 getStaticPaths 内的互不影响）
 const reader = createReader(process.cwd(), keystaticConfig);
 const siteTitle = site.title;
@@ -107,19 +110,19 @@ const caseSchema = {
         <section class="case-blocks" aria-label="案例要点">
           {item.challenge && (
             <div class="case-block">
-              <h2>挑战</h2>
+              <h2>{t(L.detail.caseChallengeTitle)}</h2>
               <p>{item.challenge}</p>
             </div>
           )}
           {item.solution && (
             <div class="case-block">
-              <h2>解决方案</h2>
+              <h2>{t(L.detail.caseSolutionTitle)}</h2>
               <p>{item.solution}</p>
             </div>
           )}
           {item.result && (
             <div class="case-block">
-              <h2>成果</h2>
+              <h2>{t(L.detail.caseResultTitle)}</h2>
               <p>{item.result}</p>
             </div>
           )}
@@ -131,8 +134,8 @@ const caseSchema = {
 
     {
       related.length > 0 && (
-        <section class="related" aria-label="关联产品">
-          <h2>本案例使用的产品</h2>
+        <section class="related" aria-label={t(L.detail.caseRelatedTitle)}>
+          <h2>{t(L.detail.caseRelatedTitle)}</h2>
           <div class="related-list">
             {related.map((p) => (
               <a class="related-item" href={`/products/${p.slug}`}>
@@ -146,11 +149,11 @@ const caseSchema = {
       )
     }
 
-    <section class="quote-block" aria-label="询盘">
+    <section class="quote-block" aria-label={t(L.detail.caseCtaTitle)}>
       <div class="quote-inner">
         <div class="quote-text">
-          <h2>有类似需求？</h2>
-          <p>告诉我们您的基材、工况与产能，我们的技术团队将提供针对性的选型建议与样品支持。</p>
+          <h2>{t(L.detail.caseCtaTitle)}</h2>
+          <p>{t(L.detail.caseCtaCopy)}</p>
         </div>
         <div class="quote-actions">
           <a class="btn btn-primary" href="/selector">开始选型</a>

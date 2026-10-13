@@ -7,7 +7,7 @@ import { createReader } from '@keystatic/core/reader';
 // 三层深：en → pages → src
 import keystaticConfig from '../../../../keystatic.config';
 import Base from '../../../layouts/Base.astro';
-import { loadSiteData } from '../../../lib/site-data';
+import { loadSiteData, loadContent } from '../../../lib/site-data';
 import { pick } from '../../../lib/i18n-content';
 
 const reader = createReader(process.cwd(), keystaticConfig);
@@ -37,6 +37,10 @@ products.sort(
 );
 
 const { productCategoryLabel, scenarioLabel } = await loadSiteData();
+// 列表页标题/副标题来自后台「列表页标题」singleton（可编辑、前后端贯通）
+const L = await loadContent();
+const t = (b: { zh: string; en: string }) => b.en;
+const productsSub = t(L.pages.productsSub).replace('{n}', String(products.length));
 
 // 英文分类名
 const CAT_EN: Record<string, string> = {
@@ -70,11 +74,8 @@ const scnFilters = [
 >
   <section>
     <div class="page-head">
-      <h1>Product Database</h1>
-      <p>
-        {products.length} industrial adhesives and sealants · filter by chemistry and application ·
-        TDS/SDS available on request
-      </p>
+      <h1>{t(L.pages.productsTitle)}</h1>
+      <p>{productsSub}</p>
     </div>
 
     <nav class="filters" id="cat-filter" aria-label="Filter by chemistry">

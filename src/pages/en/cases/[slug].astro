@@ -8,7 +8,7 @@ import keystaticConfig from '../../../../keystatic.config';
 import Base from '../../../layouts/Base.astro';
 import { marked } from 'marked';
 import { pick } from '../../../lib/i18n-content';
-import { loadSiteData } from '../../../lib/site-data';
+import { loadSiteData, loadContent } from '../../../lib/site-data';
 
 export async function getStaticPaths() {
   const reader = createReader(process.cwd(), keystaticConfig);
@@ -34,6 +34,9 @@ export async function getStaticPaths() {
 const { caseData } = Astro.props;
 const slug = Astro.params.slug;
 const { scenarioLabel } = await loadSiteData();
+// 详情页区块标题来自后台「详情页区块标题」singleton（可编辑、前后端贯通）
+const L = await loadContent();
+const t = (b: { zh: string; en: string }) => b.en;
 
 const title = pick(caseData.title, caseData.titleEn);
 const excerpt = pick(caseData.excerpt, caseData.excerptEn);
@@ -102,15 +105,15 @@ const caseSchema = {
 
     <div class="en-csr">
       <div class="en-csr-item">
-        <h2>Challenge</h2>
+        <h2>{t(L.detail.caseChallengeTitle)}</h2>
         <p>{pick(caseData.challenge, caseData.challengeEn)}</p>
       </div>
       <div class="en-csr-item">
-        <h2>Solution</h2>
+        <h2>{t(L.detail.caseSolutionTitle)}</h2>
         <p>{pick(caseData.solution, caseData.solutionEn)}</p>
       </div>
       <div class="en-csr-item">
-        <h2>Result</h2>
+        <h2>{t(L.detail.caseResultTitle)}</h2>
         <p>{pick(caseData.result, caseData.resultEn)}</p>
       </div>
     </div>
@@ -120,7 +123,7 @@ const caseSchema = {
     {
       related.length > 0 && (
         <div class="en-related">
-          <h2 class="section-title">Products used in this project</h2>
+          <h2 class="section-title">{t(L.detail.caseRelatedTitle)}</h2>
           <div class="en-related-list">
             {related.map((p) => (
               <a class="related-item" href={`/en/products/${p.slug}/`}>
@@ -133,8 +136,8 @@ const caseSchema = {
     }
 
     <div class="quote-block">
-      <h3>Have a similar application?</h3>
-      <p>Share your substrate, load and temperature conditions — our engineers will recommend a grade and process.</p>
+      <h3>{t(L.detail.caseCtaTitle)}</h3>
+      <p>{t(L.detail.caseCtaCopy)}</p>
       <div class="en-download-btns">
         <a class="btn btn-primary" href="/en/contact">Contact Sales</a>
         <a class="btn" href="/en/selector">Selection Tool</a>

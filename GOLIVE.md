@@ -18,6 +18,7 @@
 | 3 | 复核产品参数与文案 | `src/content/products/*.yaml` | [ ] | 型号、基材、耐温、认证、描述（中英文）准确无误 |
 | 4 | 复核文章/案例内容 | `src/content/posts/*`、`src/content/cases/*` | [ ] | FAQ Schema 完整、内链锚文本为描述性（禁「点击这里」） |
 | 5 | 确认多语言入口 | 页脚语言切换、hreflang 互指 | [ ] | 中英文产品/文章/案例页 `alternates` 正确 |
+| 6 | 复核新增「内容单例」 | `/keystatic` 后台 → `home`/`ui`/`contact`/`pages`/`detail` 5 个 singleton | [ ] | 首页 Hero/How-we-help、导航/页脚/搜索占位符、列表页标题、详情页区块标题、联系页标题等**后台可编辑**；上线前逐条核对中英文文案（留空则回退代码默认值） |
 
 ## 二、一键切换预上线 → 正式
 

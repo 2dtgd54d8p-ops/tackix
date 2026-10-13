@@ -8,6 +8,7 @@ import { createReader } from '@keystatic/core/reader';
 import keystaticConfig from '../../../../keystatic.config';
 import Base from '../../../layouts/Base.astro';
 import { pick } from '../../../lib/i18n-content';
+import { loadContent } from '../../../lib/site-data';
 
 const reader = createReader(process.cwd(), keystaticConfig);
 let slugs: string[] = [];
@@ -42,6 +43,9 @@ const products = (
 ).filter(Boolean) as any[];
 
 const dataJson = JSON.stringify(products);
+// 列表页标题/副标题来自后台「列表页标题」singleton（可编辑、前后端贯通）
+const L = await loadContent();
+const t = (b: { zh: string; en: string }) => b.en;
 
 const SCN_EN: Record<string, string> = {
   electronics: 'Electronics', automotive: 'Automotive', newenergy: 'New Energy',
@@ -61,8 +65,8 @@ const CURE_EN: Record<string, string> = {
 >
   <section>
     <div class="page-head">
-      <h1>Adhesive Selection Tool</h1>
-      <p>Answer three questions and we will rank the most suitable products for your assembly.</p>
+      <h1>{t(L.pages.selectorTitle)}</h1>
+      <p>{t(L.pages.selectorSub)}</p>
     </div>
 
     <form class="selector-form" id="sel-form">

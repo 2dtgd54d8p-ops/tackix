@@ -2,7 +2,7 @@
 import { createReader } from '@keystatic/core/reader';
 import keystaticConfig from '../../../keystatic.config';
 import Base from '../../layouts/Base.astro';
-import { loadSiteData } from '../../lib/site-data';
+import { loadSiteData, loadContent } from '../../lib/site-data';
 
 const reader = createReader(process.cwd(), keystaticConfig);
 let slugs: string[] = [];
@@ -33,6 +33,10 @@ cases.sort(
 );
 
 const { scenarioLabel } = await loadSiteData();
+// 列表页标题/副标题来自后台「列表页标题」singleton（可编辑、前后端贯通）
+const L = await loadContent();
+const t = (b: { zh: string; en: string }) => b.zh;
+const casesSub = t(L.pages.casesSub).replace('{n}', String(cases.length));
 
 const scenarioSet = new Set(cases.map((c) => c.scenario).filter(Boolean));
 const scenarioFilters = [
@@ -49,8 +53,8 @@ const scenarioFilters = [
   ]}>
   <section>
     <div class="page-head">
-      <h1>客户案例</h1>
-      <p>共 {cases.length} 个行业落地案例 · 真实场景中的胶粘剂选型与工艺验证</p>
+      <h1>{t(L.pages.casesTitle)}</h1>
+      <p>{casesSub}</p>
     </div>
 
     {

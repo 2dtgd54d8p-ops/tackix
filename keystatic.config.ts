@@ -412,9 +412,8 @@ export default config({
       label: '分类管理',
       schema: {
         items: fields.array(
-          {
-            label: '分类',
-            schema: {
+          fields.object(
+            {
               label: fields.text({
                 label: '显示名称',
                 description: '前台筛选条与文章卡片上显示的文字，如「技术」',
@@ -425,7 +424,8 @@ export default config({
                   '英文唯一标识，写入文章 frontmatter，如 tech。已发布文章请勿随意修改，否则会失去对应分类。',
               }),
             },
-          },
+            { label: '分类' }
+          ),
           { label: '分类项' }
         ),
       },
@@ -435,18 +435,184 @@ export default config({
       label: '标签管理',
       schema: {
         items: fields.array(
-          {
-            label: '标签',
-            schema: {
+          fields.object(
+            {
               label: fields.text({ label: '显示名称', description: '前台显示的文字，如「教程」' }),
               value: fields.text({
                 label: '标识',
-                description: '英文唯一标识，写入文章 frontmatter，如 tutorial',
+                description: '英文唯一标识，写入文章 frontmarker，如 tutorial',
               }),
             },
-          },
+            { label: '标签' }
+          ),
           { label: '标签项' }
         ),
+      },
+    },
+    // ── 内容文案单例（T13）：把前端静态文案收归后台编辑，实现「所有模块均可编辑、前后端贯通」
+    //    每个字段带 zh + en 变体；en 留空时前端回退现有英文硬编码，保证不空页。
+    //    字段均为「覆盖式」：后台不填则前端用默认值（见 src/lib/site-data.ts 的 DEFAULT_*）。
+
+    home: {
+      label: '首页内容',
+      schema: {
+        heroEyebrow: fields.text({ label: 'Hero 小标签', description: '首页主视觉上方的小字标语' }),
+        heroEyebrowEn: fields.text({ label: 'Hero 小标签(EN)' }),
+        heroCta1: fields.text({ label: 'Hero 按钮1文案', description: '如「探索解决方案」' }),
+        heroCta1En: fields.text({ label: 'Hero 按钮1(EN)' }),
+        heroCta2: fields.text({ label: 'Hero 按钮2文案', description: '如「联系我们报价」' }),
+        heroCta2En: fields.text({ label: 'Hero 按钮2(EN)' }),
+        solutionsTitle: fields.text({ label: '解决方案区标题' }),
+        solutionsTitleEn: fields.text({ label: '解决方案区标题(EN)' }),
+        solutionsSub: fields.text({ label: '解决方案区副标题', multiline: true }),
+        solutionsSubEn: fields.text({ label: '解决方案区副标题(EN)', multiline: true }),
+        solutionCards: fields.array(
+          fields.object({
+            title: fields.text({ label: '卡片标题' }),
+            titleEn: fields.text({ label: '卡片标题(EN)' }),
+            desc: fields.text({ label: '卡片描述', multiline: true }),
+            descEn: fields.text({ label: '卡片描述(EN)', multiline: true }),
+            cta: fields.text({ label: '卡片CTA', description: '卡片底部链接文案' }),
+            ctaEn: fields.text({ label: '卡片CTA(EN)' }),
+            href: fields.text({ label: '跳转链接', description: '如 /products' }),
+          }, { label: '解决方案卡片' }),
+          { label: '解决方案卡片列表' }
+        ),
+        browseTitle: fields.text({ label: '浏览分类区标题' }),
+        browseTitleEn: fields.text({ label: '浏览分类区标题(EN)' }),
+        browseSub: fields.text({ label: '浏览分类区副标题', multiline: true }),
+        browseSubEn: fields.text({ label: '浏览分类区副标题(EN)', multiline: true }),
+        featuredTitle: fields.text({ label: '精选推荐区标题' }),
+        featuredTitleEn: fields.text({ label: '精选推荐区标题(EN)' }),
+        featuredSub: fields.text({ label: '精选推荐区副标题', multiline: true }),
+        featuredSubEn: fields.text({ label: '精选推荐区副标题(EN)', multiline: true }),
+        latestTitle: fields.text({ label: '最新文章区标题' }),
+        latestTitleEn: fields.text({ label: '最新文章区标题(EN)' }),
+        latestSub: fields.text({ label: '最新文章区副标题', multiline: true }),
+        latestSubEn: fields.text({ label: '最新文章区副标题(EN)', multiline: true }),
+        tagsTitle: fields.text({ label: '热门标签区标题' }),
+        tagsTitleEn: fields.text({ label: '热门标签区标题(EN)' }),
+        tagsSub: fields.text({ label: '热门标签区副标题', multiline: true }),
+        tagsSubEn: fields.text({ label: '热门标签区副标题(EN)', multiline: true }),
+        bandTitle: fields.text({ label: '底部色带标题' }),
+        bandTitleEn: fields.text({ label: '底部色带标题(EN)' }),
+        bandSub: fields.text({ label: '底部色带副标题', multiline: true }),
+        bandSubEn: fields.text({ label: '底部色带副标题(EN)', multiline: true }),
+        bandCta1: fields.text({ label: '色带按钮1文案' }),
+        bandCta1En: fields.text({ label: '色带按钮1(EN)' }),
+        bandCta2: fields.text({ label: '色带按钮2文案' }),
+        bandCta2En: fields.text({ label: '色带按钮2(EN)' }),
+      },
+    },
+
+    ui: {
+      label: '全局界面文案',
+      schema: {
+        navItems: fields.array(
+          fields.object({
+            label: fields.text({ label: '导航名称' }),
+            labelEn: fields.text({ label: '导航名称(EN)' }),
+            href: fields.text({ label: '链接', description: '如 /products' }),
+          }, { label: '导航项' }),
+          { label: '主导航' }
+        ),
+        footerText: fields.text({ label: '页脚署名', description: '留空则用站点标题' }),
+        footerTextEn: fields.text({ label: '页脚署名(EN)' }),
+      },
+    },
+
+    contact: {
+      label: '联系页文案',
+      schema: {
+        contactInfoTitle: fields.text({ label: '联系方式区标题' }),
+        contactInfoTitleEn: fields.text({ label: '联系方式区标题(EN)' }),
+        formSectionTitle: fields.text({ label: '表单区小标题', description: '如「在线留言」' }),
+        formSectionTitleEn: fields.text({ label: '表单区小标题(EN)' }),
+        pageTitle: fields.text({ label: '页面标题' }),
+        pageTitleEn: fields.text({ label: '页面标题(EN)' }),
+        pageSub: fields.text({ label: '页面副标题', multiline: true }),
+        pageSubEn: fields.text({ label: '页面副标题(EN)', multiline: true }),
+        formTitle: fields.text({ label: '表单区标题' }),
+        formTitleEn: fields.text({ label: '表单区标题(EN)' }),
+        formName: fields.text({ label: '姓名字段标签' }),
+        formNameEn: fields.text({ label: '姓名字段标签(EN)' }),
+        formEmail: fields.text({ label: '邮箱字段标签' }),
+        formEmailEn: fields.text({ label: '邮箱字段标签(EN)' }),
+        formMsg: fields.text({ label: '留言字段标签' }),
+        formMsgEn: fields.text({ label: '留言字段标签(EN)' }),
+        submit: fields.text({ label: '提交按钮文案' }),
+        submitEn: fields.text({ label: '提交按钮文案(EN)' }),
+        success: fields.text({ label: '提交成功提示', multiline: true }),
+        successEn: fields.text({ label: '提交成功提示(EN)', multiline: true }),
+        prelaunchTitle: fields.text({ label: '预上线提示标题' }),
+        prelaunchTitleEn: fields.text({ label: '预上线提示标题(EN)' }),
+        prelaunchBody: fields.text({ label: '预上线提示正文', multiline: true }),
+        prelaunchBodyEn: fields.text({ label: '预上线提示正文(EN)', multiline: true }),
+        tipsTitle: fields.text({ label: '填写提示标题' }),
+        tipsTitleEn: fields.text({ label: '填写提示标题(EN)' }),
+        tipsItems: fields.array(
+          fields.object({
+            text: fields.text({ label: '提示项', multiline: true }),
+            textEn: fields.text({ label: '提示项(EN)', multiline: true }),
+          }, { label: '提示项' }),
+          { label: '填写提示列表' }
+        ),
+      },
+    },
+
+    pages: {
+      label: '列表页标题',
+      schema: {
+        postsTitle: fields.text({ label: '文章列表页标题' }),
+        postsTitleEn: fields.text({ label: '文章列表页标题(EN)' }),
+        postsSub: fields.text({ label: '文章列表页副标题', multiline: true }),
+        postsSubEn: fields.text({ label: '文章列表页副标题(EN)', multiline: true }),
+        productsTitle: fields.text({ label: '产品库页标题' }),
+        productsTitleEn: fields.text({ label: '产品库页标题(EN)' }),
+        productsSub: fields.text({ label: '产品库页副标题', multiline: true }),
+        productsSubEn: fields.text({ label: '产品库页副标题(EN)', multiline: true }),
+        casesTitle: fields.text({ label: '案例库页标题' }),
+        casesTitleEn: fields.text({ label: '案例库页标题(EN)' }),
+        casesSub: fields.text({ label: '案例库页副标题', multiline: true }),
+        casesSubEn: fields.text({ label: '案例库页副标题(EN)', multiline: true }),
+        selectorTitle: fields.text({ label: '选型页标题' }),
+        selectorTitleEn: fields.text({ label: '选型页标题(EN)' }),
+        selectorSub: fields.text({ label: '选型页副标题', multiline: true }),
+        selectorSubEn: fields.text({ label: '选型页副标题(EN)', multiline: true }),
+        selectorResult: fields.text({ label: '选型结果区标题' }),
+        selectorResultEn: fields.text({ label: '选型结果区标题(EN)' }),
+        searchPlaceholder: fields.text({ label: '搜索框占位符' }),
+        searchPlaceholderEn: fields.text({ label: '搜索框占位符(EN)' }),
+      },
+    },
+
+    detail: {
+      label: '详情页区块标题',
+      schema: {
+        productSpecsTitle: fields.text({ label: '产品-技术参数区标题' }),
+        productSpecsTitleEn: fields.text({ label: '产品-技术参数区标题(EN)' }),
+        productDescTitle: fields.text({ label: '产品-产品描述区标题' }),
+        productDescTitleEn: fields.text({ label: '产品-产品描述区标题(EN)' }),
+        productDocsTitle: fields.text({ label: '产品-技术文档区标题' }),
+        productDocsTitleEn: fields.text({ label: '产品-技术文档区标题(EN)' }),
+        productQuoteTitle: fields.text({ label: '产品-获取报价区标题' }),
+        productQuoteTitleEn: fields.text({ label: '产品-获取报价区标题(EN)' }),
+        productQuoteCopy: fields.text({ label: '产品-获取报价区正文', multiline: true }),
+        productQuoteCopyEn: fields.text({ label: '产品-获取报价区正文(EN)', multiline: true }),
+        caseChallengeTitle: fields.text({ label: '案例-挑战区标题' }),
+        caseChallengeTitleEn: fields.text({ label: '案例-挑战区标题(EN)' }),
+        caseSolutionTitle: fields.text({ label: '案例-解决方案区标题' }),
+        caseSolutionTitleEn: fields.text({ label: '案例-解决方案区标题(EN)' }),
+        caseResultTitle: fields.text({ label: '案例-成果区标题' }),
+        caseResultTitleEn: fields.text({ label: '案例-成果区标题(EN)' }),
+        caseRelatedTitle: fields.text({ label: '案例-相关产品区标题' }),
+        caseRelatedTitleEn: fields.text({ label: '案例-相关产品区标题(EN)' }),
+        caseCtaTitle: fields.text({ label: '案例-底部CTA标题' }),
+        caseCtaTitleEn: fields.text({ label: '案例-底部CTA标题(EN)' }),
+        caseCtaCopy: fields.text({ label: '案例-底部CTA正文', multiline: true }),
+        caseCtaCopyEn: fields.text({ label: '案例-底部CTA正文(EN)', multiline: true }),
+        faqTitle: fields.text({ label: '文章-FAQ区标题' }),
+        faqTitleEn: fields.text({ label: '文章-FAQ区标题(EN)' }),
       },
     },
   },
