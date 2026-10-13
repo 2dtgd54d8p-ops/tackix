@@ -17,6 +17,10 @@ import { createElement } from 'react';
 //   下面的 storage 配置。所以 Keystatic 提交新文章后，必须“重新构建 + 部署”，首页才会出现
 //   新文章。本仓库用 .github/workflows/deploy.yml 在每次 push 到 main（含 Keystatic 的提交）
 //   时自动重建部署，从根本上解决“新增文章首页不显示”的问题。
+// 横排栅格辅助：Keystatic 0.6.9 仅在 fields.object 内支持 layout（12 栅格）。
+// h2(n) 生成 n 对 [6,6]，即「中文 / EN 左右并排」，用于把后台长页面压成两列。
+const h2 = (n: number): number[] => Array.from({ length: n * 2 }, () => 6);
+
 const useLocal = typeof process !== 'undefined' && process.env?.KEYSTATIC_USE_LOCAL === '1';
 
 // 文章分类下拉的可选项（Keystatic select 仅支持静态数组）。
@@ -360,49 +364,50 @@ export default config({
     site: {
       label: '站点信息',
       schema: {
-        title: fields.text({ label: '站点标题' }),
-        description: fields.text({ label: '站点描述', multiline: true }),
-        // 首页 Hero 区那句主标语，留空则回落到默认文案
-        tagline: fields.text({ label: '首页标语' }),
-        // ── 联系方式（P0-3）────────────────────────────────────────────
-        // 注：页脚署名统一由「全局界面文案」singleton 的 footerText/footerTextEn 驱动
-        // （见 ui singleton + Base.astro），此处不再单独设 footer 字段，避免双源冗余。
-        // B2B 买家看完参数表的下一个动作必然是「找谁问」。预上线期询盘表单关闭，
-        // 因此联系方式是这段时间唯一可用的转化入口，正式上线后与表单并行。
-        // 全部留空则前台自动隐藏对应入口，不会渲染出空链接或占位符。
-
-        // 商务邮箱（询盘主通道，兼顾 Gmail/Outlook/企业邮箱）
-        email: fields.text({
-          label: '商务邮箱',
-          description: '如 sales@tackix.com。留空则页脚与联系页不显示邮件入口。',
-          validation: { pattern: { regex: /^[^\s@]+@[^\s@]+\.[^\s@]+$/, message: '邮箱格式不正确' } },
-        }),
-        // 公司全称：用于页脚署名与联系页主体信息，影响 B2B 买家的商业信任判断
-        company: fields.text({ label: '公司名称', description: '如 Tackix Materials Co., Ltd.' }),
-        // 办公电话（含国家码，用于电话咨询与部分地区的采购流程要求）
-        phone: fields.text({
-          label: '联系电话',
-          description: '含国家码，如 +65 6xxx xxxx。留空则不显示电话入口。',
-        }),
-        // 办公地址（部分工程/采购流程需要登记供应商地址，影响资质审核）
-        address: fields.text({ label: '办公地址', multiline: true, description: '留空则不显示地址' }),
-        // 营业时间：海外买家判断能否及时回复的参考
-        hours: fields.text({ label: '营业时间', description: '如 Mon-Fri 09:00-18:00 (GMT+8)' }),
-        // 全站 WhatsApp 号码（仅数字，含国家码，如 8613800138000）；留空则前台不显示 WhatsApp 悬浮按钮
-        whatsapp: fields.text({
-          label: 'WhatsApp 号码',
-          description: '仅数字，含国家码。留空则不显示 WhatsApp 悬浮入口。',
-        }),
-        // WhatsApp 预填话术：不同页面入口用不同引导语，提升回复率
-        whatsappPrefill: fields.text({
-          label: 'WhatsApp 默认话术',
-          description: '买家点开对话框时的预填内容，留空则用通用文案。',
-        }),
-        // 微信号：中文买家常用的即时通讯渠道；留空则不显示微信联系方式
-        wechat: fields.text({
-          label: '微信号',
-          description: '如 Tackix_Sales。留空则不显示微信联系方式。',
-        }),
+        // 站点/联系信息分组为「中文 / EN 并排」横排，缩短后台页面（Keystatic 0.6.9
+        // 仅支持在 fields.object 内用 layout 做 12 栅格；字段读取见 site-data.ts）。
+        info: fields.object(
+          {
+            title: fields.text({ label: '站点标题' }),
+            description: fields.text({ label: '站点描述', multiline: true }),
+            // 首页 Hero 区那句主标语，留空则回落到默认文案
+            tagline: fields.text({ label: '首页标语' }),
+            // 商务邮箱（询盘主通道，兼顾 Gmail/Outlook/企业邮箱）
+            email: fields.text({
+              label: '商务邮箱',
+              description: '如 sales@tackix.com。留空则页脚与联系页不显示邮件入口。',
+              validation: { pattern: { regex: /^[^\s@]+@[^\s@]+\.[^\s@]+$/, message: '邮箱格式不正确' } },
+            }),
+            // 公司全称：用于页脚署名与联系页主体信息，影响 B2B 买家的商业信任判断
+            company: fields.text({ label: '公司名称', description: '如 Tackix Materials Co., Ltd.' }),
+            // 办公电话（含国家码，用于电话咨询与部分地区的采购流程要求）
+            phone: fields.text({
+              label: '联系电话',
+              description: '含国家码，如 +65 6xxx xxxx。留空则不显示电话入口。',
+            }),
+            // 全站 WhatsApp 号码（仅数字，含国家码）；留空则前台不显示 WhatsApp 悬浮按钮
+            whatsapp: fields.text({
+              label: 'WhatsApp 号码',
+              description: '仅数字，含国家码。留空则不显示 WhatsApp 悬浮入口。',
+            }),
+            // 微信号：中文买家常用的即时通讯渠道；留空则不显示微信联系方式
+            wechat: fields.text({
+              label: '微信号',
+              description: '如 Tackix_Sales。留空则不显示微信联系方式。',
+            }),
+            // 办公地址（部分工程/采购流程需要登记供应商地址，影响资质审核）
+            address: fields.text({ label: '办公地址', multiline: true, description: '留空则不显示地址' }),
+            // 营业时间：海外买家判断能否及时回复的参考
+            hours: fields.text({ label: '营业时间', description: '如 Mon-Fri 09:00-18:00 (GMT+8)' }),
+            // WhatsApp 预填话术：不同页面入口用不同引导语，提升回复率
+            whatsappPrefill: fields.text({
+              label: 'WhatsApp 默认话术',
+              description: '买家点开对话框时的预填内容，留空则用通用文案。',
+            }),
+          },
+          // 栅格：站点标题/描述/地址占整行(12)，其余联系方式两两并排(6+6)
+          { label: '站点与联系信息（中文 / EN 并排）', layout: [12, 12, 6, 6, 6, 6, 6, 6, 12, 6, 6] }
+        ),
       },
     },
     // 分类管理：分类从此处可增删改，不再写死在代码里。
@@ -466,16 +471,47 @@ export default config({
     home: {
       label: '首页内容',
       schema: {
-        heroEyebrow: fields.text({ label: 'Hero 小标签', description: '首页主视觉上方的小字标语' }),
-        heroEyebrowEn: fields.text({ label: 'Hero 小标签(EN)' }),
-        heroCta1: fields.text({ label: 'Hero 按钮1文案', description: '如「探索解决方案」' }),
-        heroCta1En: fields.text({ label: 'Hero 按钮1(EN)' }),
-        heroCta2: fields.text({ label: 'Hero 按钮2文案', description: '如「联系我们报价」' }),
-        heroCta2En: fields.text({ label: 'Hero 按钮2(EN)' }),
-        solutionsTitle: fields.text({ label: '解决方案区标题' }),
-        solutionsTitleEn: fields.text({ label: '解决方案区标题(EN)' }),
-        solutionsSub: fields.text({ label: '解决方案区副标题', multiline: true }),
-        solutionsSubEn: fields.text({ label: '解决方案区副标题(EN)', multiline: true }),
+        // 文案字段以「中文 / EN 并排」横排（Keystatic 0.6.9 仅 fields.object 支持 layout 栅格）；
+        // solutionCards 保持顶层数组不变，读取逻辑见 site-data.ts。
+        content: fields.object(
+          {
+            heroEyebrow: fields.text({ label: 'Hero 小标签', description: '首页主视觉上方的小字标语' }),
+            heroEyebrowEn: fields.text({ label: 'Hero 小标签(EN)' }),
+            heroCta1: fields.text({ label: 'Hero 按钮1文案', description: '如「探索解决方案」' }),
+            heroCta1En: fields.text({ label: 'Hero 按钮1(EN)' }),
+            heroCta2: fields.text({ label: 'Hero 按钮2文案', description: '如「联系我们报价」' }),
+            heroCta2En: fields.text({ label: 'Hero 按钮2(EN)' }),
+            solutionsTitle: fields.text({ label: '解决方案区标题' }),
+            solutionsTitleEn: fields.text({ label: '解决方案区标题(EN)' }),
+            solutionsSub: fields.text({ label: '解决方案区副标题', multiline: true }),
+            solutionsSubEn: fields.text({ label: '解决方案区副标题(EN)', multiline: true }),
+            browseTitle: fields.text({ label: '浏览分类区标题' }),
+            browseTitleEn: fields.text({ label: '浏览分类区标题(EN)' }),
+            browseSub: fields.text({ label: '浏览分类区副标题', multiline: true }),
+            browseSubEn: fields.text({ label: '浏览分类区副标题(EN)', multiline: true }),
+            featuredTitle: fields.text({ label: '精选推荐区标题' }),
+            featuredTitleEn: fields.text({ label: '精选推荐区标题(EN)' }),
+            featuredSub: fields.text({ label: '精选推荐区副标题', multiline: true }),
+            featuredSubEn: fields.text({ label: '精选推荐区副标题(EN)', multiline: true }),
+            latestTitle: fields.text({ label: '最新文章区标题' }),
+            latestTitleEn: fields.text({ label: '最新文章区标题(EN)' }),
+            latestSub: fields.text({ label: '最新文章区副标题', multiline: true }),
+            latestSubEn: fields.text({ label: '最新文章区副标题(EN)', multiline: true }),
+            tagsTitle: fields.text({ label: '热门标签区标题' }),
+            tagsTitleEn: fields.text({ label: '热门标签区标题(EN)' }),
+            tagsSub: fields.text({ label: '热门标签区副标题', multiline: true }),
+            tagsSubEn: fields.text({ label: '热门标签区副标题(EN)', multiline: true }),
+            bandTitle: fields.text({ label: '底部色带标题' }),
+            bandTitleEn: fields.text({ label: '底部色带标题(EN)' }),
+            bandSub: fields.text({ label: '底部色带副标题', multiline: true }),
+            bandSubEn: fields.text({ label: '底部色带副标题(EN)', multiline: true }),
+            bandCta1: fields.text({ label: '色带按钮1文案' }),
+            bandCta1En: fields.text({ label: '色带按钮1(EN)' }),
+            bandCta2: fields.text({ label: '色带按钮2文案' }),
+            bandCta2En: fields.text({ label: '色带按钮2(EN)' }),
+          },
+          { label: '首页文案（中文 / EN 并排）', layout: h2(17) }
+        ),
         solutionCards: fields.array(
           fields.object({
             title: fields.text({ label: '卡片标题' }),
@@ -488,30 +524,6 @@ export default config({
           }, { label: '解决方案卡片' }),
           { label: '解决方案卡片列表' }
         ),
-        browseTitle: fields.text({ label: '浏览分类区标题' }),
-        browseTitleEn: fields.text({ label: '浏览分类区标题(EN)' }),
-        browseSub: fields.text({ label: '浏览分类区副标题', multiline: true }),
-        browseSubEn: fields.text({ label: '浏览分类区副标题(EN)', multiline: true }),
-        featuredTitle: fields.text({ label: '精选推荐区标题' }),
-        featuredTitleEn: fields.text({ label: '精选推荐区标题(EN)' }),
-        featuredSub: fields.text({ label: '精选推荐区副标题', multiline: true }),
-        featuredSubEn: fields.text({ label: '精选推荐区副标题(EN)', multiline: true }),
-        latestTitle: fields.text({ label: '最新文章区标题' }),
-        latestTitleEn: fields.text({ label: '最新文章区标题(EN)' }),
-        latestSub: fields.text({ label: '最新文章区副标题', multiline: true }),
-        latestSubEn: fields.text({ label: '最新文章区副标题(EN)', multiline: true }),
-        tagsTitle: fields.text({ label: '热门标签区标题' }),
-        tagsTitleEn: fields.text({ label: '热门标签区标题(EN)' }),
-        tagsSub: fields.text({ label: '热门标签区副标题', multiline: true }),
-        tagsSubEn: fields.text({ label: '热门标签区副标题(EN)', multiline: true }),
-        bandTitle: fields.text({ label: '底部色带标题' }),
-        bandTitleEn: fields.text({ label: '底部色带标题(EN)' }),
-        bandSub: fields.text({ label: '底部色带副标题', multiline: true }),
-        bandSubEn: fields.text({ label: '底部色带副标题(EN)', multiline: true }),
-        bandCta1: fields.text({ label: '色带按钮1文案' }),
-        bandCta1En: fields.text({ label: '色带按钮1(EN)' }),
-        bandCta2: fields.text({ label: '色带按钮2文案' }),
-        bandCta2En: fields.text({ label: '色带按钮2(EN)' }),
       },
     },
 
@@ -526,40 +538,53 @@ export default config({
           }, { label: '导航项' }),
           { label: '主导航' }
         ),
-        footerText: fields.text({ label: '页脚署名', description: '留空则用站点标题' }),
-        footerTextEn: fields.text({ label: '页脚署名(EN)' }),
+        // 页脚署名中英文并排（Keystatic 0.6.9 仅 fields.object 支持 layout 栅格）
+        content: fields.object(
+          {
+            footerText: fields.text({ label: '页脚署名', description: '留空则用站点标题' }),
+            footerTextEn: fields.text({ label: '页脚署名(EN)' }),
+          },
+          { label: '页脚文案（中文 / EN 并排）', layout: h2(1) }
+        ),
       },
     },
 
     contact: {
       label: '联系页文案',
       schema: {
-        contactInfoTitle: fields.text({ label: '联系方式区标题' }),
-        contactInfoTitleEn: fields.text({ label: '联系方式区标题(EN)' }),
-        formSectionTitle: fields.text({ label: '表单区小标题', description: '如「在线留言」' }),
-        formSectionTitleEn: fields.text({ label: '表单区小标题(EN)' }),
-        pageTitle: fields.text({ label: '页面标题' }),
-        pageTitleEn: fields.text({ label: '页面标题(EN)' }),
-        pageSub: fields.text({ label: '页面副标题', multiline: true }),
-        pageSubEn: fields.text({ label: '页面副标题(EN)', multiline: true }),
-        formTitle: fields.text({ label: '表单区标题' }),
-        formTitleEn: fields.text({ label: '表单区标题(EN)' }),
-        formName: fields.text({ label: '姓名字段标签' }),
-        formNameEn: fields.text({ label: '姓名字段标签(EN)' }),
-        formEmail: fields.text({ label: '邮箱字段标签' }),
-        formEmailEn: fields.text({ label: '邮箱字段标签(EN)' }),
-        formMsg: fields.text({ label: '留言字段标签' }),
-        formMsgEn: fields.text({ label: '留言字段标签(EN)' }),
-        submit: fields.text({ label: '提交按钮文案' }),
-        submitEn: fields.text({ label: '提交按钮文案(EN)' }),
-        success: fields.text({ label: '提交成功提示', multiline: true }),
-        successEn: fields.text({ label: '提交成功提示(EN)', multiline: true }),
-        prelaunchTitle: fields.text({ label: '预上线提示标题' }),
-        prelaunchTitleEn: fields.text({ label: '预上线提示标题(EN)' }),
-        prelaunchBody: fields.text({ label: '预上线提示正文', multiline: true }),
-        prelaunchBodyEn: fields.text({ label: '预上线提示正文(EN)', multiline: true }),
-        tipsTitle: fields.text({ label: '填写提示标题' }),
-        tipsTitleEn: fields.text({ label: '填写提示标题(EN)' }),
+        // 联系页文案中英文并排（Keystatic 0.6.9 仅 fields.object 支持 layout 栅格）；
+        // tipsItems 保持顶层数组不变，读取逻辑见 site-data.ts。
+        content: fields.object(
+          {
+            contactInfoTitle: fields.text({ label: '联系方式区标题' }),
+            contactInfoTitleEn: fields.text({ label: '联系方式区标题(EN)' }),
+            formSectionTitle: fields.text({ label: '表单区小标题', description: '如「在线留言」' }),
+            formSectionTitleEn: fields.text({ label: '表单区小标题(EN)' }),
+            pageTitle: fields.text({ label: '页面标题' }),
+            pageTitleEn: fields.text({ label: '页面标题(EN)' }),
+            pageSub: fields.text({ label: '页面副标题', multiline: true }),
+            pageSubEn: fields.text({ label: '页面副标题(EN)', multiline: true }),
+            formTitle: fields.text({ label: '表单区标题' }),
+            formTitleEn: fields.text({ label: '表单区标题(EN)' }),
+            formName: fields.text({ label: '姓名字段标签' }),
+            formNameEn: fields.text({ label: '姓名字段标签(EN)' }),
+            formEmail: fields.text({ label: '邮箱字段标签' }),
+            formEmailEn: fields.text({ label: '邮箱字段标签(EN)' }),
+            formMsg: fields.text({ label: '留言字段标签' }),
+            formMsgEn: fields.text({ label: '留言字段标签(EN)' }),
+            submit: fields.text({ label: '提交按钮文案' }),
+            submitEn: fields.text({ label: '提交按钮文案(EN)' }),
+            success: fields.text({ label: '提交成功提示', multiline: true }),
+            successEn: fields.text({ label: '提交成功提示(EN)', multiline: true }),
+            prelaunchTitle: fields.text({ label: '预上线提示标题' }),
+            prelaunchTitleEn: fields.text({ label: '预上线提示标题(EN)' }),
+            prelaunchBody: fields.text({ label: '预上线提示正文', multiline: true }),
+            prelaunchBodyEn: fields.text({ label: '预上线提示正文(EN)', multiline: true }),
+            tipsTitle: fields.text({ label: '填写提示标题' }),
+            tipsTitleEn: fields.text({ label: '填写提示标题(EN)' }),
+          },
+          { label: '联系页文案（中文 / EN 并排）', layout: h2(13) }
+        ),
         tipsItems: fields.array(
           fields.object({
             text: fields.text({ label: '提示项', multiline: true }),
@@ -573,56 +598,68 @@ export default config({
     pages: {
       label: '列表页标题',
       schema: {
-        postsTitle: fields.text({ label: '文章列表页标题' }),
-        postsTitleEn: fields.text({ label: '文章列表页标题(EN)' }),
-        postsSub: fields.text({ label: '文章列表页副标题', multiline: true }),
-        postsSubEn: fields.text({ label: '文章列表页副标题(EN)', multiline: true }),
-        productsTitle: fields.text({ label: '产品库页标题' }),
-        productsTitleEn: fields.text({ label: '产品库页标题(EN)' }),
-        productsSub: fields.text({ label: '产品库页副标题', multiline: true }),
-        productsSubEn: fields.text({ label: '产品库页副标题(EN)', multiline: true }),
-        casesTitle: fields.text({ label: '案例库页标题' }),
-        casesTitleEn: fields.text({ label: '案例库页标题(EN)' }),
-        casesSub: fields.text({ label: '案例库页副标题', multiline: true }),
-        casesSubEn: fields.text({ label: '案例库页副标题(EN)', multiline: true }),
-        selectorTitle: fields.text({ label: '选型页标题' }),
-        selectorTitleEn: fields.text({ label: '选型页标题(EN)' }),
-        selectorSub: fields.text({ label: '选型页副标题', multiline: true }),
-        selectorSubEn: fields.text({ label: '选型页副标题(EN)', multiline: true }),
-        selectorResult: fields.text({ label: '选型结果区标题' }),
-        selectorResultEn: fields.text({ label: '选型结果区标题(EN)' }),
-        searchPlaceholder: fields.text({ label: '搜索框占位符' }),
-        searchPlaceholderEn: fields.text({ label: '搜索框占位符(EN)' }),
+        // 各列表页标题中英文并排（Keystatic 0.6.9 仅 fields.object 支持 layout 栅格）
+        content: fields.object(
+          {
+            postsTitle: fields.text({ label: '文章列表页标题' }),
+            postsTitleEn: fields.text({ label: '文章列表页标题(EN)' }),
+            postsSub: fields.text({ label: '文章列表页副标题', multiline: true }),
+            postsSubEn: fields.text({ label: '文章列表页副标题(EN)', multiline: true }),
+            productsTitle: fields.text({ label: '产品库页标题' }),
+            productsTitleEn: fields.text({ label: '产品库页标题(EN)' }),
+            productsSub: fields.text({ label: '产品库页副标题', multiline: true }),
+            productsSubEn: fields.text({ label: '产品库页副标题(EN)', multiline: true }),
+            casesTitle: fields.text({ label: '案例库页标题' }),
+            casesTitleEn: fields.text({ label: '案例库页标题(EN)' }),
+            casesSub: fields.text({ label: '案例库页副标题', multiline: true }),
+            casesSubEn: fields.text({ label: '案例库页副标题(EN)', multiline: true }),
+            selectorTitle: fields.text({ label: '选型页标题' }),
+            selectorTitleEn: fields.text({ label: '选型页标题(EN)' }),
+            selectorSub: fields.text({ label: '选型页副标题', multiline: true }),
+            selectorSubEn: fields.text({ label: '选型页副标题(EN)', multiline: true }),
+            selectorResult: fields.text({ label: '选型结果区标题' }),
+            selectorResultEn: fields.text({ label: '选型结果区标题(EN)' }),
+            searchPlaceholder: fields.text({ label: '搜索框占位符' }),
+            searchPlaceholderEn: fields.text({ label: '搜索框占位符(EN)' }),
+          },
+          { label: '列表页标题（中文 / EN 并排）', layout: h2(10) }
+        ),
       },
     },
 
     detail: {
       label: '详情页区块标题',
       schema: {
-        productSpecsTitle: fields.text({ label: '产品-技术参数区标题' }),
-        productSpecsTitleEn: fields.text({ label: '产品-技术参数区标题(EN)' }),
-        productDescTitle: fields.text({ label: '产品-产品描述区标题' }),
-        productDescTitleEn: fields.text({ label: '产品-产品描述区标题(EN)' }),
-        productDocsTitle: fields.text({ label: '产品-技术文档区标题' }),
-        productDocsTitleEn: fields.text({ label: '产品-技术文档区标题(EN)' }),
-        productQuoteTitle: fields.text({ label: '产品-获取报价区标题' }),
-        productQuoteTitleEn: fields.text({ label: '产品-获取报价区标题(EN)' }),
-        productQuoteCopy: fields.text({ label: '产品-获取报价区正文', multiline: true }),
-        productQuoteCopyEn: fields.text({ label: '产品-获取报价区正文(EN)', multiline: true }),
-        caseChallengeTitle: fields.text({ label: '案例-挑战区标题' }),
-        caseChallengeTitleEn: fields.text({ label: '案例-挑战区标题(EN)' }),
-        caseSolutionTitle: fields.text({ label: '案例-解决方案区标题' }),
-        caseSolutionTitleEn: fields.text({ label: '案例-解决方案区标题(EN)' }),
-        caseResultTitle: fields.text({ label: '案例-成果区标题' }),
-        caseResultTitleEn: fields.text({ label: '案例-成果区标题(EN)' }),
-        caseRelatedTitle: fields.text({ label: '案例-相关产品区标题' }),
-        caseRelatedTitleEn: fields.text({ label: '案例-相关产品区标题(EN)' }),
-        caseCtaTitle: fields.text({ label: '案例-底部CTA标题' }),
-        caseCtaTitleEn: fields.text({ label: '案例-底部CTA标题(EN)' }),
-        caseCtaCopy: fields.text({ label: '案例-底部CTA正文', multiline: true }),
-        caseCtaCopyEn: fields.text({ label: '案例-底部CTA正文(EN)', multiline: true }),
-        faqTitle: fields.text({ label: '文章-FAQ区标题' }),
-        faqTitleEn: fields.text({ label: '文章-FAQ区标题(EN)' }),
+        // 详情页各区块标题中英文并排（Keystatic 0.6.9 仅 fields.object 支持 layout 栅格）
+        content: fields.object(
+          {
+            productSpecsTitle: fields.text({ label: '产品-技术参数区标题' }),
+            productSpecsTitleEn: fields.text({ label: '产品-技术参数区标题(EN)' }),
+            productDescTitle: fields.text({ label: '产品-产品描述区标题' }),
+            productDescTitleEn: fields.text({ label: '产品-产品描述区标题(EN)' }),
+            productDocsTitle: fields.text({ label: '产品-技术文档区标题' }),
+            productDocsTitleEn: fields.text({ label: '产品-技术文档区标题(EN)' }),
+            productQuoteTitle: fields.text({ label: '产品-获取报价区标题' }),
+            productQuoteTitleEn: fields.text({ label: '产品-获取报价区标题(EN)' }),
+            productQuoteCopy: fields.text({ label: '产品-获取报价区正文', multiline: true }),
+            productQuoteCopyEn: fields.text({ label: '产品-获取报价区正文(EN)', multiline: true }),
+            caseChallengeTitle: fields.text({ label: '案例-挑战区标题' }),
+            caseChallengeTitleEn: fields.text({ label: '案例-挑战区标题(EN)' }),
+            caseSolutionTitle: fields.text({ label: '案例-解决方案区标题' }),
+            caseSolutionTitleEn: fields.text({ label: '案例-解决方案区标题(EN)' }),
+            caseResultTitle: fields.text({ label: '案例-成果区标题' }),
+            caseResultTitleEn: fields.text({ label: '案例-成果区标题(EN)' }),
+            caseRelatedTitle: fields.text({ label: '案例-相关产品区标题' }),
+            caseRelatedTitleEn: fields.text({ label: '案例-相关产品区标题(EN)' }),
+            caseCtaTitle: fields.text({ label: '案例-底部CTA标题' }),
+            caseCtaTitleEn: fields.text({ label: '案例-底部CTA标题(EN)' }),
+            caseCtaCopy: fields.text({ label: '案例-底部CTA正文', multiline: true }),
+            caseCtaCopyEn: fields.text({ label: '案例-底部CTA正文(EN)', multiline: true }),
+            faqTitle: fields.text({ label: '文章-FAQ区标题' }),
+            faqTitleEn: fields.text({ label: '文章-FAQ区标题(EN)' }),
+          },
+          { label: '详情页区块标题（中文 / EN 并排）', layout: h2(12) }
+        ),
       },
     },
   },

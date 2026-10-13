@@ -1,7 +1,3 @@
-title: Tackix
-description: 'Tackix 是面向工业胶粘剂与密封剂行业的垂直平台，提供产品数据库、选型工具、技术文章与案例库，支持多语言与在线询盘。'
-tagline: '工业胶粘剂与密封剂 · 选型 · 技术 · 询盘'
-
 # ── 联系方式（P0-3）────────────────────────────────────────────────
 # ⚠️ 以下为**占位值**，请在后台 /keystatic →「站点信息」替换为真实信息后再正式上线。
 # 留空的字段会自动从页面隐藏，不会渲染空链接；但全部留空会让联系页只剩表单，
@@ -17,11 +13,17 @@ tagline: '工业胶粘剂与密封剂 · 选型 · 技术 · 询盘'
 #   whatsapp        WhatsApp 号码，**仅数字含国家码**，如 6598765432（新加坡 +65）
 #   whatsappPrefill WhatsApp 预填话术，点开对话框即自动带上，提高回复率
 #   wechat          微信号（中文买家常用即时通讯渠道）；占位值，上线前替换
-email: 'jccker@gmail.com'
-company: ''
-phone: ''
-address: ''
-hours: 'Mon-Fri 09:00-18:00 (GMT+8)'
-whatsapp: ''
-whatsappPrefill: 'Hello, I would like a quotation for industrial adhesives. Could you share TDS/SDS and technical support?'
-wechat: 'Tackix_Sales'
+info:
+  # 站点基础信息（标题/描述/标语占整行）
+  title: Tackix
+  description: 'Tackix 是面向工业胶粘剂与密封剂行业的垂直平台，提供产品数据库、选型工具、技术文章与案例库，支持多语言与在线询盘。'
+  tagline: '工业胶粘剂与密封剂 · 选型 · 技术 · 询盘'
+  # 联系方式（两两并排）
+  email: 'jccker@gmail.com'
+  company: ''
+  phone: ''
+  whatsapp: ''
+  wechat: 'Tackix_Sales'
+  address: ''
+  hours: 'Mon-Fri 09:00-18:00 (GMT+8)'
+  whatsappPrefill: 'Hello, I would like a quotation for industrial adhesives. Could you share TDS/SDS and technical support?'

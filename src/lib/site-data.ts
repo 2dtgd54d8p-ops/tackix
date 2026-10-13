@@ -187,19 +187,21 @@ export async function loadSiteData() {
       // ⚠️ 这里必须**逐字段列出** singleton 的所有字段：Keystatic 的 read()
       // 返回的就是 YAML 原样，新增字段若不显式透传就会被静默丢弃
       // （P0-3 加联系字段时踩过：只有 whatsapp 生效，email/phone 等全部为 undefined）。
+      // 字段已分组进 info 对象（横排栅格），用 info ?? s 兼容迁移前后的数据。
+      const info = s.info ?? s;
       site = {
-        title: s.title || DEFAULT_SITE.title,
-        description: s.description || DEFAULT_SITE.description,
-        tagline: s.tagline || DEFAULT_SITE.tagline,
+        title: info.title || DEFAULT_SITE.title,
+        description: info.description || DEFAULT_SITE.description,
+        tagline: info.tagline || DEFAULT_SITE.tagline,
         // 联系方式（P0-3）：留空即为空串，前台据此隐藏对应入口
-        email: s.email || '',
-        company: s.company || '',
-        phone: s.phone || '',
-        address: s.address || '',
-        hours: s.hours || '',
-        whatsapp: s.whatsapp || '',
-        whatsappPrefill: s.whatsappPrefill || '',
-        wechat: s.wechat || '',
+        email: info.email || '',
+        company: info.company || '',
+        phone: info.phone || '',
+        address: info.address || '',
+        hours: info.hours || '',
+        whatsapp: info.whatsapp || '',
+        whatsappPrefill: info.whatsappPrefill || '',
+        wechat: info.wechat || '',
       };
     }
   } catch (e) {
@@ -411,12 +413,14 @@ export async function loadContent() {
     reader.singletons.detail.read().catch(() => null),
   ]) as any[];
 
+  // 后台字段已分组进 content 对象（横排栅格）；用 ?.content ?? ?. 兜底，兼容迁移前后的数据
+  const h = home?.content ?? home ?? {};
   const homeOut = {
-    heroEyebrow: pickB(HOME_DEFAULT.heroEyebrow, home?.heroEyebrow, home?.heroEyebrowEn),
-    heroCta1: pickB(HOME_DEFAULT.heroCta1, home?.heroCta1, home?.heroCta1En),
-    heroCta2: pickB(HOME_DEFAULT.heroCta2, home?.heroCta2, home?.heroCta2En),
-    solutionsTitle: pickB(HOME_DEFAULT.solutionsTitle, home?.solutionsTitle, home?.solutionsTitleEn),
-    solutionsSub: pickB(HOME_DEFAULT.solutionsSub, home?.solutionsSub, home?.solutionsSubEn),
+    heroEyebrow: pickB(HOME_DEFAULT.heroEyebrow, h.heroEyebrow, h.heroEyebrowEn),
+    heroCta1: pickB(HOME_DEFAULT.heroCta1, h.heroCta1, h.heroCta1En),
+    heroCta2: pickB(HOME_DEFAULT.heroCta2, h.heroCta2, h.heroCta2En),
+    solutionsTitle: pickB(HOME_DEFAULT.solutionsTitle, h.solutionsTitle, h.solutionsTitleEn),
+    solutionsSub: pickB(HOME_DEFAULT.solutionsSub, h.solutionsSub, h.solutionsSubEn),
     solutionCards: (home?.solutionCards?.length ? home.solutionCards : HOME_CARDS_DEFAULT).map((c: any, i: number) => {
       const d = HOME_CARDS_DEFAULT[i] ?? HOME_CARDS_DEFAULT[0];
       return {
@@ -426,18 +430,18 @@ export async function loadContent() {
         href: c.href || d.href,
       };
     }),
-    browseTitle: pickB(HOME_DEFAULT.browseTitle, home?.browseTitle, home?.browseTitleEn),
-    browseSub: pickB(HOME_DEFAULT.browseSub, home?.browseSub, home?.browseSubEn),
-    featuredTitle: pickB(HOME_DEFAULT.featuredTitle, home?.featuredTitle, home?.featuredTitleEn),
-    featuredSub: pickB(HOME_DEFAULT.featuredSub, home?.featuredSub, home?.featuredSubEn),
-    latestTitle: pickB(HOME_DEFAULT.latestTitle, home?.latestTitle, home?.latestTitleEn),
-    latestSub: pickB(HOME_DEFAULT.latestSub, home?.latestSub, home?.latestSubEn),
-    tagsTitle: pickB(HOME_DEFAULT.tagsTitle, home?.tagsTitle, home?.tagsTitleEn),
-    tagsSub: pickB(HOME_DEFAULT.tagsSub, home?.tagsSub, home?.tagsSubEn),
-    bandTitle: pickB(HOME_DEFAULT.bandTitle, home?.bandTitle, home?.bandTitleEn),
-    bandSub: pickB(HOME_DEFAULT.bandSub, home?.bandSub, home?.bandSubEn),
-    bandCta1: pickB(HOME_DEFAULT.bandCta1, home?.bandCta1, home?.bandCta1En),
-    bandCta2: pickB(HOME_DEFAULT.bandCta2, home?.bandCta2, home?.bandCta2En),
+    browseTitle: pickB(HOME_DEFAULT.browseTitle, h.browseTitle, h.browseTitleEn),
+    browseSub: pickB(HOME_DEFAULT.browseSub, h.browseSub, h.browseSubEn),
+    featuredTitle: pickB(HOME_DEFAULT.featuredTitle, h.featuredTitle, h.featuredTitleEn),
+    featuredSub: pickB(HOME_DEFAULT.featuredSub, h.featuredSub, h.featuredSubEn),
+    latestTitle: pickB(HOME_DEFAULT.latestTitle, h.latestTitle, h.latestTitleEn),
+    latestSub: pickB(HOME_DEFAULT.latestSub, h.latestSub, h.latestSubEn),
+    tagsTitle: pickB(HOME_DEFAULT.tagsTitle, h.tagsTitle, h.tagsTitleEn),
+    tagsSub: pickB(HOME_DEFAULT.tagsSub, h.tagsSub, h.tagsSubEn),
+    bandTitle: pickB(HOME_DEFAULT.bandTitle, h.bandTitle, h.bandTitleEn),
+    bandSub: pickB(HOME_DEFAULT.bandSub, h.bandSub, h.bandSubEn),
+    bandCta1: pickB(HOME_DEFAULT.bandCta1, h.bandCta1, h.bandCta1En),
+    bandCta2: pickB(HOME_DEFAULT.bandCta2, h.bandCta2, h.bandCta2En),
   };
 
   const navOut = (ui?.navItems?.length ? ui.navItems : UI_NAV_DEFAULT).map((n: any, i: number) => {
@@ -448,20 +452,21 @@ export async function loadContent() {
     };
   });
 
+  const c = contact?.content ?? contact ?? {};
   const contactOut = {
-    contactInfoTitle: pickB(CONTACT_DEFAULT.contactInfoTitle, contact?.contactInfoTitle, contact?.contactInfoTitleEn),
-    formSectionTitle: pickB(CONTACT_DEFAULT.formSectionTitle, contact?.formSectionTitle, contact?.formSectionTitleEn),
-    pageTitle: pickB(CONTACT_DEFAULT.pageTitle, contact?.pageTitle, contact?.pageTitleEn),
-    pageSub: pickB(CONTACT_DEFAULT.pageSub, contact?.pageSub, contact?.pageSubEn),
-    formTitle: pickB(CONTACT_DEFAULT.formTitle, contact?.formTitle, contact?.formTitleEn),
-    formName: pickB(CONTACT_DEFAULT.formName, contact?.formName, contact?.formNameEn),
-    formEmail: pickB(CONTACT_DEFAULT.formEmail, contact?.formEmail, contact?.formEmailEn),
-    formMsg: pickB(CONTACT_DEFAULT.formMsg, contact?.formMsg, contact?.formMsgEn),
-    submit: pickB(CONTACT_DEFAULT.submit, contact?.submit, contact?.submitEn),
-    success: pickB(CONTACT_DEFAULT.success, contact?.success, contact?.successEn),
-    prelaunchTitle: pickB(CONTACT_DEFAULT.prelaunchTitle, contact?.prelaunchTitle, contact?.prelaunchTitleEn),
-    prelaunchBody: pickB(CONTACT_DEFAULT.prelaunchBody, contact?.prelaunchBody, contact?.prelaunchBodyEn),
-    tipsTitle: pickB(CONTACT_DEFAULT.tipsTitle, contact?.tipsTitle, contact?.tipsTitleEn),
+    contactInfoTitle: pickB(CONTACT_DEFAULT.contactInfoTitle, c.contactInfoTitle, c.contactInfoTitleEn),
+    formSectionTitle: pickB(CONTACT_DEFAULT.formSectionTitle, c.formSectionTitle, c.formSectionTitleEn),
+    pageTitle: pickB(CONTACT_DEFAULT.pageTitle, c.pageTitle, c.pageTitleEn),
+    pageSub: pickB(CONTACT_DEFAULT.pageSub, c.pageSub, c.pageSubEn),
+    formTitle: pickB(CONTACT_DEFAULT.formTitle, c.formTitle, c.formTitleEn),
+    formName: pickB(CONTACT_DEFAULT.formName, c.formName, c.formNameEn),
+    formEmail: pickB(CONTACT_DEFAULT.formEmail, c.formEmail, c.formEmailEn),
+    formMsg: pickB(CONTACT_DEFAULT.formMsg, c.formMsg, c.formMsgEn),
+    submit: pickB(CONTACT_DEFAULT.submit, c.submit, c.submitEn),
+    success: pickB(CONTACT_DEFAULT.success, c.success, c.successEn),
+    prelaunchTitle: pickB(CONTACT_DEFAULT.prelaunchTitle, c.prelaunchTitle, c.prelaunchTitleEn),
+    prelaunchBody: pickB(CONTACT_DEFAULT.prelaunchBody, c.prelaunchBody, c.prelaunchBodyEn),
+    tipsTitle: pickB(CONTACT_DEFAULT.tipsTitle, c.tipsTitle, c.tipsTitleEn),
     tipsItems: (contact?.tipsItems?.length ? contact.tipsItems : CONTACT_TIPS_DEFAULT).map((t: any, i: number) => {
       const d = CONTACT_TIPS_DEFAULT[i] ?? CONTACT_TIPS_DEFAULT[0];
       const zh = t?.text ?? d.zh;
@@ -470,39 +475,41 @@ export async function loadContent() {
     }),
   };
 
+  const pg = pages?.content ?? pages ?? {};
   const pagesOut = {
-    postsTitle: pickB(PAGES_DEFAULT.postsTitle, pages?.postsTitle, pages?.postsTitleEn),
-    postsSub: pickB(PAGES_DEFAULT.postsSub, pages?.postsSub, pages?.postsSubEn),
-    productsTitle: pickB(PAGES_DEFAULT.productsTitle, pages?.productsTitle, pages?.productsTitleEn),
-    productsSub: pickB(PAGES_DEFAULT.productsSub, pages?.productsSub, pages?.productsSubEn),
-    casesTitle: pickB(PAGES_DEFAULT.casesTitle, pages?.casesTitle, pages?.casesTitleEn),
-    casesSub: pickB(PAGES_DEFAULT.casesSub, pages?.casesSub, pages?.casesSubEn),
-    selectorTitle: pickB(PAGES_DEFAULT.selectorTitle, pages?.selectorTitle, pages?.selectorTitleEn),
-    selectorSub: pickB(PAGES_DEFAULT.selectorSub, pages?.selectorSub, pages?.selectorSubEn),
-    selectorResult: pickB(PAGES_DEFAULT.selectorResult, pages?.selectorResult, pages?.selectorResultEn),
-    searchPlaceholder: pickB(PAGES_DEFAULT.searchPlaceholder, pages?.searchPlaceholder, pages?.searchPlaceholderEn),
+    postsTitle: pickB(PAGES_DEFAULT.postsTitle, pg.postsTitle, pg.postsTitleEn),
+    postsSub: pickB(PAGES_DEFAULT.postsSub, pg.postsSub, pg.postsSubEn),
+    productsTitle: pickB(PAGES_DEFAULT.productsTitle, pg.productsTitle, pg.productsTitleEn),
+    productsSub: pickB(PAGES_DEFAULT.productsSub, pg.productsSub, pg.productsSubEn),
+    casesTitle: pickB(PAGES_DEFAULT.casesTitle, pg.casesTitle, pg.casesTitleEn),
+    casesSub: pickB(PAGES_DEFAULT.casesSub, pg.casesSub, pg.casesSubEn),
+    selectorTitle: pickB(PAGES_DEFAULT.selectorTitle, pg.selectorTitle, pg.selectorTitleEn),
+    selectorSub: pickB(PAGES_DEFAULT.selectorSub, pg.selectorSub, pg.selectorSubEn),
+    selectorResult: pickB(PAGES_DEFAULT.selectorResult, pg.selectorResult, pg.selectorResultEn),
+    searchPlaceholder: pickB(PAGES_DEFAULT.searchPlaceholder, pg.searchPlaceholder, pg.searchPlaceholderEn),
   };
 
+  const dt = detail?.content ?? detail ?? {};
   const detailOut = {
-    productSpecsTitle: pickB(DETAIL_DEFAULT.productSpecsTitle, detail?.productSpecsTitle, detail?.productSpecsTitleEn),
-    productDescTitle: pickB(DETAIL_DEFAULT.productDescTitle, detail?.productDescTitle, detail?.productDescTitleEn),
-    productDocsTitle: pickB(DETAIL_DEFAULT.productDocsTitle, detail?.productDocsTitle, detail?.productDocsTitleEn),
-    productQuoteTitle: pickB(DETAIL_DEFAULT.productQuoteTitle, detail?.productQuoteTitle, detail?.productQuoteTitleEn),
-    productQuoteCopy: pickB(DETAIL_DEFAULT.productQuoteCopy, detail?.productQuoteCopy, detail?.productQuoteCopyEn),
-    caseChallengeTitle: pickB(DETAIL_DEFAULT.caseChallengeTitle, detail?.caseChallengeTitle, detail?.caseChallengeTitleEn),
-    caseSolutionTitle: pickB(DETAIL_DEFAULT.caseSolutionTitle, detail?.caseSolutionTitle, detail?.caseSolutionTitleEn),
-    caseResultTitle: pickB(DETAIL_DEFAULT.caseResultTitle, detail?.caseResultTitle, detail?.caseResultTitleEn),
-    caseRelatedTitle: pickB(DETAIL_DEFAULT.caseRelatedTitle, detail?.caseRelatedTitle, detail?.caseRelatedTitleEn),
-    caseCtaTitle: pickB(DETAIL_DEFAULT.caseCtaTitle, detail?.caseCtaTitle, detail?.caseCtaTitleEn),
-    caseCtaCopy: pickB(DETAIL_DEFAULT.caseCtaCopy, detail?.caseCtaCopy, detail?.caseCtaCopyEn),
-    faqTitle: pickB(DETAIL_DEFAULT.faqTitle, detail?.faqTitle, detail?.faqTitleEn),
+    productSpecsTitle: pickB(DETAIL_DEFAULT.productSpecsTitle, dt.productSpecsTitle, dt.productSpecsTitleEn),
+    productDescTitle: pickB(DETAIL_DEFAULT.productDescTitle, dt.productDescTitle, dt.productDescTitleEn),
+    productDocsTitle: pickB(DETAIL_DEFAULT.productDocsTitle, dt.productDocsTitle, dt.productDocsTitleEn),
+    productQuoteTitle: pickB(DETAIL_DEFAULT.productQuoteTitle, dt.productQuoteTitle, dt.productQuoteTitleEn),
+    productQuoteCopy: pickB(DETAIL_DEFAULT.productQuoteCopy, dt.productQuoteCopy, dt.productQuoteCopyEn),
+    caseChallengeTitle: pickB(DETAIL_DEFAULT.caseChallengeTitle, dt.caseChallengeTitle, dt.caseChallengeTitleEn),
+    caseSolutionTitle: pickB(DETAIL_DEFAULT.caseSolutionTitle, dt.caseSolutionTitle, dt.caseSolutionTitleEn),
+    caseResultTitle: pickB(DETAIL_DEFAULT.caseResultTitle, dt.caseResultTitle, dt.caseResultTitleEn),
+    caseRelatedTitle: pickB(DETAIL_DEFAULT.caseRelatedTitle, dt.caseRelatedTitle, dt.caseRelatedTitleEn),
+    caseCtaTitle: pickB(DETAIL_DEFAULT.caseCtaTitle, dt.caseCtaTitle, dt.caseCtaTitleEn),
+    caseCtaCopy: pickB(DETAIL_DEFAULT.caseCtaCopy, dt.caseCtaCopy, dt.caseCtaCopyEn),
+    faqTitle: pickB(DETAIL_DEFAULT.faqTitle, dt.faqTitle, dt.faqTitleEn),
   };
 
   return {
     home: homeOut,
     ui: {
       navItems: navOut,
-      footerText: pickB(FOOTER_DEFAULT, ui?.footerText, ui?.footerTextEn),
+      footerText: pickB(FOOTER_DEFAULT, ui?.content?.footerText ?? ui?.footerText, ui?.content?.footerTextEn ?? ui?.footerTextEn),
     },
     contact: contactOut,
     pages: pagesOut,

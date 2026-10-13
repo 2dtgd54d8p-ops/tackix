@@ -17,5 +17,6 @@ navItems:
   - label: '联系'
     labelEn: 'Contact'
     href: '/contact'
-footerText: ''
-footerTextEn: ''
+content:
+  footerText: ''
+  footerTextEn: ''
