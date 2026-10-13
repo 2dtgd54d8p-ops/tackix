@@ -34,8 +34,8 @@ export async function getStaticPaths() {
 const { post } = Astro.props;
 const slug = Astro.params.slug;
 
-// stageLabel 等标签函数由 loadSiteData() 返回（不是顶层导出）
-const { stageLabel } = await loadSiteData();
+// 分类/标签/场景/阶段的英文标签函数由 loadSiteData() 返回
+const { categoryLabelEn, tagLabelEn, scenarioLabelEn, stageLabelEn } = await loadSiteData();
 // 详情页区块标题来自后台「详情页区块标题」singleton（可编辑、前后端贯通）
 const L = await loadContent();
 const t = (b: { zh: string; en: string }) => b.en;
@@ -52,6 +52,15 @@ const faq = zhFaq.map((f, i) => ({
   question: (useEn ? enFaq[i]?.question : f.question) ?? f.question,
   answer: (useEn ? enFaq[i]?.answer : f.answer) ?? f.answer,
 })).filter((f) => f.question && f.answer);
+
+// 分类 / 标签 / 场景 / 阶段 的英文展示名（与中文页对称，统一走后台 singleton 标签）
+const categoryName =
+  post.category && post.category !== 'uncategorized' ? categoryLabelEn(post.category) : null;
+const tagNames = Array.isArray(post.tags)
+  ? post.tags.map((tg: string) => tagLabelEn(tg)).filter(Boolean)
+  : [];
+const scenarioName = scenarioLabelEn(post.scenario);
+const stageName = stageLabelEn(post.stage);
 
 const alternates = [
   { lang: 'zh-CN', href: `/posts/${slug}/` },
@@ -101,8 +110,17 @@ const dateStr = post.publishedAt ? new Date(post.publishedAt).toISOString() : ''
     <a class="en-back" href="/en/posts/">← All Articles</a>
 
     <article class="prose en-article">
-      <h1>{title}</h1>
-      {post.stage && <span class="tag">{stageLabel(post.stage)}</span>}
+      <header class="en-post-head">
+        {categoryName && <span class="badge">{categoryName}</span>}
+        <h1>{title}</h1>
+        {(scenarioName || stageName) && (
+          <div class="post-badges">
+            {scenarioName && <span class="badge badge-scenario">Scenario: {scenarioName}</span>}
+            {stageName && <span class="badge badge-stage">Stage: {stageName}</span>}
+          </div>
+        )}
+        {post.publishedAt && <p class="en-post-meta">{post.publishedAt}</p>}
+      </header>
       <p class="en-article-excerpt">{excerpt}</p>
       <div set:html={bodyHtml} />
 
@@ -125,6 +143,14 @@ const dateStr = post.publishedAt ? new Date(post.publishedAt).toISOString() : ''
       }
     </article>
 
+    {
+      tagNames.length > 0 && (
+        <div class="tags">
+          {tagNames.map((tg) => <span class="tag">{tg}</span>)}
+        </div>
+      )
+    }
+
     <div class="en-post-cta">
       <a class="btn btn-primary" href="/en/contact">Discuss Your Application</a>
       <a class="btn" href="/en/selector">Selection Tool</a>
@@ -135,8 +161,18 @@ const dateStr = post.publishedAt ? new Date(post.publishedAt).toISOString() : ''
 <style>
   .en-back { display: inline-block; margin-bottom: 18px; font-size: 14px; color: var(--muted); }
   .en-article { max-width: var(--readw); margin: 0 auto; }
+  .en-post-head { text-align: center; margin-bottom: 26px; padding-bottom: 22px; border-bottom: 1px solid var(--border); }
+  .en-post-head .badge { margin-bottom: 14px; }
   .en-article h1 { font-size: 34px; line-height: 1.2; margin: 0 0 14px; }
+  .en-post-badges { display: flex; flex-wrap: wrap; gap: 8px; justify-content: center; margin: 12px 0 0; }
+  .en-post-badges .badge { margin-bottom: 0; }
+  .badge { display: inline-block; padding: 4px 12px; border-radius: var(--r-pill); font-size: 12.5px; font-weight: 600; background: var(--surface-2); color: var(--fg-soft); }
+  .badge-scenario { background: color-mix(in srgb, var(--g1) 18%, transparent); color: var(--g1); }
+  .badge-stage { background: color-mix(in srgb, var(--g2) 18%, transparent); color: var(--g2); }
+  .en-post-meta { margin: 12px 0 0; color: var(--muted); font-size: 13.5px; }
   .en-article-excerpt { color: var(--muted); font-size: 16.5px; line-height: 1.7; margin: 0 0 24px; }
+  .tag { display: inline-block; padding: 4px 12px; border-radius: var(--r-pill); font-size: 12.5px; background: var(--surface-2); border: 1px solid var(--border); color: var(--fg-soft); }
+  .tags { margin-top: 30px; display: flex; flex-wrap: wrap; gap: 8px; justify-content: center; }
   .faq-block { margin-top: 40px; }
   .faq-list { display: grid; gap: 10px; }
   .faq-item summary { cursor: pointer; font-weight: 600; padding: 12px 14px; background: var(--surface-2); border-radius: var(--r-sm); }

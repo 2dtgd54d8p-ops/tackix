@@ -61,6 +61,12 @@ export const DEFAULT_STAGES = [
   { label: '决策阶段', value: 'decision' },
 ];
 
+export const DEFAULT_STAGES_EN = [
+  { label: 'Awareness', value: 'awareness' },
+  { label: 'Consideration', value: 'consideration' },
+  { label: 'Decision', value: 'decision' },
+];
+
 // 产品类型（胶粘剂化学体系）—— 与 keystatic.config 的 PRODUCT_CATEGORY_OPTIONS 保持一致
 export const DEFAULT_PRODUCT_CATEGORIES = [
   { label: '环氧树脂胶', value: 'epoxy' },
@@ -206,6 +212,7 @@ export async function loadSiteData() {
   const tagEnMap = new Map(tags.map((t) => [t.value, t.labelEn]));
   const scenarioMap = new Map(DEFAULT_SCENARIOS.map((c) => [c.value, c.label]));
   const stageMap = new Map(DEFAULT_STAGES.map((c) => [c.value, c.label]));
+  const stageEnMap = new Map(DEFAULT_STAGES_EN.map((c) => [c.value, c.label]));
   const productCategoryMap = new Map(DEFAULT_PRODUCT_CATEGORIES.map((c) => [c.value, c.label]));
   const certMap = new Map(DEFAULT_CERTS.map((c) => [c.value, c.label]));
   const cureMap = new Map(DEFAULT_CURE.map((c) => [c.value, c.label]));
@@ -235,6 +242,9 @@ export async function loadSiteData() {
     scenarioLabel: (v: string | undefined) => (v ? scenarioMap.get(v) ?? '' : ''),
     /** 决策阶段值 -> 中文名 */
     stageLabel: (v: string | undefined) => (v ? stageMap.get(v) ?? '' : ''),
+    stageLabelEn: (v: string | undefined) => (v ? stageEnMap.get(v) ?? v : ''),
+    /** 决策阶段值 -> 英文名 */
+    stageLabelEn: (v: string | undefined) => (v ? stageEnMap.get(v) ?? v : ''),
     /** 产品类型值 -> 中文名（空值返回空串） */
     productCategoryLabel: (v: string | undefined) => (v ? productCategoryMap.get(v) ?? '' : ''),
     /** 认证值 -> 中文名（空值返回原值） */
