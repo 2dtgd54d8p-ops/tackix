@@ -1,0 +1,41 @@
+items:
+  - label: 选型指南
+    value: selection-guide
+  - label: 环氧胶
+    value: epoxy
+  - label: 聚氨酯胶
+    value: polyurethane
+  - label: 硅酮密封胶
+    value: silicone-sealant
+  - label: UV 固化胶
+    value: uv-adhesive
+  - label: 瞬干胶
+    value: cyanoacrylate
+  - label: 厌氧胶
+    value: anaerobic
+  - label: 热熔胶
+    value: hotmelt
+  - label: 基材粘接
+    value: substrate
+  - label: 表面处理
+    value: surface-treatment
+  - label: 结构粘接
+    value: structural-bonding
+  - label: 密封防水
+    value: sealing
+  - label: 耐温耐候
+    value: temperature-weather
+  - label: 电子封装
+    value: electronics
+  - label: 汽车制造
+    value: automotive
+  - label: 新能源
+    value: new-energy
+  - label: 建筑工程
+    value: construction
+  - label: 包装印刷
+    value: packaging
+  - label: 医疗器械
+    value: medical
+  - label: 常见问题
+    value: faq
