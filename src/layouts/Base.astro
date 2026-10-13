@@ -25,6 +25,7 @@ const whatsappNumber = (site.whatsapp ?? '').trim();
 const contactEmail = (site.email ?? '').trim();
 const contactPhone = (site.phone ?? '').trim();
 const contactCompany = (site.company ?? '').trim();
+const contactWechat = (site.wechat ?? '').trim();
 // WhatsApp 预填话术：后台可配，避免所有入口共用一句硬编码文案
 const waPrefill = (site.whatsappPrefill ?? '').trim() || '您好，我想咨询工业胶粘剂/密封剂产品与选型。';
 
@@ -199,14 +200,15 @@ const showFloatContact =
     <main class="container">
       <slot />
     </main>
-    <footer class="site-footer">
+      <footer class="site-footer">
       {
-        (contactEmail || contactPhone || contactCompany) && (
+        (contactEmail || contactPhone || contactCompany || contactWechat) && (
           <div class="footer-contact">
             {contactCompany && <span class="fc-company">{contactCompany}</span>}
             {contactEmail && (
               <a href={`mailto:${contactEmail}`}>{contactEmail}</a>
             )}
+            {contactWechat && <span class="fc-wechat">微信：{contactWechat}</span>}
             {contactPhone && <a href={`tel:${contactPhone.replace(/[^\d+]/g, '')}`}>{contactPhone}</a>}
           </div>
         )

@@ -16,10 +16,12 @@ tagline: '工业胶粘剂与密封剂 · 选型 · 技术 · 询盘'
 #   hours           营业时间（海外买家判断能否及时回复）
 #   whatsapp        WhatsApp 号码，**仅数字含国家码**，如 6598765432（新加坡 +65）
 #   whatsappPrefill WhatsApp 预填话术，点开对话框即自动带上，提高回复率
-email: ''
+#   wechat          微信号（中文买家常用即时通讯渠道）；占位值，上线前替换
+email: 'jccker@gmail.com'
 company: ''
 phone: ''
 address: ''
 hours: 'Mon-Fri 09:00-18:00 (GMT+8)'
 whatsapp: ''
 whatsappPrefill: 'Hello, I would like a quotation for industrial adhesives. Could you share TDS/SDS and technical support?'
+wechat: 'Tackix_Sales'

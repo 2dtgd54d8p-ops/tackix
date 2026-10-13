@@ -398,6 +398,11 @@ export default config({
           label: 'WhatsApp 默认话术',
           description: '买家点开对话框时的预填内容，留空则用通用文案。',
         }),
+        // 微信号：中文买家常用的即时通讯渠道；留空则不显示微信联系方式
+        wechat: fields.text({
+          label: '微信号',
+          description: '如 Tackix_Sales。留空则不显示微信联系方式。',
+        }),
       },
     },
     // 分类管理：分类从此处可增删改，不再写死在代码里。

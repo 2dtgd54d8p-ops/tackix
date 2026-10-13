@@ -131,6 +131,7 @@ export const DEFAULT_SITE = {
   hours: '',
   whatsapp: '',
   whatsappPrefill: '',
+  wechat: '',
 };
 
 const UNCATEGORIZED_LABEL = '未分类';
@@ -172,6 +173,7 @@ export async function loadSiteData() {
         hours: s.hours || '',
         whatsapp: s.whatsapp || '',
         whatsappPrefill: s.whatsappPrefill || '',
+        wechat: s.wechat || '',
       };
     }
   } catch (e) {
@@ -298,7 +300,7 @@ const CONTACT_DEFAULT = {
   submit: p('发送询盘', 'Send Enquiry'),
   success: p('感谢您的留言，我们会尽快回复。', 'Thank you — your enquiry has been received. We will reply shortly.'),
   prelaunchTitle: p('本站尚未正式上线', 'This site is not yet live'),
-  prelaunchBody: p('在线表单暂时关闭，避免测试数据与真实询盘混淆。请通过邮件或 WhatsApp 直接联系我们。', 'The online form is temporarily closed. Please reach us directly by email or WhatsApp.'),
+  prelaunchBody: p('在线表单暂时关闭，避免测试数据与真实询盘混淆。请通过邮件或即时通讯（微信/WhatsApp）直接联系我们。', 'The online form is temporarily closed. Please reach us directly by email or instant messaging (WeChat/WhatsApp).'),
   tipsTitle: p('留言时请包含', 'What to include'),
 };
 const CONTACT_TIPS_DEFAULT: Bilingual[] = [
