@@ -60,7 +60,8 @@ try { caseSlugs = await reader.collections.cases.list(); } catch (e) {}
 const productCount = productSlugs.length;
 const caseCount = caseSlugs.length;
 
-// 只列出实际有文章的分类/标签，避免出现点进去是空的筛选项
+// 列出后台「分类管理」的全部分类（含暂时没有文章的），保证前台与后台同步；
+// 空分类点进去由下方空态「该筛选下暂无文章。」兜底。
 const categories = buildFilterOptions(withMeta, managedCategories);
 const usedTags = tags.filter((t) => withMeta.some((p) => (p.tags ?? []).includes(t.value)));
 

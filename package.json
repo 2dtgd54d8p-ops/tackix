@@ -4,12 +4,16 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "dev": "KEYSTATIC_USE_LOCAL=1 astro dev",
+    "gen:options": "node scripts/gen-content-options.mjs",
+    "predev": "node scripts/gen-content-options.mjs",
+    "dev": "node scripts/dev-with-watch.mjs",
+    "prebuild": "node scripts/gen-content-options.mjs",
     "build": "astro build",
     "postbuild": "pagefind --site dist",
     "preview": "astro preview",
     "astro": "astro",
-    "cf:dev": "wrangler pages dev ./dist"
+    "cf:dev": "wrangler pages dev ./dist",
+    "postinstall": "node scripts/patch-keystatic.mjs"
   },
   "dependencies": {
     "@astrojs/cloudflare": "^12.6.13",

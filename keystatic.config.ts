@@ -1,5 +1,9 @@
 import { config, collection, singleton, fields } from '@keystatic/core';
 import { createElement } from 'react';
+// 文章「分类」「标签」下拉选项：由 scripts/gen-content-options.mjs 从后台
+// 「分类管理」「标签管理」singleton（仓库根 categories/index.yaml、tags/index.yaml）
+// 在构建期生成。改后台即自动跟随，不再手改本文件。
+import { CATEGORY_OPTIONS, TAG_OPTIONS } from './src/generated/content-options';
 
 // 存储后端切换（仅决定 /keystatic 后台 UI 的数据读写来源，不影响静态站点的构建）：
 // - 生产（构建 + Cloudflare Worker 运行时）一律使用 github 模式，后台经 GitHub App 读写仓库
@@ -52,37 +56,9 @@ const useLocal =
     ? __KEYSTATIC_USE_LOCAL__
     : env('KEYSTATIC_USE_LOCAL') === '1';
 
-// 文章分类下拉的可选项（Keystatic select 仅支持静态数组）。
-// 与后台「分类管理」singleton 保持一致：增删分类时两处都要改。
-const CATEGORY_OPTIONS = [
-  { label: '技术', value: 'tech' },
-  { label: '产品', value: 'product' },
-  { label: '随笔', value: 'notes' },
-];
-
-// 文章标签下拉的可选项。与后台「标签管理」singleton 保持一致。
-const TAG_OPTIONS = [
-  { label: '选型指南', value: 'selection-guide' },
-  { label: '环氧胶', value: 'epoxy' },
-  { label: '聚氨酯胶', value: 'polyurethane' },
-  { label: '硅酮密封胶', value: 'silicone-sealant' },
-  { label: 'UV 固化胶', value: 'uv-adhesive' },
-  { label: '瞬干胶', value: 'cyanoacrylate' },
-  { label: '厌氧胶', value: 'anaerobic' },
-  { label: '热熔胶', value: 'hotmelt' },
-  { label: '基材粘接', value: 'substrate' },
-  { label: '表面处理', value: 'surface-treatment' },
-  { label: '结构粘接', value: 'structural-bonding' },
-  { label: '密封防水', value: 'sealing' },
-  { label: '耐温耐候', value: 'temperature-weather' },
-  { label: '电子封装', value: 'electronics' },
-  { label: '汽车制造', value: 'automotive' },
-  { label: '新能源', value: 'new-energy' },
-  { label: '建筑工程', value: 'construction' },
-  { label: '包装印刷', value: 'packaging' },
-  { label: '医疗器械', value: 'medical' },
-  { label: '常见问题', value: 'faq' },
-];
+// CATEGORY_OPTIONS / TAG_OPTIONS 现在从 ./src/generated/content-options 导入，
+// 该文件由 scripts/gen-content-options.mjs 依据后台「分类管理」「标签管理」
+// singleton 在构建期生成（见文件顶部 import）。增删分类/标签只需改后台。
 
 // 应用场景（胶粘剂/密封剂典型行业）。与 site-data DEFAULT_SCENARIOS 保持一致。
 const SCENARIO_OPTIONS = [
@@ -211,12 +187,12 @@ export default config({
         // 草稿开关：false 的文章不会被构建进站点（见 index.astro / [slug].astro 的过滤）
         published: fields.checkbox({ label: '已发布', defaultValue: true }),
         featured: fields.checkbox({ label: '首页置顶', defaultValue: false }),
-        // ⚠️ Keystatic 的 select.options 只支持静态数组（见
-        // @keystatic/core form/fields/select 的签名），无法运行时读取文件，
-        // 所以这里必须硬编码。新增/删除分类要同时改两处，保证前后台一致：
-        //   ① 下方 CATEGORY_OPTIONS
-        //   ② 后台「分类管理」singleton（site/categories.yaml）
-        // 前台首页筛选条以「分类管理」为准。
+        // 分类下拉选项来自 `src/generated/content-options.ts` 的 CATEGORY_OPTIONS，
+        // 该文件由 `scripts/gen-content-options.mjs` 在 predev/prebuild 阶段从
+        // 后台「分类管理」singleton（categories/index.yaml）构建期生成。
+        // ⚠️ Keystatic 的 select.options 只接受静态数组、无法运行时读文件，
+        // 故采用「构建期 codegen」：后台增删分类并保存后，重启 dev / 重新构建
+        // 即自动同步，无需手改本文件。前台首页筛选条同样以「分类管理」为准。
         category: fields.select({
           label: '分类',
           options: [
@@ -225,8 +201,8 @@ export default config({
           ],
           defaultValue: 'uncategorized',
         }),
-        // ⚠️ 同 category：Keystatic select/multiselect 的 options 只支持静态数组，
-        // 新增/删除标签要同时改下方 TAG_OPTIONS 和后台「标签管理」singleton。
+        // 标签多选选项来自 `src/generated/content-options.ts` 的 TAG_OPTIONS（构建期
+        // 由 scripts/gen-content-options.mjs 从后台「标签管理」singleton 生成）。
         tags: fields.multiselect({
           label: '标签',
           options: TAG_OPTIONS,
@@ -443,10 +419,13 @@ export default config({
     // 为什么需要它：Keystatic 的 fields.select 的 options 只接受静态数组
     // （见 @keystatic/core 的 form/fields/select 签名 options: readonly Option[]），
     // 不支持运行时读取文件，因此无法直接把「分类列表」变成动态数据源。
-    // 折中做法：分类用一个可编辑的 singleton 来维护，文章表单仍用静态
-    // 下拉框（其选项由下方 CATEGORY_OPTIONS 同步），两者保持一致。
-    // 新增分类步骤：① 在此页添加一项 → ② 把同样的 label/value 加到
-    // keystatic.config.ts 的 CATEGORY_OPTIONS → ③ 提交并等自动部署。
+    // 解决方案：用本 singleton 维护分类，再由 scripts/gen-content-options.mjs
+    // 在 predev/prebuild 阶段构建期生成 CATEGORY_OPTIONS/TAG_OPTIONS（写入
+    // src/generated/content-options.ts），文章表单的下拉框 import 该生成模块。
+    // 新增分类步骤（只需在后台操作，无需改代码）：
+    //   ① 在此页「分类管理」添加一项并保存 →
+    //   ② 重启 dev 或重新构建（predev/prebuild 会重跑 codegen）→
+    //   ③ 文章编辑器的「分类」下拉即出现新选项；前台筛选条同步。
     categories: {
       label: '分类管理',
       schema: {
@@ -469,7 +448,16 @@ export default config({
             },
             { label: '分类' }
           ),
-          { label: '分类项' }
+          {
+            label: '分类项',
+            // 折叠态行标签：直接显示分类名，避免后台只显示「Item 1/2/3」让人找不到。
+            // itemLabel 收到的是该条目的 preview props：{ fields, onChange, schema }，
+            // 取 fields.label.value（或 labelEn 回退）。
+            itemLabel: (props) =>
+              (props.fields.label.value as string) ||
+              (props.fields.labelEn.value as string) ||
+              '未命名分类',
+          }
         ),
       },
     },
@@ -489,7 +477,13 @@ export default config({
             },
             { label: '标签' }
           ),
-          { label: '标签项' }
+          {
+            label: '标签项',
+            itemLabel: (props) =>
+              (props.fields.label.value as string) ||
+              (props.fields.labelEn.value as string) ||
+              '未命名标签',
+          }
         ),
       },
     },

@@ -3,6 +3,7 @@ import { defineConfig } from 'astro/config';
 import react from '@astrojs/react';
 import keystatic from '@keystatic/astro';
 import cloudflare from '@astrojs/cloudflare';
+import keystaticUiEnhance from './keystatic-ui-enhance.mjs';
 
 // 独立站平台：Astro + Keystatic + Cloudflare Pages
 // - output: 'static'（默认）-> 页面默认静态预渲染（快/免费/无限带宽）；
@@ -28,6 +29,8 @@ export default defineConfig({
   integrations: [
     react(),
     keystatic(), // 注入 /keystatic 后台与 /api/keystatic/* 接口
+    // 后台 UI 增强：把 multiselect（标签等）由单列改为多列，缩短编辑页
+    keystaticUiEnhance(),
   ],
   vite: {
     // ⚠️ 必须注入 __KEYSTATIC_USE_LOCAL__：keystatic.config.ts 同时跑在浏览器端

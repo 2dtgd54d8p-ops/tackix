@@ -262,7 +262,13 @@ export async function loadSiteData() {
 }
 
 /**
- * 生成只含有文章的筛选项。
+ * 生成筛选/浏览分类项。
+ *
+ * 列出「后台 · 分类管理」里的**全部**分类（含暂时没有文章的分类），使前台
+ * 浏览分类/筛选条与后台保持 1:1 同步——后台加了分类，前台就会出现，不再
+ * 「后台有、前台看不到」。空分类点进去由各页空态兜底
+ * （首页「该筛选下暂无文章。」/ 列表页「该分类下暂无文章。」）。
+ *
  * `uncategorized` 是系统内置分类，不在管理表里，但只要有文章未分类
  * 就必须出现在筛选条上，否则这些文章将无处可去。
  */
@@ -273,7 +279,7 @@ export function buildFilterOptions(posts: any[], categories: any[]) {
   return [
     { value: 'all', label: '全部' },
     ...(hasUncategorized ? [{ value: 'uncategorized', label: UNCATEGORIZED_LABEL }] : []),
-    ...categories.filter((c) => posts.some((p) => p.category === c.value)),
+    ...categories,
   ];
 }
 
