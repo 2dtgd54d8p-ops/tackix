@@ -4,7 +4,7 @@ import keystaticConfig from '../../../keystatic.config';
 import Base from '../../layouts/Base.astro';
 import { loadSiteData, loadContent, buildFilterOptions } from '../../lib/site-data';
 import { readingMinutes, coverSrc } from '../../lib/markdown';
-import { getLocale, pickB, type Locale } from '../../lib/i18n';
+import { getLocale, pickB, type Locale, type Bilingual } from '../../lib/i18n';
 
 const { locale: localeProp } = Astro.props;
 const locale: Locale = localeProp ?? getLocale(Astro);
@@ -40,46 +40,98 @@ withMeta.sort((a, b) => String(b.publishedAt ?? '').localeCompare(String(a.publi
 
 const { categories, categoryLabel, tagLabel } = await loadSiteData(locale);
 
-// 服务端分类筛选：?cat=value
-const activeCat = Astro.url.searchParams.get('cat') || 'all';
-const catOptions = buildFilterOptions(withMeta, categories);
-const filtered =
-  activeCat === 'all'
-    ? withMeta
-    : withMeta.filter((p) => (p.category ?? 'uncategorized') === activeCat);
+// 场景标签映射（scenario slug → 本地化名称），用于「按场景筛选」与卡片标注
+const scenarioMap = new Map<string, string>();
+try {
+  const sSlugs = await reader.collections.scenarios.list();
+  await Promise.all(
+    sSlugs.map(async (s: string) => {
+      try {
+        const sc: any = await reader.collections.scenarios.read(s);
+        if (sc && sc.published !== false)
+          scenarioMap.set(s, pickB(locale, (sc.name as Bilingual) ?? ({ zh: s, en: s } as Bilingual)));
+      } catch {
+        /* 忽略单个场景读取失败 */
+      }
+    })
+  );
+} catch {
+  /* 场景集合不可用时降级为无场景筛选 */
+}
+// 仅展示「确实有文章关联」的场景，避免出现空筛选项
+const usedScenarios = new Set(
+  withMeta.map((p: any) => p.scenario).filter((v: any) => v && v !== 'none')
+);
+const scenarioOptions = [
+  { value: 'all', label: locale === 'en' ? 'All scenarios' : '全部场景' },
+  ...[...scenarioMap.entries()]
+    .filter(([value]) => usedScenarios.has(value))
+    .map(([value, label]) => ({ value, label })),
+];
+const scenarioLabel = (v: string) => scenarioMap.get(v) || v;
 
-const sub = pages.knowledgeSub.replace('{n}', String(withMeta.length));
+// 服务端分类筛选项（链接式，SEO 友好）
+const catOptions = buildFilterOptions(withMeta, categories);
 ---
 
 <Base title={pages.knowledgeTitle} description={pages.knowledgeSub}>
   <section>
     <div class="page-head">
       <h1>{pages.knowledgeTitle}</h1>
-      <p>{sub}</p>
+      <p>
+        {pages.knowledgeSub.split('{n}')[0]}
+        <span id="kb-count">{withMeta.length}</span>
+        {pages.knowledgeSub.split('{n}')[1]}
+      </p>
     </div>
 
-    <!-- 分类筛选条：链接式，SEO 友好、零 JS -->
-    <div class="filter-bar" role="group" aria-label="Filter by category">
+    <!-- 场景筛选条：按 4 大场景定位推荐方案（客户端即时筛选，静态站也可用） -->
+    {
+      scenarioOptions.length > 1 && (
+        <div class="filter-bar kb-filter" role="group" aria-label={t('按场景筛选', 'Filter by scenario')}>
+          {scenarioOptions.map((s) => (
+            <button
+              type="button"
+              class="chip"
+              data-filter="scenario"
+              data-value={s.value}
+              aria-pressed="false"
+            >
+              {s.label}
+            </button>
+          ))}
+        </div>
+      )
+    }
+
+    <!-- 分类筛选条 -->
+    <div class="filter-bar kb-filter" role="group" aria-label={t('按分类筛选', 'Filter by category')}>
       {
         catOptions.map((c) => (
-          <a
-            class={c.value === activeCat ? 'chip is-active' : 'chip'}
-            href={c.value === 'all' ? `${lp}/knowledge` : `${lp}/knowledge?cat=${c.value}`}
-            aria-current={c.value === activeCat ? 'true' : undefined}
+          <button
+            type="button"
+            class="chip"
+            data-filter="cat"
+            data-value={c.value}
+            aria-pressed="false"
           >
             {c.label}
-          </a>
+          </button>
         ))
       }
     </div>
 
     {
-      filtered.length === 0 ? (
-        <p class="empty">{t('该分类下暂无文章。', 'No articles in this category yet.')}</p>
+      withMeta.length === 0 ? (
+        <p class="empty">{t('暂无文章。', 'No articles yet.')}</p>
       ) : (
-        <div class="grid">
-          {filtered.map((post) => (
-            <article class="card" data-category={post.category ?? 'uncategorized'}>
+        <div class="grid" id="kb-grid">
+          {withMeta.map((post) => (
+            <article
+              class="card"
+              data-category={post.category ?? 'uncategorized'}
+              data-scenario={post.scenario ?? 'none'}
+            >
               {coverSrc(post.cover) && (
                 <div class="card-media card-media-sm">
                   <img src={coverSrc(post.cover)} alt="" loading="lazy" />
@@ -91,9 +143,12 @@ const sub = pages.knowledgeSub.replace('{n}', String(withMeta.length));
                 </h3>
                 {post.excerpt && <p class="card-excerpt">{pickB(locale, post.excerpt)}</p>}
                 <div class="card-meta">
+                  {post.scenario && post.scenario !== 'none' && (
+                    <span class="tag tag-scenario">{scenarioLabel(post.scenario)}</span>
+                  )}
                   <span class="tag">{categoryLabel(post.category)}</span>
-                  {(post.tags ?? []).slice(0, 2).map((t: string) => (
-                    <span class="tag tag-plain">{tagLabel(t)}</span>
+                  {(post.tags ?? []).slice(0, 2).map((tg: string) => (
+                    <span class="tag tag-plain">{tagLabel(tg)}</span>
                   ))}
                   {post.publishedAt && <span>{post.publishedAt}</span>}
                   <span class="read-time">· {post.readMin}{t(' 分钟阅读', ' min read')}</span>
@@ -107,6 +162,64 @@ const sub = pages.knowledgeSub.replace('{n}', String(withMeta.length));
   </section>
 </Base>
 
+<script is:inline>
+  (function () {
+    var grid = document.getElementById('kb-grid');
+    if (!grid) return;
+    var chips = Array.prototype.slice.call(document.querySelectorAll('.kb-filter [data-filter]'));
+    var countEl = document.getElementById('kb-count');
+    var total = grid.querySelectorAll('.card').length;
+
+    function getParam(name) {
+      try {
+        return new URLSearchParams(location.search).get(name) || 'all';
+      } catch (e) {
+        return 'all';
+      }
+    }
+    var state = { cat: getParam('cat'), scenario: getParam('scenario') };
+
+    function apply() {
+      var cards = grid.querySelectorAll('.card');
+      var visible = 0;
+      cards.forEach(function (card) {
+        var okCat = state.cat === 'all' || card.getAttribute('data-category') === state.cat;
+        var okSc =
+          state.scenario === 'all' || card.getAttribute('data-scenario') === state.scenario;
+        var show = okCat && okSc;
+        card.style.display = show ? '' : 'none';
+        if (show) visible++;
+      });
+      if (countEl) countEl.textContent = String(visible);
+      chips.forEach(function (chip) {
+        var f = chip.getAttribute('data-filter');
+        var v = chip.getAttribute('data-value');
+        var active = state[f] === v;
+        chip.classList.toggle('is-active', active);
+        chip.setAttribute('aria-pressed', active ? 'true' : 'false');
+      });
+    }
+
+    chips.forEach(function (chip) {
+      chip.addEventListener('click', function () {
+        var f = chip.getAttribute('data-filter');
+        var v = chip.getAttribute('data-value');
+        state[f] = v;
+        var params = new URLSearchParams();
+        if (state.cat !== 'all') params.set('cat', state.cat);
+        if (state.scenario !== 'all') params.set('scenario', state.scenario);
+        var qs = params.toString();
+        try {
+          history.replaceState(null, '', qs ? location.pathname + '?' + qs : location.pathname);
+        } catch (e) {}
+        apply();
+      });
+    });
+
+    apply();
+  })();
+</script>
+
 <style>
   .filter-bar {
     display: flex;
@@ -115,6 +228,7 @@ const sub = pages.knowledgeSub.replace('{n}', String(withMeta.length));
     justify-content: center;
     margin: -8px 0 36px;
   }
+  .kb-filter:first-of-type { margin-top: 4px; }
   .chip {
     display: inline-flex;
     align-items: center;
@@ -123,14 +237,26 @@ const sub = pages.knowledgeSub.replace('{n}', String(withMeta.length));
     border-radius: var(--r-pill);
     background: var(--surface);
     color: var(--fg-soft);
+    font-family: inherit;
     font-size: 13px;
     font-weight: 500;
+    line-height: 1.2;
     text-decoration: none;
+    cursor: pointer;
+    -webkit-appearance: none;
+    appearance: none;
     transition: border-color var(--dur) var(--ease), color var(--dur) var(--ease),
       background var(--dur) var(--ease);
   }
   .chip:hover { border-color: var(--accent); color: var(--accent); text-decoration: none; }
   .chip.is-active { background: var(--accent); border-color: var(--accent); color: var(--on-accent); }
+  /* 场景徽章：用强调色区分「所属场景」，帮助访客一眼定位推荐方案 */
+  .tag-scenario {
+    background: var(--accent-soft);
+    color: var(--accent-strong);
+    border-color: color-mix(in srgb, var(--accent) 28%, transparent);
+  }
   .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 22px; }
+  .empty { text-align: center; color: var(--muted); padding: 44px 0; }
   @media (max-width: 700px) { .grid { grid-template-columns: minmax(0, 1fr); gap: 18px; } }
 </style>
