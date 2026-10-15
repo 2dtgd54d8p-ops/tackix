@@ -66,11 +66,7 @@ if (jsonLd && faqItems.length) {
 const customSections = normalizeSections(post?.customSections);
 // 选型逻辑要点 → HowTo（独立节点），争取步骤类富媒体结果
 const howTo = post
-  ? howToSchema(
-      locale,
-      pickB(locale, post.name),
-      (post.selectionLogic ?? []).map((p: any) => p?.point)
-    )
+  ? howToSchema(locale, pickB(locale, post.name), post.selectionLogic ?? [])
   : null;
 ---
 
@@ -120,7 +116,10 @@ const howTo = post
                 {post.selectionLogic.map((p: any) => (
                   <li>
                     <span class="dot" aria-hidden="true" />
-                    {pickB(locale, p.point)}
+                    <span class="logic-text">
+                      {pickB(locale, p.title) && <strong class="logic-title">{pickB(locale, p.title)}</strong>}
+                      {pickB(locale, p.point) && <span class="logic-desc">{pickB(locale, p.point)}</span>}
+                    </span>
                   </li>
                 ))}
               </ul>
@@ -269,6 +268,9 @@ const howTo = post
     border-radius: 50%;
     background: var(--accent);
   }
+  .logic-text { display: flex; flex-direction: column; gap: 3px; }
+  .logic-title { font-weight: 600; color: var(--fg); }
+  .logic-desc { color: var(--fg-soft); line-height: 1.6; }
 
   .article-body { margin-top: 24px; }
 

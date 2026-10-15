@@ -152,6 +152,10 @@ mould-resistant, tile-stone, expansion-joints, surface-prep, substrate, temperat
 > 适用：Application Pitfalls / Troubleshooting 类文章应充分利用 `pitfall` 标记；Selection Guide 类可只填操作步骤。
 
 Each article template (Markdown body **plus** the structured `steps` field above):
+
+> ⚠️ **FAQ 请用后台的 `faq` 字段填写**（自动生成 FAQPage 结构化数据），**正文里不要再写 `## FAQ`**，
+> 否则会与 FAQPage 重复。正文只写 Background / What you need to know。
+
 ```
 ## Background
 [1–2 sentences on the user's situation and the cost of getting it wrong]
@@ -160,10 +164,6 @@ Each article template (Markdown body **plus** the structured `steps` field above
 - [bullet: key principle 1]
 - [bullet: key principle 2]
 - [bullet: key principle 3]
-
-## FAQ
-**Q: [question]**
-A: [answer — also emitted as FAQPage structured data]
 
 # 结构化步骤（后台 Step-by-step 字段，非正文 Markdown）：
 #   step 1  title="清洁并干燥基面"  text="用无绒布拭净，确保无油无尘，完全干燥后再施工"
@@ -218,30 +218,42 @@ Certifications block: reuse `site.certBadges` (label + note) — e.g. ISO 9001 /
 确保前端展示、AI 抽取、Google 富媒体结果三者一致，避免「内容与结构化数据两张皮」。
 
 ### 8.1 字段 → 结构化数据映射
-| 后台字段 | 作用 | 产出的 Schema |
-|---|---|---|
-| `name`（双语） | 展示标题 | `Article.headline` |
-| `excerpt`（双语） | 摘要 | `Article.description` + `<meta name="description">` |
-| `publishedAt` | 发布日期 | `Article.datePublished` / `dateModified` |
-| `category` / `tags` | 分类 / 标签 | 内部筛选 + 页面关键词（Keywords） |
-| `conclusion`（场景方案） | 首句结论（答案前置） | 页面顶部高亮，强化 E-E-A-T |
-| `steps`（结构化步骤） | 操作要点 | **HowTo + HowToStep**（见下） |
-| `body`（Markdown） | 正文主体 | 页面主内容 |
-| `customSections`（自定义区块） | 标题/段落/图片/提示框/引用 | 页面结构化版式 |
-| `faq`（问答对） | 常见问题 | **FAQPage** |
+
+> **适用范围**：下表区分「知识文章（`knowledge` 集合）」与「场景方案（`scenarios` 集合）」。
+> 两类模板结构不同——**知识文章用 `steps` 驱动 HowTo，场景方案用 `selectionLogic` 驱动 HowTo**，
+> 请勿混用。
+
+| 后台字段 | 适用 | 作用 | 产出的 Schema |
+|---|---|---|---|
+| `name`（双语） | 文章 + 方案 | 展示标题 | `Article.headline` |
+| `excerpt`（双语） | 文章 + 方案 | 摘要 | `Article.description` + `<meta name="description">` |
+| `publishedAt` | 仅文章 | 发布日期 | `Article.datePublished` / `dateModified` |
+| `category` / `tags` | 仅文章 | 分类 / 标签 | 内部筛选 + 页面关键词（Keywords） |
+| `conclusion`（一句话结论） | 仅方案 | 首句结论（答案前置） | 页面顶部高亮，强化 E-E-A-T |
+| `steps`（结构化步骤） | 仅文章 | 操作要点（含 pitfall 避坑） | **HowTo + HowToStep**（见 §8.2） |
+| `selectionLogic`（选型逻辑要点） | 仅方案 | 选型要点（3–5 条，含标题+说明） | **HowTo + HowToStep**（见 §8.2） |
+| `body`（Markdown） | 文章 + 方案 | 正文主体 | 页面主内容 |
+| `customSections`（自定义区块） | 文章 + 方案 | 标题/段落/图片/提示框/引用 | 页面结构化版式 |
+| `faq`（问答对） | 文章 + 方案 | 常见问题 | **FAQPage** |
 
 ### 8.2 HowTo 规范（核心）
-- 用后台 **结构化 `steps` 字段** 写步骤，**不要**把步骤写成正文里的 Markdown 列表——
-  只有结构化 steps 才会生成 `HowTo` / `HowToStep` JSON-LD，被 Google 富媒体与 AI 直接抽取。
-- 每条 step 含 `title`（步骤名）+ `text`（说明）。
-- 勾选 `pitfall`（避坑）的条目以「施工避坑」警示区块渲染，**不计入** HowTo 编号步骤，
+
+两类内容都用**结构化字段**写步骤，**不要**把步骤写成正文里的 Markdown 列表——
+只有结构化字段才会生成 `HowTo` / `HowToStep` JSON-LD，被 Google 富媒体与 AI 直接抽取。
+
+- **知识文章（`knowledge`）**：用 `steps` 字段。每条含 `title`（步骤名）+ `text`（说明）。
+  勾选 `pitfall`（避坑）的条目以「施工避坑」警示区块渲染，**不计入** HowTo 编号步骤，
   避免把「不要做」混进步骤序列。
-- 输出形态：`Article`（`inLanguage`）+ `FAQPage` + `HowTo`（`inLanguage`）三块并列 JSON-LD。
+- **场景方案（`scenarios`）**：用 `selectionLogic` 字段（要点标题 + 要点说明）。每条要点
+  直接映射为一个 `HowToStep`（含 `name` + `text`），无需避坑拆分。
+
+- 输出形态：`Article`（`inLanguage`，**内嵌 `FAQPage` 作为 `mainEntity`**）+ 独立的 `HowTo`（`inLanguage`）
+  两段 JSON-LD。
 
 ### 8.3 写作规则（利于 AI / SEO 收录）
 1. **答案前置**：场景方案首句即结论（写进 `conclusion`），让 AI 摘要与搜索片段直接命中。
-2. **步骤结构化**：所有操作型内容走 `steps` 字段，而非纯文本。
-3. **问答成对**：FAQ 用「问题 → 答案」成对填写，自动生成 FAQPage。
+2. **步骤结构化**：操作型内容一律走结构化字段，而非纯文本——知识文章用 `steps`，场景方案用 `selectionLogic`（均生成 HowTo）。
+3. **问答成对**：FAQ 用「问题 → 答案」成对填写（后台 `faq` 字段），自动生成 FAQPage；**正文里不要再写 `## FAQ`**。
 4. **内部链接用描述性锚文本**：禁止「点击这里」；用「查看厨卫防霉方案」之类。
 5. **双语对齐**：每个 bi() 字段的 zh 与 en 都要填，保证 `/` 与 `/en` 两套内容完整。
 6. **每页独立 title / description**：列表与详情页 title 由路由 + `name` 自动拼装，

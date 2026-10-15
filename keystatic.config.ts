@@ -272,10 +272,14 @@ export default config({
           description:
             '例如：厨卫防霉防漏请选用耐持续浸水的防霉柔性密封胶。',
         }),
-        // 选型逻辑要点（3-5 条）
+        // 选型逻辑要点（3-5 条）：每条含「要点标题」+「要点说明」，
+        // 直接映射为场景页 HowTo 的 HowToStep（name=标题, text=说明）。
         selectionLogic: fields.array(
-          fields.object({ point: bi('要点') }, { label: '要点' }),
-          { label: '选型逻辑' }
+          fields.object({
+            title: bi('要点标题'),
+            point: bi('要点说明', { multiline: true }),
+          }, { label: '要点' }),
+          { label: '选型逻辑（驱动 HowTo）' }
         ),
         // 推荐产品占位（2-3 个），参数用占位符如 [movement capability] / [temperature range]
         recommendedProducts: fields.array(

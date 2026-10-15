@@ -70,23 +70,40 @@ export function organizationSchema(locale: Locale, site: SiteContact, base: URL)
  * （如场景方案的 selectionLogic[i].point）。无有效步骤返回 null，
  * 调用方据此决定是否注入 script。
  */
+export interface ScenarioPoint {
+  title?: { zh?: string; en?: string } | null;
+  point?: { zh?: string; en?: string } | null;
+}
+
+/**
+ * 把场景方案的「选型逻辑要点」映射为 HowTo 步骤。
+ * 每个要点含 `title`（双语，作 HowToStep.name）+ `point`（双语，作说明 text）。
+ * 与知识文章 howToFromSteps 区分：场景要点不区分 pitfall，每条都计入编号步骤。
+ * 无有效要点返回 null。
+ */
 export function howToSchema(
   locale: Locale,
   name: string,
-  points: Array<{ zh?: string; en?: string } | undefined | null>
+  points: Array<ScenarioPoint | undefined | null> | undefined | null
 ) {
   if (!points || !points.length) return null;
   const steps = points
-    .map((p) => (p ? pickB(locale, p as any) : ''))
-    .filter((text): text is string => !!text && text.trim().length > 0)
-    .map((text, i) => ({
-      '@type': 'HowToStep',
+    .map((p) => {
+      const t = p ? pickB(locale, (p as ScenarioPoint).title as any) : '';
+      const txt = p ? pickB(locale, (p as ScenarioPoint).point as any) : '';
+      return { title: (t || '').trim(), text: (txt || '').trim() };
+    })
+    .filter((s) => s.title || s.text)
+    .map((s, i) => ({
+      '@type': 'HowToStep' as const,
       position: i + 1,
-      text: text.trim(),
+      ...(s.title ? { name: s.title } : {}),
+      // schema.org 的 HowToStep.text 为必填；name 已作步骤名时 text 仍保留完整说明
+      text: s.text || s.title,
     }));
   if (!steps.length) return null;
   return {
-    '@type': 'HowTo',
+    '@type': 'HowTo' as const,
     name,
     inLanguage: inLanguage(locale),
     step: steps,
