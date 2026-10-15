@@ -1,29 +1,27 @@
-# ── 联系方式（P0-3）────────────────────────────────────────────────
-# ⚠️ 以下为**占位值**，请在后台 /keystatic →「站点信息」替换为真实信息后再正式上线。
-# 留空的字段会自动从页面隐藏，不会渲染空链接；但全部留空会让联系页只剩表单，
-# 而预上线期表单是关闭的 —— 等于没有转化入口，因此至少要填 email 或 whatsapp。
-#
-# 字段说明：
-#   email           商务邮箱（询盘主通道，建议用与公司域名一致的邮箱，
-#                   避免用个人邮箱影响 B2B 买家的信任判断）
-#   company         公司全称，影响资质审核，建议与营业执照/注册名一致
-#   phone           联系电话（部分东南亚采购流程要求提供）
-#   address         办公地址（工程/采购流程常需登记供应商地址）
-#   hours           营业时间（海外买家判断能否及时回复）
-#   whatsapp        WhatsApp 号码，**仅数字含国家码**，如 6598765432（新加坡 +65）
-#   whatsappPrefill WhatsApp 预填话术，点开对话框即自动带上，提高回复率
-#   wechat          微信号（中文买家常用即时通讯渠道）；占位值，上线前替换
 info:
-  # 站点基础信息（标题/描述/标语占整行）
-  title: Tackix
-  description: 'Tackix 是面向工业胶粘剂与密封剂行业的垂直平台，提供产品数据库、选型工具、技术文章与案例库，支持多语言与在线询盘。'
-  tagline: '工业胶粘剂与密封剂 · 选型 · 技术 · 询盘'
-  # 联系方式（两两并排）
-  email: 'jccker@gmail.com'
+  title:
+    zh: Tackix
+    en: Tackix
+  description:
+    zh: Tackix 是面向海外承包商、安装商与 DIY 用户的场景化工业胶粘剂与密封剂选型知识平台——提供场景方案、应用知识与直接询盘。
+    en: >-
+      Tackix helps overseas contractors, installers and DIY users choose the right industrial adhesive or sealant for
+      the job — with scenario-based guides, application know-how and direct inquiry.
+  tagline:
+    zh: 工业胶粘剂与密封剂 · 选型 · 技术 · 询盘
+    en: Industrial adhesives & sealants · selection · technology · inquiry
+  email: jccker@gmail.com
   company: ''
   phone: ''
   whatsapp: ''
-  wechat: 'Tackix_Sales'
   address: ''
-  hours: 'Mon-Fri 09:00-18:00 (GMT+8)'
-  whatsappPrefill: 'Hello, I would like a quotation for industrial adhesives. Could you share TDS/SDS and technical support?'
+  hours: Mon-Fri 09:00-18:00 (GMT+8)
+  whatsappPrefill: Hello, I would like a quotation for industrial adhesives. Could you share TDS/SDS and technical support?
+trust:
+  trustTitle:
+    zh: 为什么选择我们
+    en: Why Tackix
+  trustSub:
+    zh: 以场景为先的选型知识，让每一次材料指定都透明、高效、可信赖。
+    en: Scenario-first selection knowledge that makes every specification transparent, efficient and trustworthy.
+certBadges: []

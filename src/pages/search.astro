@@ -1,12 +1,17 @@
 ---
 import Base from '../layouts/Base.astro';
+import { getLocale, type Locale } from '../lib/i18n';
+
+const { locale: localeProp } = Astro.props;
+const locale: Locale = localeProp ?? getLocale(Astro);
+const t = (zh: string, en: string) => (locale === 'en' ? en : zh);
 ---
 
-<Base title="搜索">
+<Base title={t('搜索', 'Search')}>
   <section>
     <div class="page-head">
-      <h1>搜索</h1>
-      <p>输入关键词检索站内文章（索引由 Pagefind 在构建时生成）。</p>
+      <h1>{t('搜索', 'Search')}</h1>
+      <p>{t('按关键词搜索全站内容（索引由 Pagefind 在构建时生成）。', 'Search the site by keyword (index built by Pagefind at build time).')}</p>
     </div>
     <link rel="stylesheet" href="/pagefind/pagefind-ui.css" />
     <div id="search"></div>
@@ -21,8 +26,8 @@ import Base from '../layouts/Base.astro';
       element: '#search',
       showSubResults: true,
       translations: {
-        placeholder: '搜索文章…',
-        zero_results: '没有找到与 [SEARCH_TERM] 相关的内容',
+        placeholder: t('搜索文章与方案…', 'Search articles and solutions…'),
+        zero_results: t('未找到与 [SEARCH_TERM] 相关的结果', 'No results for [SEARCH_TERM]'),
       },
     });
     // 顶栏常驻搜索框提交到 /search?q=… 后，自动执行该查询并回填输入框

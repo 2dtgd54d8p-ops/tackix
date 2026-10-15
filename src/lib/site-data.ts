@@ -1,8 +1,12 @@
 /**
- * 站点公共数据读取（构建期使用）
+ * 站点公共数据读取（构建期使用，全站中英双语）
  * ---------------------------------------------------------------
- * 分类 / 标签 / 应用场景 / 决策阶段 / 站点信息都来自 Keystatic singleton
- * （后台可增删改），各页面统一从此处读取，避免每个页面各写一份映射逻辑。
+ * 分类 / 标签 / 站点信息都来自 Keystatic singleton（后台可增删改），
+ * 各页面统一从此处读取，避免每个页面各写一份映射逻辑。
+ *
+ * 多语言形态：所有「展示文案」字段均为 Bilingual 对象 { zh, en }。
+ * 页面调用 loadSiteData(locale) / loadContent(locale) 时按当前语种取出
+ * 已落定的纯字符串，后台任意字段留空即回落 DEFAULT_* 默认值。
  *
  * 为什么不用 fields.select 的动态选项：Keystatic 的 select 签名是
  * `options: readonly Option[]`（见 @keystatic/core form/fields/select），
@@ -11,143 +15,49 @@
  */
 import { createReader } from '@keystatic/core/reader';
 import keystaticConfig from '../../keystatic.config';
+import { pickB, DEFAULT_LOCALE } from './i18n';
+import type { Bilingual, Locale } from './i18n';
 
-export const DEFAULT_CATEGORIES = [
-  { label: '技术', labelEn: 'Technology', value: 'tech' },
-  { label: '产品', labelEn: 'Products', value: 'product' },
-  { label: '随笔', labelEn: 'Notes', value: 'notes' },
+// 重新导出，方便页面从本模块直接取用
+export { pickB } from './i18n';
+export type { Bilingual, Locale } from './i18n';
+
+// 知识库分类（3 个子分类）：与后台「分类管理」singleton 对齐（双语）。
+// 后台未配置时回退到此默认值。
+export const DEFAULT_CATEGORIES: { label: Bilingual; value: string }[] = [
+  { label: { zh: '选型指南', en: 'Selection Guide' }, value: 'selection-guide' },
+  { label: { zh: '应用避坑', en: 'Application Pitfalls' }, value: 'application-pitfalls' },
+  { label: { zh: '故障排查', en: 'Troubleshooting' }, value: 'troubleshooting' },
 ];
 
-// 与后台「标签管理」singleton 对齐（原为博客默认值 astro/cloudflare/keystatic/tutorial，
-// 已更正为真实标签，避免 singleton 为空时回退到错误标签）。
-export const DEFAULT_TAGS = [
-  { label: '选型指南', labelEn: 'Selection Guide', value: 'selection-guide' },
-  { label: '环氧胶', labelEn: 'Epoxy', value: 'epoxy' },
-  { label: '聚氨酯胶', labelEn: 'Polyurethane', value: 'polyurethane' },
-  { label: '硅酮密封胶', labelEn: 'Silicone Sealant', value: 'silicone-sealant' },
-  { label: 'UV 固化胶', labelEn: 'UV Adhesive', value: 'uv-adhesive' },
-  { label: '瞬干胶', labelEn: 'Cyanoacrylate', value: 'cyanoacrylate' },
-  { label: '厌氧胶', labelEn: 'Anaerobic', value: 'anaerobic' },
-  { label: '热熔胶', labelEn: 'Hot Melt', value: 'hotmelt' },
-  { label: '基材粘接', labelEn: 'Substrate Bonding', value: 'substrate' },
-  { label: '表面处理', labelEn: 'Surface Treatment', value: 'surface-treatment' },
-  { label: '结构粘接', labelEn: 'Structural Bonding', value: 'structural-bonding' },
-  { label: '密封防水', labelEn: 'Sealing & Waterproofing', value: 'sealing' },
-  { label: '耐温耐候', labelEn: 'Heat & Weather Resistance', value: 'temperature-weather' },
-  { label: '电子封装', labelEn: 'Electronics Encapsulation', value: 'electronics' },
-  { label: '汽车制造', labelEn: 'Automotive', value: 'automotive' },
-  { label: '新能源', labelEn: 'New Energy', value: 'new-energy' },
-  { label: '建筑工程', labelEn: 'Construction', value: 'construction' },
-  { label: '包装印刷', labelEn: 'Packaging & Printing', value: 'packaging' },
-  { label: '医疗器械', labelEn: 'Medical Devices', value: 'medical' },
-  { label: '常见问题', labelEn: 'FAQ', value: 'faq' },
-];
-
-// 应用场景（胶粘剂/密封剂典型行业）—— 与 keystatic.config 的 SCENARIO_OPTIONS 保持一致
-export const DEFAULT_SCENARIOS = [
-  { label: '电子封装', value: 'electronics' },
-  { label: '汽车制造', value: 'automotive' },
-  { label: '新能源', value: 'newenergy' },
-  { label: '建筑工程', value: 'construction' },
-  { label: '包装印刷', value: 'packaging' },
-  { label: '医疗器械', value: 'medical' },
-  { label: '通用工业', value: 'general' },
-];
-
-// 决策阶段（内容按买家旅程组织：认知 → 评估 → 决策）
-export const DEFAULT_STAGES = [
-  { label: '认知阶段', value: 'awareness' },
-  { label: '评估阶段', value: 'consideration' },
-  { label: '决策阶段', value: 'decision' },
-];
-
-export const DEFAULT_STAGES_EN = [
-  { label: 'Awareness', value: 'awareness' },
-  { label: 'Consideration', value: 'consideration' },
-  { label: 'Decision', value: 'decision' },
-];
-
-// 产品类型（胶粘剂化学体系）—— 与 keystatic.config 的 PRODUCT_CATEGORY_OPTIONS 保持一致
-export const DEFAULT_PRODUCT_CATEGORIES = [
-  { label: '环氧树脂胶', value: 'epoxy' },
-  { label: '聚氨酯胶', value: 'polyurethane' },
-  { label: '丙烯酸胶', value: 'acrylic' },
-  { label: '硅胶/硅酮', value: 'silicone' },
-  { label: '瞬干胶(氰基丙烯酸酯)', value: 'cyanoacrylate' },
-  { label: 'UV 胶', value: 'uv' },
-  { label: '厌氧胶', value: 'anaerobic' },
-  { label: '热熔胶', value: 'hotmelt' },
-];
-
-// 产品认证 —— 与 keystatic.config 的 CERT_OPTIONS 保持一致
-export const DEFAULT_CERTS = [
-  { label: 'RoHS', value: 'rohs' },
-  { label: 'REACH', value: 'reach' },
-  { label: 'UL', value: 'ul' },
-  { label: 'FDA', value: 'fda' },
-  { label: 'NSF', value: 'nsf' },
-  { label: 'ISO 9001', value: 'iso9001' },
-  { label: '无卤', value: 'halogen-free' },
-];
-
-// 固化方式 —— 与 keystatic.config 的 CURE_OPTIONS 保持一致
-export const DEFAULT_CURE = [
-  { label: '室温固化', value: 'rt' },
-  { label: '加热固化', value: 'heat' },
-  { label: 'UV 固化', value: 'uv' },
-  { label: '湿气固化', value: 'moisture' },
-  { label: '双组分混合', value: '2k' },
-];
-
-// ── 英文内容映射（T12 补充）：产品规格值（化学体系/场景/固化/认证）的英文展示名。
-//    这些下拉选项在 keystatic.config 里是静态数组、且必须与英文站一致，故此处用静态
-//    默认值即可（后台改分类/标签不影响产品规格体系值）。值必须与 DEFAULT_* 的 value 对齐。
-export const DEFAULT_PRODUCT_CATEGORIES_EN = [
-  { label: 'Epoxy Adhesive', value: 'epoxy' },
-  { label: 'Polyurethane Adhesive', value: 'polyurethane' },
-  { label: 'Acrylic Adhesive', value: 'acrylic' },
-  { label: 'Silicone Sealant', value: 'silicone' },
-  { label: 'Cyanoacrylate (Instant)', value: 'cyanoacrylate' },
-  { label: 'UV Adhesive', value: 'uv' },
-  { label: 'Anaerobic Adhesive', value: 'anaerobic' },
-  { label: 'Hot Melt Adhesive', value: 'hotmelt' },
-];
-
-export const DEFAULT_SCENARIOS_EN = [
-  { label: 'Electronics Encapsulation', value: 'electronics' },
-  { label: 'Automotive', value: 'automotive' },
-  { label: 'New Energy', value: 'newenergy' },
-  { label: 'Construction', value: 'construction' },
-  { label: 'Packaging', value: 'packaging' },
-  { label: 'Medical Devices', value: 'medical' },
-  { label: 'General Industry', value: 'general' },
-];
-
-export const DEFAULT_CURE_EN = [
-  { label: 'Room Temperature', value: 'rt' },
-  { label: 'Heat Cure', value: 'heat' },
-  { label: 'UV Cure', value: 'uv' },
-  { label: 'Moisture Cure', value: 'moisture' },
-  { label: 'Two-Part Mix', value: '2k' },
-];
-
-// 认证英文展示名（RoHS/REACH 等本身即国际通用写法，保持原值）
-export const DEFAULT_CERTS_EN = [
-  { label: 'RoHS', value: 'rohs' },
-  { label: 'REACH', value: 'reach' },
-  { label: 'UL', value: 'ul' },
-  { label: 'FDA', value: 'fda' },
-  { label: 'NSF', value: 'nsf' },
-  { label: 'ISO 9001', value: 'iso9001' },
-  { label: 'Halogen-Free', value: 'halogen-free' },
+// 与后台「标签管理」singleton 对齐（双语）。
+export const DEFAULT_TAGS: { label: Bilingual; value: string }[] = [
+  { label: { zh: '硅酮密封胶', en: 'Silicone Sealant' }, value: 'silicone-sealant' },
+  { label: { zh: '聚氨酯', en: 'Polyurethane' }, value: 'polyurethane' },
+  { label: { zh: '环氧', en: 'Epoxy' }, value: 'epoxy' },
+  { label: { zh: 'MS 聚合物', en: 'MS Polymer' }, value: 'ms-polymer' },
+  { label: { zh: '防水', en: 'Waterproofing' }, value: 'waterproofing' },
+  { label: { zh: '防霉', en: 'Mould Resistance' }, value: 'mould-resistant' },
+  { label: { zh: '瓷砖与石材', en: 'Tile & Stone' }, value: 'tile-stone' },
+  { label: { zh: '伸缩缝', en: 'Expansion Joints' }, value: 'expansion-joints' },
+  { label: { zh: '表面处理', en: 'Surface Prep' }, value: 'surface-prep' },
+  { label: { zh: '基材', en: 'Substrate' }, value: 'substrate' },
+  { label: { zh: '温度', en: 'Temperature' }, value: 'temperature' },
+  { label: { zh: 'DIY', en: 'DIY' }, value: 'diy' },
+  { label: { zh: '专业', en: 'Professional' }, value: 'professional' },
 ];
 
 export const DEFAULT_SITE = {
-  title: 'Tackix',
-  description:
-    'Tackix 是面向工业胶粘剂与密封剂行业的垂直平台，提供产品数据库、选型工具、技术文章与案例库，支持多语言与在线询盘。',
-  tagline: '工业胶粘剂与密封剂 · 选型 · 技术 · 询盘',
-  // 联系方式（P0-3）：默认值全为空，前台会隐藏对应入口，需在后台「站点信息」填写
+  title: { zh: 'Tackix', en: 'Tackix' } as Bilingual,
+  description: {
+    zh: 'Tackix 是面向海外承包商、安装商与 DIY 用户的场景化工业胶粘剂与密封剂选型知识平台——提供场景方案、应用知识与直接询盘。',
+    en: 'Tackix helps overseas contractors, installers and DIY users choose the right industrial adhesive or sealant for the job — with scenario-based guides, application know-how and direct inquiry.',
+  } as Bilingual,
+  tagline: {
+    zh: '工业胶粘剂与密封剂 · 选型 · 技术 · 询盘',
+    en: 'Industrial adhesives & sealants · selection · technology · inquiry',
+  } as Bilingual,
+  // 联系方式默认值全为空，前台会隐藏对应入口，需在后台「站点信息」填写
   email: '',
   company: '',
   phone: '',
@@ -155,18 +65,26 @@ export const DEFAULT_SITE = {
   hours: '',
   whatsapp: '',
   whatsappPrefill: '',
-  wechat: '',
 };
 
-const UNCATEGORIZED_LABEL = '未分类';
+const UNCATEGORIZED_LABEL: Record<Locale, string> = {
+  zh: '未分类',
+  en: 'Uncategorized',
+};
+export function uncategorizedLabel(locale: Locale): string {
+  return UNCATEGORIZED_LABEL[locale] ?? UNCATEGORIZED_LABEL[DEFAULT_LOCALE];
+}
 
 /** 读 singleton；任一失败都静默回落到默认值，保证构建不中断 */
-export async function loadSiteData() {
+export async function loadSiteData(locale: Locale = DEFAULT_LOCALE) {
   const reader = createReader(process.cwd(), keystaticConfig);
 
   let categories = DEFAULT_CATEGORIES;
   let tags = DEFAULT_TAGS;
   let site = { ...DEFAULT_SITE };
+  let trustTitle: Bilingual = { zh: '', en: '' };
+  let trustSub: Bilingual = { zh: '', en: '' };
+  let certBadges: { label: Bilingual; note: Bilingual }[] = [];
 
   try {
     const [cat, tag, s] = await Promise.all([
@@ -175,25 +93,26 @@ export async function loadSiteData() {
       reader.singletons.site.read().catch(() => null),
     ]);
 
-    const catItems = cat?.items?.filter((c) => c?.value && c?.label);
+    const catItems = cat?.items?.filter((c: any) => c?.value && c?.label);
     if (catItems?.length)
-      categories = catItems.map((c) => ({ label: c.label, labelEn: c.labelEn || c.label, value: c.value }));
+      categories = catItems.map((c: any) => ({
+        label: c.label as Bilingual,
+        value: c.value,
+      }));
 
-    const tagItems = tag?.items?.filter((t) => t?.value && t?.label);
+    const tagItems = tag?.items?.filter((t: any) => t?.value && t?.label);
     if (tagItems?.length)
-      tags = tagItems.map((t) => ({ label: t.label, labelEn: t.labelEn || t.label, value: t.value }));
+      tags = tagItems.map((t: any) => ({ label: t.label as Bilingual, value: t.value }));
 
     if (s) {
-      // ⚠️ 这里必须**逐字段列出** singleton 的所有字段：Keystatic 的 read()
-      // 返回的就是 YAML 原样，新增字段若不显式透传就会被静默丢弃
-      // （P0-3 加联系字段时踩过：只有 whatsapp 生效，email/phone 等全部为 undefined）。
-      // 字段已分组进 info 对象（横排栅格），用 info ?? s 兼容迁移前后的数据。
+      // ⚠️ 必须逐字段列出 singleton 的所有字段：Keystatic 的 read() 返回的就是 YAML 原样，
+      // 新增字段若不显式透传就会被静默丢弃。字段已分组进 info/trust 对象（横排栅格），
+      // 用 info ?? s 兼容迁移前后的数据。
       const info = s.info ?? s;
       site = {
-        title: info.title || DEFAULT_SITE.title,
-        description: info.description || DEFAULT_SITE.description,
-        tagline: info.tagline || DEFAULT_SITE.tagline,
-        // 联系方式（P0-3）：留空即为空串，前台据此隐藏对应入口
+        title: info.title as Bilingual,
+        description: info.description as Bilingual,
+        tagline: info.tagline as Bilingual,
         email: info.email || '',
         company: info.company || '',
         phone: info.phone || '',
@@ -201,63 +120,52 @@ export async function loadSiteData() {
         hours: info.hours || '',
         whatsapp: info.whatsapp || '',
         whatsappPrefill: info.whatsappPrefill || '',
-        wechat: info.wechat || '',
       };
+      const trust = s.trust ?? {};
+      trustTitle = (trust.trustTitle as Bilingual) ?? { zh: '', en: '' };
+      trustSub = (trust.trustSub as Bilingual) ?? { zh: '', en: '' };
+      certBadges = (s.certBadges ?? [])
+        .filter((b: any) => b?.label)
+        .map((b: any) => ({
+          label: b.label as Bilingual,
+          note: (b.note ?? '') as Bilingual,
+        }));
     }
   } catch (e) {
     console.warn('[build] 读取站点数据失败，使用默认值：', e);
   }
 
   const categoryMap = new Map(categories.map((c) => [c.value, c.label]));
-  const categoryEnMap = new Map(categories.map((c) => [c.value, c.labelEn]));
   const tagMap = new Map(tags.map((t) => [t.value, t.label]));
-  const tagEnMap = new Map(tags.map((t) => [t.value, t.labelEn]));
-  const scenarioMap = new Map(DEFAULT_SCENARIOS.map((c) => [c.value, c.label]));
-  const stageMap = new Map(DEFAULT_STAGES.map((c) => [c.value, c.label]));
-  const stageEnMap = new Map(DEFAULT_STAGES_EN.map((c) => [c.value, c.label]));
-  const productCategoryMap = new Map(DEFAULT_PRODUCT_CATEGORIES.map((c) => [c.value, c.label]));
-  const certMap = new Map(DEFAULT_CERTS.map((c) => [c.value, c.label]));
-  const cureMap = new Map(DEFAULT_CURE.map((c) => [c.value, c.label]));
-
-  // 英文标签映射（T12 补充）：供 /en 页面渲染规格值的英文展示名
-  const productCategoryEnMap = new Map(DEFAULT_PRODUCT_CATEGORIES_EN.map((c) => [c.value, c.label]));
-  const scenarioEnMap = new Map(DEFAULT_SCENARIOS_EN.map((c) => [c.value, c.label]));
-  const certEnMap = new Map(DEFAULT_CERTS_EN.map((c) => [c.value, c.label]));
-  const cureEnMap = new Map(DEFAULT_CURE_EN.map((c) => [c.value, c.label]));
 
   return {
-    site,
-    categories,
-    tags,
-    /** 分类值 -> 中文名；未登记的值兜底为「未分类」，不把英文原值暴露给访客 */
+    site: {
+      title: pickB(locale, site.title) || 'Tackix',
+      description: pickB(locale, site.description) || '',
+      tagline: pickB(locale, site.tagline) || '',
+      email: site.email,
+      company: site.company,
+      phone: site.phone,
+      address: site.address,
+      hours: site.hours,
+      whatsapp: site.whatsapp,
+      whatsappPrefill: site.whatsappPrefill,
+      trustTitle: pickB(locale, trustTitle),
+      trustSub: pickB(locale, trustSub),
+      certBadges: certBadges.map((b) => ({
+        label: pickB(locale, b.label),
+        note: pickB(locale, b.note),
+      })),
+    },
+    categories: categories.map((c) => ({ value: c.value, label: pickB(locale, c.label) })),
+    tags: tags.map((t) => ({ value: t.value, label: pickB(locale, t.label) })),
+    /** 分类值 -> 显示名；未登记的值兜底为「未分类 / Uncategorized」 */
     categoryLabel: (v: string | undefined) => {
       const key = v ?? 'uncategorized';
-      return key === 'uncategorized' ? UNCATEGORIZED_LABEL : categoryMap.get(key) ?? UNCATEGORIZED_LABEL;
+      if (key === 'uncategorized') return uncategorizedLabel(locale);
+      return pickB(locale, categoryMap.get(key)) || key;
     },
-    categoryLabelEn: (v: string | undefined) => {
-      const key = v ?? 'uncategorized';
-      return key === 'uncategorized' ? 'Uncategorized' : categoryEnMap.get(key) || categoryMap.get(key) || 'Uncategorized';
-    },
-    tagLabel: (v: string) => tagMap.get(v) ?? v,
-    tagLabelEn: (v: string) => tagEnMap.get(v) || tagMap.get(v) || v,
-    /** 应用场景值 -> 中文名（空值返回空串，便于调用方判断是否有值） */
-    scenarioLabel: (v: string | undefined) => (v ? scenarioMap.get(v) ?? '' : ''),
-    /** 决策阶段值 -> 中文名 */
-    stageLabel: (v: string | undefined) => (v ? stageMap.get(v) ?? '' : ''),
-    stageLabelEn: (v: string | undefined) => (v ? stageEnMap.get(v) ?? v : ''),
-    /** 决策阶段值 -> 英文名 */
-    stageLabelEn: (v: string | undefined) => (v ? stageEnMap.get(v) ?? v : ''),
-    /** 产品类型值 -> 中文名（空值返回空串） */
-    productCategoryLabel: (v: string | undefined) => (v ? productCategoryMap.get(v) ?? '' : ''),
-    /** 认证值 -> 中文名（空值返回原值） */
-    certLabel: (v: string) => certMap.get(v) ?? v,
-    /** 固化方式值 -> 中文名（空值返回空串） */
-    cureLabel: (v: string | undefined) => (v ? cureMap.get(v) ?? '' : ''),
-    // ── 英文标签函数（T12 补充，供 /en 页面使用）──────────────────────
-    productCategoryLabelEn: (v: string | undefined) => (v ? productCategoryEnMap.get(v) ?? v : ''),
-    scenarioLabelEn: (v: string | undefined) => (v ? scenarioEnMap.get(v) ?? v : ''),
-    certLabelEn: (v: string) => certEnMap.get(v) ?? v,
-    cureLabelEn: (v: string | undefined) => (v ? cureEnMap.get(v) ?? v : ''),
+    tagLabel: (v: string) => pickB(locale, tagMap.get(v)) || v,
   };
 }
 
@@ -265,260 +173,210 @@ export async function loadSiteData() {
  * 生成筛选/浏览分类项。
  *
  * 列出「后台 · 分类管理」里的**全部**分类（含暂时没有文章的分类），使前台
- * 浏览分类/筛选条与后台保持 1:1 同步——后台加了分类，前台就会出现，不再
- * 「后台有、前台看不到」。空分类点进去由各页空态兜底
- * （首页「该筛选下暂无文章。」/ 列表页「该分类下暂无文章。」）。
- *
- * `uncategorized` 是系统内置分类，不在管理表里，但只要有文章未分类
- * 就必须出现在筛选条上，否则这些文章将无处可去。
+ * 浏览分类/筛选条与后台保持 1:1 同步。空分类点进去由各页空态兜底。
  */
-export function buildFilterOptions(posts: any[], categories: any[]) {
+export function buildFilterOptions(
+  posts: any[],
+  categories: { value: string; label: string }[],
+  locale: Locale = DEFAULT_LOCALE
+) {
   const hasUncategorized = posts.some(
     (p) => (p.category ?? 'uncategorized') === 'uncategorized'
   );
   return [
-    { value: 'all', label: '全部' },
-    ...(hasUncategorized ? [{ value: 'uncategorized', label: UNCATEGORIZED_LABEL }] : []),
+    { value: 'all', label: locale === 'en' ? 'All' : '全部' },
+    ...(hasUncategorized
+      ? [{ value: 'uncategorized', label: uncategorizedLabel(locale) }]
+      : []),
     ...categories,
   ];
 }
 
-export { UNCATEGORIZED_LABEL };
-
 // ═══════════════════════════════════════════════════════════════════════════
-// T13：全站静态文案默认值（后台未填时使用），中英双语。
+// 全站静态文案默认值（后台未填时使用），全双语（zh + en）。
 // 与前端各页面当前硬编码文案保持一致，保证「后台不填也不空页」，且后台可编辑。
 // ═══════════════════════════════════════════════════════════════════════════
 
-type Bilingual = { zh: string; en: string };
-const p = (zh: string, en: string): Bilingual => ({ zh, en });
-
 // 首页
 const HOME_DEFAULT: Record<string, Bilingual> = {
-  heroEyebrow: p('工业胶粘剂与密封剂 · 选型 · 技术 · 询盘', 'Industrial Adhesives & Sealants · Selection · Technology · Inquiry'),
-  heroCta1: p('探索解决方案', 'Explore Solutions'),
-  heroCta2: p('联系我们报价', 'Contact Us for Quotation'),
-  solutionsTitle: p('解决方案', 'Solutions'),
-  solutionsSub: p('从产品选型到落地应用，一站式找到适合的胶粘剂方案', 'From product selection to real-world application — find the right adhesive solution in one place'),
-  browseTitle: p('浏览分类', 'Browse by Category'),
-  browseSub: p('按主题快速找到你感兴趣的内容', 'Quickly find content by topic'),
-  featuredTitle: p('精选推荐', 'Editor’s Picks'),
-  featuredSub: p('值得优先一读的文章', 'Articles worth reading first'),
-  latestTitle: p('最新文章', 'Latest Articles'),
-  latestSub: p('持续记录，持续更新', 'Continuously documented and updated'),
-  tagsTitle: p('热门标签', 'Popular Tags'),
-  tagsSub: p('点击标签，查看同主题文章', 'Click a tag to see related articles'),
-  bandTitle: p('需要选型建议？', 'Need a selection recommendation?'),
-  bandSub: p('面向工业胶粘剂与密封剂行业的垂直平台，提供产品、选型、技术与案例。', 'A vertical platform for the industrial adhesive & sealant industry — products, selection, technology and cases.'),
-  bandCta1: p('联系我们获取报价', 'Contact Us for Quotation'),
-  bandCta2: p('浏览技术文章', 'Browse Technical Articles'),
+  heroEyebrow: { zh: '场景化材料选型，化繁为简', en: 'Scenario-based material selection, made simple' },
+  heroCta1: { zh: '浏览解决方案', en: 'Explore solutions' },
+  heroCta2: { zh: '联系我们报价', en: 'Contact us for quotation' },
+  scenariosTitle: { zh: '场景解决方案', en: 'Scenario Solutions' },
+  scenariosSub: {
+    zh: '四大高频场景，每个都给出明确推荐、推荐理由与可询盘的产品。',
+    en: 'Four high-frequency jobs, each with a clear recommendation, the reasoning behind it, and products to ask about.',
+  },
+  knowledgeTitle: { zh: '知识库', en: 'Knowledge Base' },
+  knowledgeSub: {
+    zh: '面向真实工况的胶粘剂与密封剂选型指南、避坑与排障。',
+    en: 'Guides, pitfalls and troubleshooting for real-world adhesive & sealant jobs.',
+  },
+  bandTitle: { zh: '需要量身定制的选型建议？', en: 'Need a tailored recommendation?' },
+  bandSub: {
+    zh: '告诉我们您的基材、工况与用量，我们的工程师会推荐合适型号并报价。',
+    en: 'Tell us your substrates, conditions and volume — our engineers will recommend a grade and quote.',
+  },
+  bandCta1: { zh: '联系我们报价', en: 'Contact us for quotation' },
+  bandCta2: { zh: '浏览知识库', en: 'Browse the Knowledge Base' },
 };
 
-const HOME_CARDS_DEFAULT: { title: Bilingual; desc: Bilingual; cta: Bilingual; href: string }[] = [
-  { title: p('产品数据库', 'Product Database'), desc: p('按化学体系、固化方式与认证筛选工业胶粘剂与密封剂，查看关键参数与文档。', 'Filter industrial adhesives & sealants by chemistry, cure and certification; review key specs and docs.'), cta: p('浏览胶粘剂产品库', 'Browse the adhesive product library'), href: '/products' },
-  { title: p('选型工具', 'Selection Tool'), desc: p('根据应用场景、固化需求与基材自动推荐匹配的胶型，快速缩小选型范围。', 'Auto-recommend matching adhesive types from application, cure needs and substrates to narrow your shortlist.'), cta: p('开始在线选型', 'Start online selection'), href: '/selector' },
-  { title: p('应用案例', 'Application Cases'), desc: p('看同行如何在新能源、电子、汽车等场景落地胶粘剂方案与选型结果。', 'See how peers deploy adhesive solutions across new energy, electronics, automotive and more.'), cta: p('查看应用案例', 'View application cases'), href: '/cases' },
-  { title: p('在线询盘', 'Online Inquiry'), desc: p('提供应用场景与技术要求，获取针对性选型建议、样品与技术文档。', 'Share your application and requirements to get tailored selection advice, samples and technical docs.'), cta: p('获取选型建议与报价', 'Get advice & quotation'), href: '/contact' },
-];
-
-// 全局界面
 const UI_NAV_DEFAULT: { label: Bilingual; href: string }[] = [
-  { label: p('首页', 'Home'), href: '/' },
-  { label: p('产品', 'Products'), href: '/products' },
-  { label: p('选型', 'Selector'), href: '/selector' },
-  { label: p('案例', 'Cases'), href: '/cases' },
-  { label: p('文章', 'Articles'), href: '/posts' },
-  { label: p('联系', 'Contact'), href: '/contact' },
+  { label: { zh: '首页', en: 'Home' }, href: '/' },
+  { label: { zh: '解决方案', en: 'Solutions' }, href: '/solutions' },
+  { label: { zh: '知识库', en: 'Knowledge' }, href: '/knowledge' },
+  { label: { zh: '关于', en: 'About' }, href: '/about' },
+  { label: { zh: '联系', en: 'Contact' }, href: '/contact' },
 ];
-const FOOTER_DEFAULT: Bilingual = p('', '');
+const FOOTER_DEFAULT = '';
 
 // 联系页
-const CONTACT_DEFAULT = {
-  contactInfoTitle: p('联系方式', 'Contact Information'),
-  formSectionTitle: p('在线留言', 'Send us a message'),
-  pageTitle: p('联系我们', 'Contact Sales'),
-  pageSub: p('告诉我们您的基材、工况与产能，我们的技术团队将提供针对性的选型建议与报价。', 'Tell us your substrates, operating conditions and volume — our engineers will recommend a grade and quote.'),
-  formTitle: p('发送消息', 'Send us a message'),
-  formName: p('您的姓名', 'Your name'),
-  formEmail: p('商务邮箱', 'Business email'),
-  formMsg: p('您的应用场景', 'Your application'),
-  submit: p('发送询盘', 'Send Enquiry'),
-  success: p('感谢您的留言，我们会尽快回复。', 'Thank you — your enquiry has been received. We will reply shortly.'),
-  prelaunchTitle: p('本站尚未正式上线', 'This site is not yet live'),
-  prelaunchBody: p('在线表单暂时关闭，避免测试数据与真实询盘混淆。请通过邮件或即时通讯（微信/WhatsApp）直接联系我们。', 'The online form is temporarily closed. Please reach us directly by email or instant messaging (WeChat/WhatsApp).'),
-  tipsTitle: p('留言时请包含', 'What to include'),
+const CONTACT_DEFAULT: Record<string, Bilingual> = {
+  pageTitle: { zh: '联系我们', en: 'Contact Sales' },
+  pageSub: {
+    zh: '告诉我们您的基材、工况与用量，我们的工程师会提供针对性的选型建议与报价。',
+    en: 'Tell us your substrates, operating conditions and volume — our engineers will recommend a grade and quote.',
+  },
+  contactInfoTitle: { zh: '联系方式', en: 'Contact Information' },
+  formSectionTitle: { zh: '在线留言', en: 'Send us a message' },
+  formTitle: { zh: '发送消息', en: 'Send us a message' },
+  formName: { zh: '您的姓名', en: 'Your name' },
+  formEmail: { zh: '商务邮箱', en: 'Business email' },
+  formMsg: { zh: '您的应用场景', en: 'Your application' },
+  submit: { zh: '发送询盘', en: 'Send Enquiry' },
+  success: {
+    zh: '感谢您的留言，我们会尽快回复。',
+    en: 'Thank you — your enquiry has been received. We will reply shortly.',
+  },
+  prelaunchTitle: { zh: '本站尚未正式上线', en: 'This site is not yet live' },
+  prelaunchBody: {
+    zh: '在线表单暂时关闭，避免测试数据与真实询盘混淆。请通过邮件或 WhatsApp 直接联系我们。',
+    en: 'The online form is temporarily closed. Please reach us directly by email or WhatsApp.',
+  },
+  tipsTitle: { zh: '留言时请包含', en: 'What to include' },
 };
 const CONTACT_TIPS_DEFAULT: Bilingual[] = [
-  p('基材（如铝、钢、PC、FRP）', 'Substrates (e.g. aluminium, steel, PC, FRP)'),
-  p('载荷类型与接头活动量', 'Load type and joint movement'),
-  p('工作温度范围', 'Operating temperature range'),
-  p('固化偏好与产线节拍', 'Cure preference and line takt'),
-  p('认证要求（RoHS、REACH、UL 等）', 'Certification requirements (RoHS, REACH, UL)'),
+  { zh: '基材（如铝、钢、PC、FRP、瓷砖、天然石材）', en: 'Substrates (e.g. aluminium, steel, PC, FRP, tile, natural stone)' },
+  { zh: '载荷类型与接头活动量', en: 'Load type and joint movement' },
+  { zh: '工作温度范围', en: 'Operating temperature range' },
+  { zh: '固化偏好与产线节拍', en: 'Cure preference and line takt' },
+  { zh: '认证要求（RoHS、REACH、FDA 等）', en: 'Certification requirements (RoHS, REACH, FDA, etc.)' },
 ];
 
 // 列表页标题
 const PAGES_DEFAULT: Record<string, Bilingual> = {
-  postsTitle: p('全部文章', 'All Articles'),
-  postsSub: p('共 {n} 篇 · 记录技术、实践与思考', '{n} articles · notes on technology, practice and thinking'),
-  productsTitle: p('产品库', 'Product Database'),
-  productsSub: p('共 {n} 款工业胶粘剂与密封剂 · 按类型与场景筛选，支持 TDS/SDS 下载与在线询盘', '{n} industrial adhesives & sealants · filter by type and scenario, with TDS/SDS download and online inquiry'),
-  casesTitle: p('客户案例', 'Customer Cases'),
-  casesSub: p('共 {n} 个行业落地案例 · 真实场景中的胶粘剂选型与工艺验证', '{n} real-world cases · adhesive selection and process validation in real scenarios'),
-  selectorTitle: p('产品选型', 'Adhesive Selection'),
-  selectorSub: p('按应用场景、固化方式与适用基材，为您推荐匹配的工业胶粘剂与密封剂。', 'Recommend matching industrial adhesives & sealants by application, cure method and substrate.'),
-  selectorResult: p('推荐结果', 'Recommended Results'),
-  searchPlaceholder: p('搜索文章、产品、案例…', 'Search articles, products, cases…'),
+  knowledgeTitle: { zh: '知识库', en: 'Knowledge Base' },
+  knowledgeSub: {
+    zh: '共 {n} 篇 · 选型指南、应用避坑与故障排查',
+    en: '{n} articles · selection guides, application pitfalls and troubleshooting',
+  },
+  scenariosTitle: { zh: '场景解决方案', en: 'Scenario Solutions' },
+  scenariosSub: {
+    zh: '选择您的工况，获取明确推荐与可询盘的产品。',
+    en: 'Pick your job, get a clear recommendation and the products to ask about.',
+  },
+  searchPlaceholder: { zh: '搜索文章与方案…', en: 'Search articles and solutions…' },
 };
 
 // 详情页区块标题
 const DETAIL_DEFAULT: Record<string, Bilingual> = {
-  productSpecsTitle: p('技术参数', 'Technical Specifications'),
-  productDescTitle: p('产品描述', 'Product Description'),
-  productDocsTitle: p('技术文档', 'Documents'),
-  productQuoteTitle: p('获取报价与技术支持', 'Get Quotation & Technical Support'),
-  productQuoteCopy: p('本平台为工业胶粘剂与密封剂 B2B 渠道，所有产品按订单与规格报价。请留下需求，我们的技术团队将在 1 个工作日内回复。', 'This is a B2B channel for industrial adhesives & sealants; all products are quoted per order and specification. Leave your requirements and our team will reply within 1 business day.'),
-  caseChallengeTitle: p('挑战', 'Challenge'),
-  caseSolutionTitle: p('解决方案', 'Solution'),
-  caseResultTitle: p('成果', 'Result'),
-  caseRelatedTitle: p('本案例使用的产品', 'Products Used in This Case'),
-  caseCtaTitle: p('有类似需求？', 'Have a similar need?'),
-  caseCtaCopy: p('告诉我们您的基材、工况与产能，我们的技术团队将提供针对性的选型建议与样品支持。', 'Tell us your substrates, conditions and volume — our team will provide tailored selection advice and samples.'),
-  faqTitle: p('常见问题（FAQ）', 'Frequently Asked Questions'),
+  articleFaqTitle: { zh: '常见问题', en: 'Frequently Asked Questions' },
+  scenarioConclusionTitle: { zh: '一句话结论', en: 'The bottom line' },
+  scenarioSelectionTitle: { zh: '选型逻辑', en: 'How to choose' },
+  scenarioProductsTitle: { zh: '推荐产品', en: 'Recommended products' },
+  scenarioInquiryTitle: { zh: '获取量身定制的建议', en: 'Get a tailored recommendation' },
 };
 
-/** 取双语字段：后台 zh/en 优先，缺失回退默认值 */
-function pickB(def: Bilingual, zh?: string | null, en?: string | null): Bilingual {
-  return {
-    zh: zh && zh.trim() ? zh : def.zh,
-    en: en && en.trim() ? en : def.en,
-  };
-}
+// 关于页
+const ABOUT_DEFAULT: Record<string, Bilingual> = {
+  pageTitle: { zh: '关于 Tackix', en: 'About Tackix' },
+  pageSub: {
+    zh: '我们帮助海外承包商、安装商与 DIY 用户为手上的活儿选对胶粘剂或密封剂。',
+    en: 'We help overseas contractors, installers and DIY users pick the right adhesive or sealant for the job.',
+  },
+  storyTitle: { zh: '我们的故事', en: 'Our story' },
+  storyBody: {
+    zh: 'Tackix 始于一个朴素的困扰：选对胶粘剂很难，而大多数技术资料默认你早已知道答案。于是我们搭建了一个以场景为先的知识库，让选对产品只需要问清几个关键问题。',
+    en: 'Tackix started from a simple frustration: choosing the right adhesive is hard, and most technical datasheets assume you already know the answer. We built a scenario-first knowledge base so the right product is a few clear questions away.',
+  },
+  missionTitle: { zh: '我们的使命', en: 'Our mission' },
+  missionBody: {
+    zh: '让材料选型透明而高效——让每一位承包商、安装商与 DIY 用户都能自信地指定产品，无需猜测即可获取报价。',
+    en: 'Make material selection transparent and efficient — so every contractor, installer and DIY user can specify with confidence and get a quote without the guesswork.',
+  },
+  factoryCaption: { zh: '我们的生产车间', en: 'Our production facility' },
+};
 
 /**
- * 兼容两种数据形态：
- * - 后台填写的 item（如 solutionCards[i]）字段是普通字符串（title / titleEn 分开）；
- * - 本地默认常量（HOME_CARDS_DEFAULT / UI_NAV_DEFAULT）字段是 Bilingual 对象。
- * 统一抽取出 zh 字符串，再交给 pickB。
+ * 读取全站静态文案单例（home/ui/contact/pages/detail/about），与默认值合并。
+ * 返回结构化对象，字段均为「已按当前语种落定的纯字符串」。
+ * 后台任意字段留空即回退默认值。
  */
-function zhOr(v: any): string | undefined {
-  if (v && typeof v === 'object' && 'zh' in v) return (v as Bilingual).zh;
-  return v;
-}
-
-/**
- * T13：读取全站静态文案单例（home/ui/contact/pages/detail），与默认值合并。
- * 返回结构化对象，前端按 locale 取 zh 或 en。后台任意字段留空即回退默认值。
- */
-export async function loadContent() {
+export async function loadContent(locale: Locale = DEFAULT_LOCALE) {
   const reader = createReader(process.cwd(), keystaticConfig);
-  const [home, ui, contact, pages, detail] = await Promise.all([
+  const [home, ui, contact, pages, detail, about] = await Promise.all([
     reader.singletons.home.read().catch(() => null),
     reader.singletons.ui.read().catch(() => null),
     reader.singletons.contact.read().catch(() => null),
     reader.singletons.pages.read().catch(() => null),
     reader.singletons.detail.read().catch(() => null),
+    reader.singletons.about.read().catch(() => null),
   ]) as any[];
 
-  // 后台字段已分组进 content 对象（横排栅格）；用 ?.content ?? ?. 兜底，兼容迁移前后的数据
   const h = home?.content ?? home ?? {};
-  const homeOut = {
-    heroEyebrow: pickB(HOME_DEFAULT.heroEyebrow, h.heroEyebrow, h.heroEyebrowEn),
-    heroCta1: pickB(HOME_DEFAULT.heroCta1, h.heroCta1, h.heroCta1En),
-    heroCta2: pickB(HOME_DEFAULT.heroCta2, h.heroCta2, h.heroCta2En),
-    solutionsTitle: pickB(HOME_DEFAULT.solutionsTitle, h.solutionsTitle, h.solutionsTitleEn),
-    solutionsSub: pickB(HOME_DEFAULT.solutionsSub, h.solutionsSub, h.solutionsSubEn),
-    solutionCards: (home?.solutionCards?.length ? home.solutionCards : HOME_CARDS_DEFAULT).map((c: any, i: number) => {
-      const d = HOME_CARDS_DEFAULT[i] ?? HOME_CARDS_DEFAULT[0];
-      return {
-        title: pickB(d.title, zhOr(c.title), c.titleEn),
-        desc: pickB(d.desc, zhOr(c.desc), c.descEn),
-        cta: pickB(d.cta, zhOr(c.cta), c.ctaEn),
-        href: c.href || d.href,
-      };
-    }),
-    browseTitle: pickB(HOME_DEFAULT.browseTitle, h.browseTitle, h.browseTitleEn),
-    browseSub: pickB(HOME_DEFAULT.browseSub, h.browseSub, h.browseSubEn),
-    featuredTitle: pickB(HOME_DEFAULT.featuredTitle, h.featuredTitle, h.featuredTitleEn),
-    featuredSub: pickB(HOME_DEFAULT.featuredSub, h.featuredSub, h.featuredSubEn),
-    latestTitle: pickB(HOME_DEFAULT.latestTitle, h.latestTitle, h.latestTitleEn),
-    latestSub: pickB(HOME_DEFAULT.latestSub, h.latestSub, h.latestSubEn),
-    tagsTitle: pickB(HOME_DEFAULT.tagsTitle, h.tagsTitle, h.tagsTitleEn),
-    tagsSub: pickB(HOME_DEFAULT.tagsSub, h.tagsSub, h.tagsSubEn),
-    bandTitle: pickB(HOME_DEFAULT.bandTitle, h.bandTitle, h.bandTitleEn),
-    bandSub: pickB(HOME_DEFAULT.bandSub, h.bandSub, h.bandSubEn),
-    bandCta1: pickB(HOME_DEFAULT.bandCta1, h.bandCta1, h.bandCta1En),
-    bandCta2: pickB(HOME_DEFAULT.bandCta2, h.bandCta2, h.bandCta2En),
-  };
+  const homeOut = Object.fromEntries(
+    Object.keys(HOME_DEFAULT).map((k) => [k, pickB(locale, (h[k] as Bilingual) ?? HOME_DEFAULT[k])])
+  );
 
-  const navOut = (ui?.navItems?.length ? ui.navItems : UI_NAV_DEFAULT).map((n: any, i: number) => {
-    const d = UI_NAV_DEFAULT[i] ?? UI_NAV_DEFAULT[0];
-    return {
-      label: pickB(d.label, zhOr(n.label), n.labelEn),
-      href: n.href || d.href,
-    };
-  });
+  const navOut = (ui?.navItems?.length ? ui.navItems : UI_NAV_DEFAULT).map((n: any, i: number) => ({
+    label: pickB(locale, n.label as Bilingual) || UI_NAV_DEFAULT[i]?.label?.[locale] || (UI_NAV_DEFAULT[i]?.href ?? ''),
+    href: n.href || '/',
+  }));
+
+  // footerText 兼容两种形态：后台双语对象 {zh,en} / 纯字符串
+  const fbRaw: unknown = ui?.content?.footerText;
+  const fbText =
+    typeof fbRaw === 'string' ? fbRaw.trim() : pickB(locale, fbRaw as Bilingual | null | undefined);
+  const footerText = fbText || `Powered by ${DEFAULT_SITE.title[locale] || 'Tackix'}`;
 
   const c = contact?.content ?? contact ?? {};
-  const contactOut = {
-    contactInfoTitle: pickB(CONTACT_DEFAULT.contactInfoTitle, c.contactInfoTitle, c.contactInfoTitleEn),
-    formSectionTitle: pickB(CONTACT_DEFAULT.formSectionTitle, c.formSectionTitle, c.formSectionTitleEn),
-    pageTitle: pickB(CONTACT_DEFAULT.pageTitle, c.pageTitle, c.pageTitleEn),
-    pageSub: pickB(CONTACT_DEFAULT.pageSub, c.pageSub, c.pageSubEn),
-    formTitle: pickB(CONTACT_DEFAULT.formTitle, c.formTitle, c.formTitleEn),
-    formName: pickB(CONTACT_DEFAULT.formName, c.formName, c.formNameEn),
-    formEmail: pickB(CONTACT_DEFAULT.formEmail, c.formEmail, c.formEmailEn),
-    formMsg: pickB(CONTACT_DEFAULT.formMsg, c.formMsg, c.formMsgEn),
-    submit: pickB(CONTACT_DEFAULT.submit, c.submit, c.submitEn),
-    success: pickB(CONTACT_DEFAULT.success, c.success, c.successEn),
-    prelaunchTitle: pickB(CONTACT_DEFAULT.prelaunchTitle, c.prelaunchTitle, c.prelaunchTitleEn),
-    prelaunchBody: pickB(CONTACT_DEFAULT.prelaunchBody, c.prelaunchBody, c.prelaunchBodyEn),
-    tipsTitle: pickB(CONTACT_DEFAULT.tipsTitle, c.tipsTitle, c.tipsTitleEn),
-    tipsItems: (contact?.tipsItems?.length ? contact.tipsItems : CONTACT_TIPS_DEFAULT).map((t: any, i: number) => {
+  const contactOut = Object.fromEntries(
+    Object.keys(CONTACT_DEFAULT).map((k) => [k, pickB(locale, (c[k] as Bilingual) ?? CONTACT_DEFAULT[k])])
+  ) as Record<string, string>;
+  contactOut.tipsItems = (contact?.tipsItems?.length ? contact.tipsItems : CONTACT_TIPS_DEFAULT).map(
+    (t: any, i: number) => {
       const d = CONTACT_TIPS_DEFAULT[i] ?? CONTACT_TIPS_DEFAULT[0];
-      const zh = t?.text ?? d.zh;
-      const en = t?.textEn ?? d.en;
-      return pickB(d, zh, en);
-    }),
-  };
+      return pickB(locale, (t?.text as Bilingual) ?? d);
+    }
+  );
 
   const pg = pages?.content ?? pages ?? {};
-  const pagesOut = {
-    postsTitle: pickB(PAGES_DEFAULT.postsTitle, pg.postsTitle, pg.postsTitleEn),
-    postsSub: pickB(PAGES_DEFAULT.postsSub, pg.postsSub, pg.postsSubEn),
-    productsTitle: pickB(PAGES_DEFAULT.productsTitle, pg.productsTitle, pg.productsTitleEn),
-    productsSub: pickB(PAGES_DEFAULT.productsSub, pg.productsSub, pg.productsSubEn),
-    casesTitle: pickB(PAGES_DEFAULT.casesTitle, pg.casesTitle, pg.casesTitleEn),
-    casesSub: pickB(PAGES_DEFAULT.casesSub, pg.casesSub, pg.casesSubEn),
-    selectorTitle: pickB(PAGES_DEFAULT.selectorTitle, pg.selectorTitle, pg.selectorTitleEn),
-    selectorSub: pickB(PAGES_DEFAULT.selectorSub, pg.selectorSub, pg.selectorSubEn),
-    selectorResult: pickB(PAGES_DEFAULT.selectorResult, pg.selectorResult, pg.selectorResultEn),
-    searchPlaceholder: pickB(PAGES_DEFAULT.searchPlaceholder, pg.searchPlaceholder, pg.searchPlaceholderEn),
-  };
+  const pagesOut = Object.fromEntries(
+    Object.keys(PAGES_DEFAULT).map((k) => [k, pickB(locale, (pg[k] as Bilingual) ?? PAGES_DEFAULT[k])])
+  ) as Record<string, string>;
 
   const dt = detail?.content ?? detail ?? {};
-  const detailOut = {
-    productSpecsTitle: pickB(DETAIL_DEFAULT.productSpecsTitle, dt.productSpecsTitle, dt.productSpecsTitleEn),
-    productDescTitle: pickB(DETAIL_DEFAULT.productDescTitle, dt.productDescTitle, dt.productDescTitleEn),
-    productDocsTitle: pickB(DETAIL_DEFAULT.productDocsTitle, dt.productDocsTitle, dt.productDocsTitleEn),
-    productQuoteTitle: pickB(DETAIL_DEFAULT.productQuoteTitle, dt.productQuoteTitle, dt.productQuoteTitleEn),
-    productQuoteCopy: pickB(DETAIL_DEFAULT.productQuoteCopy, dt.productQuoteCopy, dt.productQuoteCopyEn),
-    caseChallengeTitle: pickB(DETAIL_DEFAULT.caseChallengeTitle, dt.caseChallengeTitle, dt.caseChallengeTitleEn),
-    caseSolutionTitle: pickB(DETAIL_DEFAULT.caseSolutionTitle, dt.caseSolutionTitle, dt.caseSolutionTitleEn),
-    caseResultTitle: pickB(DETAIL_DEFAULT.caseResultTitle, dt.caseResultTitle, dt.caseResultTitleEn),
-    caseRelatedTitle: pickB(DETAIL_DEFAULT.caseRelatedTitle, dt.caseRelatedTitle, dt.caseRelatedTitleEn),
-    caseCtaTitle: pickB(DETAIL_DEFAULT.caseCtaTitle, dt.caseCtaTitle, dt.caseCtaTitleEn),
-    caseCtaCopy: pickB(DETAIL_DEFAULT.caseCtaCopy, dt.caseCtaCopy, dt.caseCtaCopyEn),
-    faqTitle: pickB(DETAIL_DEFAULT.faqTitle, dt.faqTitle, dt.faqTitleEn),
-  };
+  const detailOut = Object.fromEntries(
+    Object.keys(DETAIL_DEFAULT).map((k) => [k, pickB(locale, (dt[k] as Bilingual) ?? DETAIL_DEFAULT[k])])
+  ) as Record<string, string>;
+
+  const a = about?.content ?? about ?? {};
+  const aboutOut = {
+    ...Object.fromEntries(
+      Object.keys(ABOUT_DEFAULT).map((k) => [k, pickB(locale, (a[k] as Bilingual) ?? ABOUT_DEFAULT[k])])
+    ),
+    factoryImage: about?.factoryImage ?? '',
+  } as Record<string, string> & { factoryImage: string };
 
   return {
     home: homeOut,
     ui: {
       navItems: navOut,
-      footerText: pickB(FOOTER_DEFAULT, ui?.content?.footerText ?? ui?.footerText, ui?.content?.footerTextEn ?? ui?.footerTextEn),
+      footerText,
     },
     contact: contactOut,
     pages: pagesOut,
     detail: detailOut,
+    about: aboutOut,
   };
 }

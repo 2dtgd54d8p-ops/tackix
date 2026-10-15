@@ -1,22 +1,25 @@
 navItems:
-  - label: '首页'
-    labelEn: 'Home'
-    href: '/'
-  - label: '产品'
-    labelEn: 'Products'
-    href: '/products'
-  - label: '选型'
-    labelEn: 'Selector'
-    href: '/selector'
-  - label: '案例'
-    labelEn: 'Cases'
-    href: '/cases'
-  - label: '文章'
-    labelEn: 'Articles'
-    href: '/posts'
-  - label: '联系'
-    labelEn: 'Contact'
-    href: '/contact'
+  - label:
+      zh: 首页
+      en: Home
+    href: /
+  - label:
+      zh: 解决方案
+      en: Solutions
+    href: /solutions
+  - label:
+      zh: 知识库
+      en: Knowledge
+    href: /knowledge
+  - label:
+      zh: 关于
+      en: About
+    href: /about
+  - label:
+      zh: 联系
+      en: Contact
+    href: /contact
 content:
-  footerText: ''
-  footerTextEn: ''
+  footerText:
+    zh: ''
+    en: ''

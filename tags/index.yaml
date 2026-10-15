@@ -1,61 +1,53 @@
 items:
-  - label: 选型指南
-    labelEn: Selection Guide
-    value: selection-guide
-  - label: 环氧胶
-    labelEn: Epoxy
-    value: epoxy
-  - label: 聚氨酯胶
-    labelEn: Polyurethane
-    value: polyurethane
-  - label: 硅酮密封胶
-    labelEn: Silicone Sealant
+  - label:
+      zh: 硅酮密封胶
+      en: Silicone Sealant
     value: silicone-sealant
-  - label: UV 固化胶
-    labelEn: UV Adhesive
-    value: uv-adhesive
-  - label: 瞬干胶
-    labelEn: Cyanoacrylate
-    value: cyanoacrylate
-  - label: 厌氧胶
-    labelEn: Anaerobic
-    value: anaerobic
-  - label: 热熔胶
-    labelEn: Hot Melt
-    value: hotmelt
-  - label: 基材粘接
-    labelEn: Substrate Bonding
+  - label:
+      zh: 聚氨酯
+      en: Polyurethane
+    value: polyurethane
+  - label:
+      zh: 环氧
+      en: Epoxy
+    value: epoxy
+  - label:
+      zh: MS 聚合物
+      en: MS Polymer
+    value: ms-polymer
+  - label:
+      zh: 防水
+      en: Waterproofing
+    value: waterproofing
+  - label:
+      zh: 防霉
+      en: Mould Resistance
+    value: mould-resistant
+  - label:
+      zh: 瓷砖与石材
+      en: Tile & Stone
+    value: tile-stone
+  - label:
+      zh: 伸缩缝
+      en: Expansion Joints
+    value: expansion-joints
+  - label:
+      zh: 表面处理
+      en: Surface Prep
+    value: surface-prep
+  - label:
+      zh: 基材
+      en: Substrate
     value: substrate
-  - label: 表面处理
-    labelEn: Surface Treatment
-    value: surface-treatment
-  - label: 结构粘接
-    labelEn: Structural Bonding
-    value: structural-bonding
-  - label: 密封防水
-    labelEn: Sealing & Waterproofing
-    value: sealing
-  - label: 耐温耐候
-    labelEn: Heat & Weather Resistance
-    value: temperature-weather
-  - label: 电子封装
-    labelEn: Electronics Encapsulation
-    value: electronics
-  - label: 汽车制造
-    labelEn: Automotive
-    value: automotive
-  - label: 新能源
-    labelEn: New Energy
-    value: new-energy
-  - label: 建筑工程
-    labelEn: Construction
-    value: construction
-  - label: 包装印刷
-    labelEn: Packaging & Printing
-    value: packaging
-  - label: 医疗器械
-    labelEn: Medical Devices
-    value: medical
-  - label: 常见问题
-    labelEn: FAQ
-    value: faq
+  - label:
+      zh: 温度
+      en: Temperature
+    value: temperature
+  - label:
+      zh: DIY
+      en: DIY
+    value: diy
+  - label:
+      zh: 专业
+      en: Professional
+    value: professional

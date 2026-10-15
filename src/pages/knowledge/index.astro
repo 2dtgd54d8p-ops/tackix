@@ -1,0 +1,136 @@
+---
+import { createReader } from '@keystatic/core/reader';
+import keystaticConfig from '../../../keystatic.config';
+import Base from '../../layouts/Base.astro';
+import { loadSiteData, loadContent, buildFilterOptions } from '../../lib/site-data';
+import { readingMinutes, coverSrc } from '../../lib/markdown';
+import { getLocale, pickB, type Locale } from '../../lib/i18n';
+
+const { locale: localeProp } = Astro.props;
+const locale: Locale = localeProp ?? getLocale(Astro);
+const lp = locale === 'en' ? '/en' : '';
+const t = (zh: string, en: string) => (locale === 'en' ? en : zh);
+
+const reader = createReader(process.cwd(), keystaticConfig);
+const L = await loadContent(locale);
+const pages = L.pages;
+
+let slugs: string[] = [];
+try {
+  slugs = await reader.collections.knowledge.list();
+} catch (e) {
+  console.warn('[build] knowledge list failed:', e);
+}
+
+const posts = (
+  await Promise.all(
+    slugs.map(async (slug) => {
+      try {
+        const p = await reader.collections.knowledge.read(slug);
+        return p ? { slug, ...p } : null;
+      } catch {
+        return null;
+      }
+    })
+  )
+).filter((p) => p && p.published !== false);
+
+const withMeta = posts.map((p) => ({ ...p, readMin: readingMinutes(pickB(locale, p.body)) }));
+withMeta.sort((a, b) => String(b.publishedAt ?? '').localeCompare(String(a.publishedAt ?? '')));
+
+const { categories, categoryLabel, tagLabel } = await loadSiteData(locale);
+
+// 服务端分类筛选：?cat=value
+const activeCat = Astro.url.searchParams.get('cat') || 'all';
+const catOptions = buildFilterOptions(withMeta, categories);
+const filtered =
+  activeCat === 'all'
+    ? withMeta
+    : withMeta.filter((p) => (p.category ?? 'uncategorized') === activeCat);
+
+const sub = pages.knowledgeSub.replace('{n}', String(withMeta.length));
+---
+
+<Base title={pages.knowledgeTitle} description={pages.knowledgeSub}>
+  <section>
+    <div class="page-head">
+      <h1>{pages.knowledgeTitle}</h1>
+      <p>{sub}</p>
+    </div>
+
+    <!-- 分类筛选条：链接式，SEO 友好、零 JS -->
+    <div class="filter-bar" role="group" aria-label="Filter by category">
+      {
+        catOptions.map((c) => (
+          <a
+            class={c.value === activeCat ? 'chip is-active' : 'chip'}
+            href={c.value === 'all' ? `${lp}/knowledge` : `${lp}/knowledge?cat=${c.value}`}
+            aria-current={c.value === activeCat ? 'true' : undefined}
+          >
+            {c.label}
+          </a>
+        ))
+      }
+    </div>
+
+    {
+      filtered.length === 0 ? (
+        <p class="empty">{t('该分类下暂无文章。', 'No articles in this category yet.')}</p>
+      ) : (
+        <div class="grid">
+          {filtered.map((post) => (
+            <article class="card" data-category={post.category ?? 'uncategorized'}>
+              {coverSrc(post.cover) && (
+                <div class="card-media card-media-sm">
+                  <img src={coverSrc(post.cover)} alt="" loading="lazy" />
+                </div>
+              )}
+              <div class="card-body">
+                <h3 class="card-title">
+                  <a href={`${lp}/knowledge/${post.slug}`}>{pickB(locale, post.name)}</a>
+                </h3>
+                {post.excerpt && <p class="card-excerpt">{pickB(locale, post.excerpt)}</p>}
+                <div class="card-meta">
+                  <span class="tag">{categoryLabel(post.category)}</span>
+                  {(post.tags ?? []).slice(0, 2).map((t: string) => (
+                    <span class="tag tag-plain">{tagLabel(t)}</span>
+                  ))}
+                  {post.publishedAt && <span>{post.publishedAt}</span>}
+                  <span class="read-time">· {post.readMin}{t(' 分钟阅读', ' min read')}</span>
+                </div>
+              </div>
+            </article>
+          ))}
+        </div>
+      )
+    }
+  </section>
+</Base>
+
+<style>
+  .filter-bar {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    justify-content: center;
+    margin: -8px 0 36px;
+  }
+  .chip {
+    display: inline-flex;
+    align-items: center;
+    padding: 7px 16px;
+    border: 1px solid var(--border-strong);
+    border-radius: var(--r-pill);
+    background: var(--surface);
+    color: var(--fg-soft);
+    font-size: 13px;
+    font-weight: 500;
+    text-decoration: none;
+    transition: border-color var(--dur) var(--ease), color var(--dur) var(--ease),
+      background var(--dur) var(--ease);
+  }
+  .chip:hover { border-color: var(--accent); color: var(--accent); text-decoration: none; }
+  .chip.is-active { background: var(--accent); border-color: var(--accent); color: var(--on-accent); }
+  .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 22px; }
+  @media (max-width: 700px) { .grid { grid-template-columns: minmax(0, 1fr); gap: 18px; } }
+</style>

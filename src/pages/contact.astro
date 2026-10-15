@@ -1,6 +1,6 @@
 ---
 /**
- * 联系页（P0-3）
+ * 联系页
  * ---------------------------------------------------------------
  * 设计要点：
  * 1. **联系方式优先于表单**。B2B 买家看完参数表后的下一步是「找谁问」。
@@ -8,17 +8,25 @@
  * 2. **全部字段可留空**，留空则对应入口不渲染 —— 不会出现空链接或占位符
  *    （比显示「待补充」更专业，也避免误导买家）。
  * 3. 预上线期在表单区明确说明状态，避免买家反复提交却收不到回复。
+ * 4. 全站 EN-only，文案来自后台「联系页文案」singleton（可编辑、前后端贯通）。
  */
 import Base from '../layouts/Base.astro';
 import { loadSiteData, loadContent } from '../lib/site-data';
+import { organizationSchema } from '../lib/schema';
 import { isPreLaunch } from '../lib/prelaunch';
+import { getLocale, type Locale } from '../lib/i18n';
 
-const { site } = await loadSiteData();
+const { locale: localeProp } = Astro.props;
+const locale: Locale = localeProp ?? getLocale(Astro);
+const lp = locale === 'en' ? '/en' : '';
+const t = (zh: string, en: string) => (locale === 'en' ? en : zh);
+
+const { site } = await loadSiteData(locale);
 const prelaunch = isPreLaunch();
 // 联系页文案来自后台「联系页文案」singleton（可编辑、前后端贯通）
-const L = await loadContent();
-const t = (b: { zh: string; en: string }) => b.zh;
-const successMsg = t(L.contact.success);
+const L = await loadContent(locale);
+const contact = L.contact;
+const successMsg = contact.success;
 
 const email = (site.email ?? '').trim();
 const company = (site.company ?? '').trim();
@@ -30,13 +38,12 @@ const waText = encodeURIComponent(
   (site.whatsappPrefill ?? '').trim() ||
     'Hello, I would like a quotation for industrial adhesives. Could you share TDS/SDS and technical support?'
 );
-const wechat = (site.wechat ?? '').trim();
 
 // 有任一联系方式才渲染该区块
-const hasContact = !!(email || whatsapp || wechat || phone || address || company || hours);
+const hasContact = !!(email || whatsapp || phone || address || company || hours);
 const telHref = phone ? `tel:${phone.replace(/[^\d+]/g, '')}` : '';
 const mailHref = email
-  ? `mailto:${email}?subject=${encodeURIComponent('产品选型与报价咨询 · ' + (company || 'Tackix'))}`
+  ? `mailto:${email}?subject=${encodeURIComponent('Product selection & quotation enquiry · ' + (company || 'Tackix'))}`
   : '';
 const ICON = {
   mail: '<rect x="2.5" y="4.5" width="19" height="15" rx="2.5"/><path d="m3 6 9 6.5L21 6"/>',
@@ -44,27 +51,28 @@ const ICON = {
   pin: '<path d="M12 21s7-5.3 7-11a7 7 0 1 0-14 0c0 5.7 7 11 7 11Z"/><circle cx="12" cy="10" r="2.5"/>',
   clock: '<circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/>',
   building: '<path d="M3 21h18M5 21V7l7-4 7 4v14M9 10h2m-2 4h2m2-4h2m-2 4h2"/>',
-  wechat: '<path d="M21 11.5a8.4 8.4 0 0 1-9 8.4 9.7 9.7 0 0 1-2.8-.4L4 21l1.4-4.2A8.4 8.4 0 0 1 3 11.5 8.4 8.4 0 0 1 12 3a8.4 8.4 0 0 1 9 8.5z" /><path d="M8.5 10.4h7M8.5 13.4h4" />',
+};
+
+// 组织实体（含 ContactPoint），强化 E-E-A-T 与「公司实体」识别
+const orgLd = {
+  '@context': 'https://schema.org',
+  ...organizationSchema(locale, site, Astro.site ?? Astro.url),
 };
 ---
 
-<Base title="联系我"
-  alternates={[
-    { lang: 'zh-CN', href: '/contact/' },
-    { lang: 'en', href: '/en/contact/' },
-    { lang: 'x-default', href: '/en/contact/' },
-  ]}>
+<Base title={contact.pageTitle}>
+  <script type="application/ld+json" set:html={JSON.stringify(orgLd)} />
   <section>
     <div class="page-head">
-      <h1>{t(L.contact.pageTitle)}</h1>
-      <p>{t(L.contact.pageSub)}</p>
+      <h1>{contact.pageTitle}</h1>
+      <p>{contact.pageSub}</p>
     </div>
 
     <div class:list={['contact-grid', !hasContact && 'contact-grid--single']}>
       {
         hasContact && (
           <div class="contact-info">
-            <h2 class="section-title">{t(L.contact.contactInfoTitle)}</h2>
+            <h2 class="section-title">{contact.contactInfoTitle}</h2>
 
             {email && (
               <a class="contact-item" href={mailHref}>
@@ -72,7 +80,7 @@ const ICON = {
                   <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" set:html={ICON.mail} />
                 </span>
                 <span class="ci-body">
-                  <span class="ci-label">商务邮箱</span>
+                  <span class="ci-label">{t('商务邮箱', 'Business email')}</span>
                   <span class="ci-value">{email}</span>
                 </span>
               </a>
@@ -84,23 +92,10 @@ const ICON = {
                   <svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor"><path d="M12 2a10 10 0 0 0-8.6 15L2 22l5.2-1.4A10 10 0 1 0 12 2Zm5.8 14.2c-.2.7-1.3 1.3-2 1.4-.5.1-1.2.1-1.9-.1-.4-.1-1-.3-1.8-.7-3-1.3-4.9-4.3-5-4.5-.2-.2-1.2-1.6-1.2-3s.8-2.1 1-2.4c.3-.3.6-.3.8-.3h.6c.2 0 .4 0 .7.5l.9 2.2c.1.2.1.4 0 .6l-.4.6-.3.3c-.1.1-.3.3-.1.6.2.3.8 1.3 1.7 2.1 1.1 1 2 1.3 2.3 1.4.3.2.5.1.7-.1l.8-1c.2-.2.4-.2.6-.1l2.1 1c.3.1.5.2.5.3.1.2.1.7-.1 1.3Z"/></svg>
                 </span>
                 <span class="ci-body">
-                  <span class="ci-label">WhatsApp</span>
+                  <span class="ci-label">{t('WhatsApp', 'WhatsApp')}</span>
                   <span class="ci-value">+{whatsapp}</span>
                 </span>
               </a>
-            )}
-
-            {wechat && (
-              <div class="contact-item contact-item-static">
-                <span class="ci-icon" aria-hidden="true">
-                  <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" set:html={ICON.wechat} />
-                </span>
-                <span class="ci-body">
-                  <span class="ci-label">微信</span>
-                  <span class="ci-value">{wechat}</span>
-                </span>
-                <button type="button" class="ci-copy" data-wechat={wechat} aria-label="复制微信号">复制</button>
-              </div>
             )}
 
             {phone && (
@@ -109,7 +104,7 @@ const ICON = {
                   <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" set:html={ICON.phone} />
                 </span>
                 <span class="ci-body">
-                  <span class="ci-label">电话</span>
+                  <span class="ci-label">{t('电话', 'Phone')}</span>
                   <span class="ci-value">{phone}</span>
                 </span>
               </a>
@@ -121,7 +116,7 @@ const ICON = {
                   <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" set:html={ICON.building} />
                 </span>
                 <span class="ci-body">
-                  <span class="ci-label">公司</span>
+                  <span class="ci-label">{t('公司', 'Company')}</span>
                   <span class="ci-value">{company}</span>
                 </span>
               </div>
@@ -133,7 +128,7 @@ const ICON = {
                   <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" set:html={ICON.pin} />
                 </span>
                 <span class="ci-body">
-                  <span class="ci-label">地址</span>
+                  <span class="ci-label">{t('地址', 'Address')}</span>
                   <span class="ci-value">{address}</span>
                 </span>
               </div>
@@ -145,7 +140,7 @@ const ICON = {
                   <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" set:html={ICON.clock} />
                 </span>
                 <span class="ci-body">
-                  <span class="ci-label">营业时间</span>
+                  <span class="ci-label">{t('营业时间', 'Business hours')}</span>
                   <span class="ci-value">{hours}</span>
                 </span>
               </div>
@@ -155,36 +150,36 @@ const ICON = {
       }
 
       <div class="contact-form-wrap">
-        <h2 class="section-title">{t(L.contact.formSectionTitle)}</h2>
+        <h2 class="section-title">{contact.formSectionTitle}</h2>
         {
           prelaunch && (
             <div class="notice">
-              <strong>{t(L.contact.prelaunchTitle)}</strong>
-              <p>{t(L.contact.prelaunchBody)}</p>
+              <strong>{contact.prelaunchTitle}</strong>
+              <p>{contact.prelaunchBody}</p>
             </div>
           )
         }
         <form id="contact-form" class="contact-form" novalidate>
           <label class="field">
-            <span>{t(L.contact.formName)}</span>
+            <span>{contact.formName}</span>
             <input name="name" type="text" required maxlength="60" autocomplete="name" />
           </label>
           <label class="field">
-            <span>{t(L.contact.formEmail)}</span>
+            <span>{contact.formEmail}</span>
             <input name="email" type="email" required maxlength="120" autocomplete="email" />
           </label>
           <label class="field">
-            <span>{t(L.contact.formMsg)}</span>
+            <span>{contact.formMsg}</span>
             <textarea name="message" required rows="5" maxlength="2000"
-              placeholder="例如：铝合金与 FRP 粘接，长期振动，-40~85℃，间隙 0.5mm，需提供 TDS。"></textarea>
+              placeholder={t('例如：铝粘 FRP，持续振动，-40~85℃，0.5mm 间隙，需 TDS。', 'e.g. Bonding aluminium to FRP, constant vibration, -40~85℃, 0.5mm gap, TDS required.')}></textarea>
           </label>
-          <button type="submit" class="btn btn-primary">{t(L.contact.submit)}</button>
+          <button type="submit" class="btn btn-primary">{contact.submit}</button>
           <p id="contact-status" class="status" role="status" aria-live="polite" data-success={successMsg}></p>
         </form>
         <div class="tips-box">
-          <h3>{t(L.contact.tipsTitle)}</h3>
+          <h3>{contact.tipsTitle}</h3>
           <ul class="tips-list">
-            {L.contact.tipsItems.map((tip) => <li>{t(tip)}</li>)}
+            {contact.tipsItems.map((tip) => <li>{tip}</li>)}
           </ul>
         </div>
       </div>
@@ -218,15 +213,6 @@ const ICON = {
   .ci-body { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
   .ci-label { font-size: 12px; color: var(--faint); letter-spacing: 0.03em; }
   .ci-value { font-size: 14.5px; color: var(--fg); word-break: break-word; line-height: 1.5; }
-  .ci-copy {
-    margin-left: auto; align-self: center;
-    font: inherit; font-size: 12px; line-height: 1;
-    padding: 6px 10px; border-radius: var(--r-sm);
-    border: 1px solid var(--border); background: var(--surface-2); color: var(--fg-soft);
-    cursor: pointer; transition: border-color var(--dur) var(--ease), color var(--dur) var(--ease);
-  }
-  .ci-copy:hover { border-color: var(--accent); color: var(--accent); }
-  .ci-copy.copied { border-color: var(--accent); color: var(--accent); }
 
   .notice {
     padding: 13px 16px; border-radius: var(--r-md); margin-bottom: 18px;
@@ -263,26 +249,9 @@ const ICON = {
     const status = document.getElementById('contact-status');
     if (!form) return;
 
-    // 微信号一键复制
-    document.querySelectorAll('.ci-copy[data-wechat]').forEach((btn) => {
-      btn.addEventListener('click', async function () {
-        const id = btn.getAttribute('data-wechat') || '';
-        try {
-          await navigator.clipboard.writeText(id);
-          const old = btn.textContent;
-          btn.textContent = '已复制';
-          btn.classList.add('copied');
-          setTimeout(() => { btn.textContent = old; btn.classList.remove('copied'); }, 1500);
-        } catch {
-          btn.textContent = '复制失败';
-          setTimeout(() => { btn.textContent = '复制'; }, 1500);
-        }
-      });
-    });
-
     form.addEventListener('submit', async function (e) {
       e.preventDefault();
-      status.textContent = '提交中…';
+      status.textContent = 'Submitting…';
       status.className = 'status';
 
       const data = Object.fromEntries(new FormData(form).entries());
@@ -294,15 +263,15 @@ const ICON = {
         });
         const json = await res.json();
         if (res.ok && json.ok) {
-          status.textContent = status.dataset.success || '提交成功，谢谢你的留言！';
+          status.textContent = status.dataset.success || 'Thank you — your enquiry has been received.';
           status.className = 'status ok';
           form.reset();
         } else {
-          status.textContent = '提交失败：' + (json.error || '未知错误');
+          status.textContent = 'Submission failed: ' + (json.error || 'unknown error');
           status.className = 'status err';
         }
       } catch (err) {
-        status.textContent = '提交失败：' + (err && err.message ? err.message : err);
+        status.textContent = 'Submission failed: ' + (err && err.message ? err.message : err);
         status.className = 'status err';
       }
     });

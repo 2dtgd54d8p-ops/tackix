@@ -1,28 +1,30 @@
 import { createReader } from '@keystatic/core/reader';
 import keystaticConfig from '../../keystatic.config';
 import { loadSiteData } from '../lib/site-data';
+import { pickB } from '../lib/i18n';
 import type { APIRoute } from 'astro';
 
 // 静态预渲染：构建期生成 /llms.txt，供 GPTBot / PerplexityBot 等
-// AI 检索体理解站点结构与精选内容。随文章库自动刷新。
+// AI 检索体理解站点结构与精选内容。随文章/场景库自动刷新。
 export const prerender = true;
 
 export const GET: APIRoute = async (Astro) => {
   const base = Astro.site ?? new URL('https://tackix.pages.dev');
   const { site } = await loadSiteData();
   const reader = createReader(process.cwd(), keystaticConfig);
-  let slugs: string[] = [];
+
+  // 知识库文章（已发布）
+  let postSlugs: string[] = [];
   try {
-    slugs = await reader.collections.posts.list();
+    postSlugs = await reader.collections.knowledge.list();
   } catch {
-    slugs = [];
+    postSlugs = [];
   }
   const posts = (
     await Promise.all(
-      slugs.map(async (slug) => {
+      postSlugs.map(async (slug) => {
         try {
-          const post = await reader.collections.posts.read(slug);
-          // Keystatic read() 结果不含 slug 字段，需从 list() 的键补回
+          const post = await reader.collections.knowledge.read(slug);
           return post && post.published !== false ? { slug, ...post } : null;
         } catch {
           return null;
@@ -31,62 +33,28 @@ export const GET: APIRoute = async (Astro) => {
     )
   ).filter(Boolean) as any[];
   posts.sort((a, b) => String(b.publishedAt ?? '').localeCompare(String(a.publishedAt ?? '')));
-  const top = posts.slice(0, 10);
+  const topPosts = posts.slice(0, 10);
 
-  // 产品库（已上线）
-  let productSlugs: string[] = [];
+  // 场景方案（已发布）
+  let scenarioSlugs: string[] = [];
   try {
-    productSlugs = await reader.collections.products.list();
+    scenarioSlugs = await reader.collections.scenarios.list();
   } catch {
-    productSlugs = [];
+    scenarioSlugs = [];
   }
-  const products = (
+  const scenarios = (
     await Promise.all(
-      productSlugs.map(async (slug) => {
+      scenarioSlugs.map(async (slug) => {
         try {
-          const product = await reader.collections.products.read(slug);
-          // Keystatic read() 结果不含 slug 字段，需从 list() 的键补回
-          return product && product.published !== false ? { slug, ...product } : null;
+          const s = await reader.collections.scenarios.read(slug);
+          return s && s.published !== false ? { slug, ...s } : null;
         } catch {
           return null;
         }
       })
     )
   ).filter(Boolean) as any[];
-  // 首页推荐优先，其次按名称
-  products.sort(
-    (a, b) =>
-      Number(b.featured ?? false) - Number(a.featured ?? false) ||
-      String(a.name ?? '').localeCompare(String(b.name ?? ''))
-  );
-  const featured = products.filter((p) => p.featured).slice(0, 6);
-
-  // 案例库（已上线）
-  let caseSlugs: string[] = [];
-  try {
-    caseSlugs = await reader.collections.cases.list();
-  } catch {
-    caseSlugs = [];
-  }
-  const cases = (
-    await Promise.all(
-      caseSlugs.map(async (slug) => {
-        try {
-          const item = await reader.collections.cases.read(slug);
-          // Keystatic read() 结果不含 slug 字段，需从 list() 的键补回
-          return item && item.published !== false ? { slug, ...item } : null;
-        } catch {
-          return null;
-        }
-      })
-    )
-  ).filter(Boolean) as any[];
-  cases.sort(
-    (a, b) =>
-      Number(b.featured ?? false) - Number(a.featured ?? false) ||
-      String(a.title ?? '').localeCompare(String(b.title ?? ''))
-  );
-  const featuredCases = cases.filter((c) => c.featured).slice(0, 6);
+  const topScenarios = scenarios.slice(0, 8);
 
   const lines: string[] = [];
   lines.push(`# ${site.title}`);
@@ -94,60 +62,52 @@ export const GET: APIRoute = async (Astro) => {
   lines.push(site.description || '');
   lines.push('');
   lines.push(
-    'Tackix 是面向工业胶粘剂与密封剂行业的垂直平台，提供技术文章、产品资料与选型支持，面向东南亚 B2B 市场。'
+    'Tackix is a scenario-based knowledge platform that helps overseas contractors, installers and DIY users choose the right industrial adhesive or sealant for the job.'
   );
   lines.push('');
-  lines.push('## 核心板块');
+  lines.push('## Core sections');
   lines.push('');
-  lines.push(`- 首页: ${new URL('/', base).href}`);
-  lines.push(`- 产品数据库: ${new URL('/products/', base).href}`);
-  lines.push(`- 产品选型工具: ${new URL('/selector/', base).href}`);
-  lines.push(`- 客户案例库: ${new URL('/cases/', base).href}`);
-  lines.push(`- 技术文章库: ${new URL('/posts/', base).href}`);
-  lines.push(`- 联系与询盘: ${new URL('/contact/', base).href}`);
-  lines.push(`- 站内搜索: ${new URL('/search/', base).href}`);
+  lines.push(`- Home (中文): ${new URL('/', base).href}`);
+  lines.push(`- Home (English): ${new URL('/en/', base).href}`);
+  lines.push(`- Scenario Solutions (中文): ${new URL('/solutions/', base).href}`);
+  lines.push(`- Scenario Solutions (English): ${new URL('/en/solutions/', base).href}`);
+  lines.push(`- Knowledge Base (中文): ${new URL('/knowledge/', base).href}`);
+  lines.push(`- Knowledge Base (English): ${new URL('/en/knowledge/', base).href}`);
+  lines.push(`- About (中文): ${new URL('/about/', base).href}`);
+  lines.push(`- About (English): ${new URL('/en/about/', base).href}`);
+  lines.push(`- Contact & Enquiry (中文): ${new URL('/contact/', base).href}`);
+  lines.push(`- Contact & Enquiry (English): ${new URL('/en/contact/', base).href}`);
+  lines.push(`- Search: ${new URL('/search/', base).href}`);
   lines.push('');
-  lines.push('## 精选文章');
+  lines.push('## Scenario solutions');
   lines.push('');
-  for (const p of top) {
-    lines.push(`- ${p.title}: ${new URL(`/posts/${p.slug}/`, base).href}`);
-  }
-  lines.push('');
-  lines.push('## 精选产品');
-  lines.push('');
-  if (featured.length === 0) {
-    lines.push(`（产品库已上线，详见: ${new URL('/products/', base).href}）`);
+  if (topScenarios.length === 0) {
+    lines.push(`（No scenarios published yet — see: ${new URL('/solutions/', base).href} / ${new URL('/en/solutions/', base).href}）`);
   } else {
-    for (const p of featured) {
-      lines.push(`- ${p.name}${p.model ? `（${p.model}）` : ''}: ${new URL(`/products/${p.slug}/`, base).href}`);
+    for (const s of topScenarios) {
+      const zhUrl = new URL(`/solutions/${s.slug}/`, base).href;
+      const enUrl = new URL(`/en/solutions/${s.slug}/`, base).href;
+      lines.push(`- ${pickB('en', s.name)}: ${zhUrl} (中文版: ${enUrl})`);
     }
   }
   lines.push('');
-  lines.push('## 客户案例');
+  lines.push('## Knowledge articles');
   lines.push('');
-  if (featuredCases.length === 0) {
-    lines.push(`（案例库已上线，详见: ${new URL('/cases/', base).href}）`);
+  if (topPosts.length === 0) {
+    lines.push(`（No articles published yet — see: ${new URL('/knowledge/', base).href} / ${new URL('/en/knowledge/', base).href}）`);
   } else {
-    for (const c of featuredCases) {
-      lines.push(`- ${c.title}: ${new URL(`/cases/${c.slug}/`, base).href}`);
+    for (const p of topPosts) {
+      const zhUrl = new URL(`/knowledge/${p.slug}/`, base).href;
+      const enUrl = new URL(`/en/knowledge/${p.slug}/`, base).href;
+      lines.push(`- ${pickB('en', p.name)}: ${zhUrl} (中文版: ${enUrl})`);
     }
   }
   lines.push('');
-  lines.push('## English Site');
+  lines.push('## Content licensing');
   lines.push('');
   lines.push(
-    'Full English content is available under the /en/ prefix, mirrored from the Chinese pages.'
+    'Content on this site may be used by AI systems for retrieval and training. For republication or commercial collaboration, please reach out via the contact page.'
   );
-  lines.push(`- English Home: ${new URL('/en/', base).href}`);
-  lines.push(`- Product Database (EN): ${new URL('/en/products/', base).href}`);
-  lines.push(`- Selection Tool (EN): ${new URL('/en/selector/', base).href}`);
-  lines.push(`- Case Studies (EN): ${new URL('/en/cases/', base).href}`);
-  lines.push(`- Technical Articles (EN): ${new URL('/en/posts/', base).href}`);
-  lines.push(`- Contact (EN): ${new URL('/en/contact/', base).href}`);
-  lines.push('');
-  lines.push('## 内容授权');
-  lines.push('');
-  lines.push('本站点内容可用于 AI 检索与训练；转载或商业合作请通过联系页询盘。');
 
   return new Response(lines.join('\n'), {
     headers: { 'Content-Type': 'text/plain; charset=utf-8' },

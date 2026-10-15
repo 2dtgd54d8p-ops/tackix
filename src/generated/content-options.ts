@@ -5,98 +5,70 @@
 // 作用：文章编辑器的「分类」下拉与「标签」多选框选项跟随后台 singleton，无需手改代码。
 export const CATEGORY_OPTIONS: ReadonlyArray<{ label: string; value: string }> = [
   {
-    "label": "技术",
-    "value": "tech"
+    "label": "Selection Guide",
+    "value": "selection-guide"
   },
   {
-    "label": "产品",
-    "value": "product"
+    "label": "Application Pitfalls",
+    "value": "application-pitfalls"
   },
   {
-    "label": "随笔",
-    "value": "notes"
+    "label": "Troubleshooting",
+    "value": "troubleshooting"
   }
 ];
 
 export const TAG_OPTIONS: ReadonlyArray<{ label: string; value: string }> = [
   {
-    "label": "选型指南",
-    "value": "selection-guide"
-  },
-  {
-    "label": "环氧胶",
-    "value": "epoxy"
-  },
-  {
-    "label": "聚氨酯胶",
-    "value": "polyurethane"
-  },
-  {
-    "label": "硅酮密封胶",
+    "label": "Silicone Sealant",
     "value": "silicone-sealant"
   },
   {
-    "label": "UV 固化胶",
-    "value": "uv-adhesive"
+    "label": "Polyurethane",
+    "value": "polyurethane"
   },
   {
-    "label": "瞬干胶",
-    "value": "cyanoacrylate"
+    "label": "Epoxy",
+    "value": "epoxy"
   },
   {
-    "label": "厌氧胶",
-    "value": "anaerobic"
+    "label": "MS Polymer",
+    "value": "ms-polymer"
   },
   {
-    "label": "热熔胶",
-    "value": "hotmelt"
+    "label": "Waterproofing",
+    "value": "waterproofing"
   },
   {
-    "label": "基材粘接",
+    "label": "Mould Resistance",
+    "value": "mould-resistant"
+  },
+  {
+    "label": "Tile & Stone",
+    "value": "tile-stone"
+  },
+  {
+    "label": "Expansion Joints",
+    "value": "expansion-joints"
+  },
+  {
+    "label": "Surface Prep",
+    "value": "surface-prep"
+  },
+  {
+    "label": "Substrate",
     "value": "substrate"
   },
   {
-    "label": "表面处理",
-    "value": "surface-treatment"
+    "label": "Temperature",
+    "value": "temperature"
   },
   {
-    "label": "结构粘接",
-    "value": "structural-bonding"
+    "label": "DIY",
+    "value": "diy"
   },
   {
-    "label": "密封防水",
-    "value": "sealing"
-  },
-  {
-    "label": "耐温耐候",
-    "value": "temperature-weather"
-  },
-  {
-    "label": "电子封装",
-    "value": "electronics"
-  },
-  {
-    "label": "汽车制造",
-    "value": "automotive"
-  },
-  {
-    "label": "新能源",
-    "value": "new-energy"
-  },
-  {
-    "label": "建筑工程",
-    "value": "construction"
-  },
-  {
-    "label": "包装印刷",
-    "value": "packaging"
-  },
-  {
-    "label": "医疗器械",
-    "value": "medical"
-  },
-  {
-    "label": "常见问题",
-    "value": "faq"
+    "label": "Professional",
+    "value": "professional"
   }
 ];

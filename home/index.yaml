@@ -1,64 +1,34 @@
 content:
-  heroEyebrow: '工业胶粘剂与密封剂 · 选型 · 技术 · 询盘'
-  heroEyebrowEn: 'Industrial Adhesives & Sealants · Selection · Technology · Inquiry'
-  heroCta1: '探索解决方案'
-  heroCta1En: 'Explore Solutions'
-  heroCta2: '联系我们报价'
-  heroCta2En: 'Contact Us for Quotation'
-  solutionsTitle: '解决方案'
-  solutionsTitleEn: 'Solutions'
-  solutionsSub: '从产品选型到落地应用，一站式找到适合的胶粘剂方案'
-  solutionsSubEn: 'From product selection to real-world application — find the right adhesive solution in one place'
-  browseTitle: '浏览分类'
-  browseTitleEn: 'Browse by Category'
-  browseSub: '按主题快速找到你感兴趣的内容'
-  browseSubEn: 'Quickly find content by topic'
-  featuredTitle: '精选推荐'
-  featuredTitleEn: 'Editor’s Picks'
-  featuredSub: '值得优先一读的文章'
-  featuredSubEn: 'Articles worth reading first'
-  latestTitle: '最新文章'
-  latestTitleEn: 'Latest Articles'
-  latestSub: '持续记录，持续更新'
-  latestSubEn: 'Continuously documented and updated'
-  tagsTitle: '热门标签'
-  tagsTitleEn: 'Popular Tags'
-  tagsSub: '点击标签，查看同主题文章'
-  tagsSubEn: 'Click a tag to see related articles'
-  bandTitle: '需要选型建议？'
-  bandTitleEn: 'Need a selection recommendation?'
-  bandSub: '面向工业胶粘剂与密封剂行业的垂直平台，提供产品、选型、技术与案例。'
-  bandSubEn: 'A vertical platform for the industrial adhesive & sealant industry — products, selection, technology and cases.'
-  bandCta1: '联系我们获取报价'
-  bandCta1En: 'Contact Us for Quotation'
-  bandCta2: '浏览技术文章'
-  bandCta2En: 'Browse Technical Articles'
-solutionCards:
-  - title: '产品数据库'
-    titleEn: 'Product Database'
-    desc: '按化学体系、固化方式与认证筛选工业胶粘剂与密封剂，查看关键参数与文档。'
-    descEn: 'Filter industrial adhesives & sealants by chemistry, cure and certification; review key specs and docs.'
-    cta: '浏览胶粘剂产品库'
-    ctaEn: 'Browse the adhesive product library'
-    href: '/products'
-  - title: '选型工具'
-    titleEn: 'Selection Tool'
-    desc: '根据应用场景、固化需求与基材自动推荐匹配的胶型，快速缩小选型范围。'
-    descEn: 'Auto-recommend matching adhesive types from application, cure needs and substrates to narrow your shortlist.'
-    cta: '开始在线选型'
-    ctaEn: 'Start online selection'
-    href: '/selector'
-  - title: '应用案例'
-    titleEn: 'Application Cases'
-    desc: '看同行如何在新能源、电子、汽车等场景落地胶粘剂方案与选型结果。'
-    descEn: 'See how peers deploy adhesive solutions across new energy, electronics, automotive and more.'
-    cta: '查看应用案例'
-    ctaEn: 'View application cases'
-    href: '/cases'
-  - title: '在线询盘'
-    titleEn: 'Online Inquiry'
-    desc: '提供应用场景与技术要求，获取针对性选型建议、样品与技术文档。'
-    descEn: 'Share your application and requirements to get tailored selection advice, samples and technical docs.'
-    cta: '获取选型建议与报价'
-    ctaEn: 'Get advice & quotation'
-    href: '/contact'
+  heroEyebrow:
+    zh: 工业胶粘剂与密封剂 · 选型 · 技术 · 询盘
+    en: Industrial Adhesives & Sealants · Selection · Technology · Inquiry
+  heroCta1:
+    zh: 探索解决方案
+    en: Explore Solutions
+  heroCta2:
+    zh: 联系我们报价
+    en: Contact Us for Quotation
+  scenariosTitle:
+    zh: 解决方案
+    en: Solutions
+  scenariosSub:
+    zh: 从场景选型到落地应用，一站式找到适合的胶粘剂方案。
+    en: From scenario selection to real-world application — find the right adhesive solution in one place.
+  knowledgeTitle:
+    zh: 知识库
+    en: Knowledge Base
+  knowledgeSub:
+    zh: 面向真实工况的胶粘剂与密封剂选型指南、避坑与排障。
+    en: Guides, pitfalls and troubleshooting for real-world adhesive & sealant jobs.
+  bandTitle:
+    zh: 需要选型建议？
+    en: Need a selection recommendation?
+  bandSub:
+    zh: 面向工业胶粘剂与密封剂行业的垂直平台，提供方案、选型、技术与案例。
+    en: A vertical platform for the industrial adhesive & sealant industry — solutions, selection, technology and cases.
+  bandCta1:
+    zh: 联系我们获取报价
+    en: Contact Us for Quotation
+  bandCta2:
+    zh: 浏览知识库
+    en: Browse the Knowledge Base

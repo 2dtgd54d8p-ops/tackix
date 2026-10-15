@@ -1,25 +1,16 @@
 content:
-  productSpecsTitle: '技术参数'
-  productSpecsTitleEn: 'Technical Specifications'
-  productDescTitle: '产品描述'
-  productDescTitleEn: 'Product Description'
-  productDocsTitle: '技术文档'
-  productDocsTitleEn: 'Documents'
-  productQuoteTitle: '获取报价与技术支持'
-  productQuoteTitleEn: 'Get Quotation & Technical Support'
-  productQuoteCopy: '本平台为工业胶粘剂与密封剂 B2B 渠道，所有产品按订单与规格报价。请留下需求，我们的技术团队将在 1 个工作日内回复。'
-  productQuoteCopyEn: 'This is a B2B channel for industrial adhesives & sealants; all products are quoted per order and specification. Leave your requirements and our team will reply within 1 business day.'
-  caseChallengeTitle: '挑战'
-  caseChallengeTitleEn: 'Challenge'
-  caseSolutionTitle: '解决方案'
-  caseSolutionTitleEn: 'Solution'
-  caseResultTitle: '成果'
-  caseResultTitleEn: 'Result'
-  caseRelatedTitle: '本案例使用的产品'
-  caseRelatedTitleEn: 'Products Used in This Case'
-  caseCtaTitle: '有类似需求？'
-  caseCtaTitleEn: 'Have a similar need?'
-  caseCtaCopy: '告诉我们您的基材、工况与产能，我们的技术团队将提供针对性的选型建议与样品支持。'
-  caseCtaCopyEn: 'Tell us your substrates, conditions and volume — our team will provide tailored selection advice and samples.'
-  faqTitle: '常见问题（FAQ）'
-  faqTitleEn: 'Frequently Asked Questions'
+  articleFaqTitle:
+    zh: 常见问题（FAQ）
+    en: Frequently Asked Questions
+  scenarioConclusionTitle:
+    zh: 一句话结论
+    en: The bottom line
+  scenarioSelectionTitle:
+    zh: 选型逻辑
+    en: How to choose
+  scenarioProductsTitle:
+    zh: 推荐产品
+    en: Recommended products
+  scenarioInquiryTitle:
+    zh: 获取量身定制的建议
+    en: Get a tailored recommendation

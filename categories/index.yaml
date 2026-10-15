@@ -1,10 +1,13 @@
 items:
-  - label: 技术
-    labelEn: Technology
-    value: tech
-  - label: 产品
-    labelEn: Products
-    value: product
-  - label: 随笔
-    labelEn: Notes
-    value: notes
+  - label:
+      zh: 选型指南
+      en: Selection Guide
+    value: selection-guide
+  - label:
+      zh: 应用避坑
+      en: Application Pitfalls
+    value: application-pitfalls
+  - label:
+      zh: 故障排查
+      en: Troubleshooting
+    value: troubleshooting

@@ -18,6 +18,21 @@ import yaml from 'js-yaml';
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const DEST = path.join(ROOT, 'src/generated/content-options.ts');
 
+/**
+ * 从可能是「双语对象 {zh,en}」或「纯字符串」的 label 中取出用于下拉选项的字符串。
+ * 文章编辑器的「分类 / 标签」下拉显示英文（与 URL slug 一致），英文缺失时回落中文。
+ */
+function optionLabel(label) {
+  if (!label) return '';
+  if (typeof label === 'string') return label.trim();
+  if (typeof label === 'object') {
+    const en = typeof label.en === 'string' ? label.en.trim() : '';
+    const zh = typeof label.zh === 'string' ? label.zh.trim() : '';
+    return en || zh;
+  }
+  return '';
+}
+
 /** 读取某个 singleton 的 items，返回 [{label,value}]，只保留 label+value 都非空的项 */
 export function readSingletonItems(relPath) {
   const p = path.join(ROOT, relPath);
@@ -36,10 +51,9 @@ export function readSingletonItems(relPath) {
         x &&
         typeof x.value === 'string' &&
         x.value.trim() &&
-        typeof x.label === 'string' &&
-        x.label.trim()
+        optionLabel(x.label)
     )
-    .map((x) => ({ label: x.label.trim(), value: x.value.trim() }));
+    .map((x) => ({ label: optionLabel(x.label), value: x.value.trim() }));
 }
 
 export function generateContentOptions() {

@@ -17,13 +17,11 @@ export default defineConfig({
   site: import.meta.env.PUBLIC_SITE_URL || 'https://tackix.pages.dev',
   output: 'static',
   adapter: cloudflare(),
-  // 多语言（T10 脚手架）：声明支持语种，为后续 /en /vi /th 内容路由与
-  // SEO hreflang 备用链接预留。当前静态站尚未生成非默认语种内容页，
-  // 默认语种不加路径前缀（prefixDefaultLocale:false），外壳 UI 文案由
-  // Base.astro 的客户端切换器做 localStorage 偏好替换。
+  // 多语言路由：中文为默认语种，路由无前缀（/）；英文位于 /en/ 下。
+  // prefixDefaultLocale:false 让默认语种不带 /zh-CN 前缀，保持首页干净。
   i18n: {
     defaultLocale: 'zh-CN',
-    locales: ['zh-CN', 'en', 'vi', 'th'],
+    locales: ['zh-CN', 'en'],
     routing: { prefixDefaultLocale: false },
   },
   integrations: [

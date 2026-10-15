@@ -1,0 +1,134 @@
+---
+import { createReader } from '@keystatic/core/reader';
+import keystaticConfig from '../../../keystatic.config';
+import Base from '../../layouts/Base.astro';
+import { loadSiteData, loadContent } from '../../lib/site-data';
+import { coverSrc } from '../../lib/markdown';
+import { getLocale, pickB, type Locale } from '../../lib/i18n';
+
+const { locale: localeProp } = Astro.props;
+const locale: Locale = localeProp ?? getLocale(Astro);
+const lp = locale === 'en' ? '/en' : '';
+const t = (zh: string, en: string) => (locale === 'en' ? en : zh);
+
+const reader = createReader(process.cwd(), keystaticConfig);
+const L = await loadContent(locale);
+const pages = L.pages;
+
+let slugs: string[] = [];
+try {
+  slugs = await reader.collections.scenarios.list();
+} catch (e) {
+  console.warn('[build] scenarios list failed:', e);
+}
+
+const scenarios = (
+  await Promise.all(
+    slugs.map(async (slug) => {
+      try {
+        const s = await reader.collections.scenarios.read(slug);
+        return s ? { slug, ...s } : null;
+      } catch {
+        return null;
+      }
+    })
+  )
+).filter((s) => s && s.published !== false);
+
+// 优先「首页显示」，其次保持顺序
+const featured = scenarios.filter((s) => s.featured);
+const ordered = (featured.length ? featured : scenarios).slice();
+
+const { site } = await loadSiteData(locale);
+---
+
+<Base title={pages.scenariosTitle} description={pages.scenariosSub}>
+  <section>
+    <div class="page-head">
+      <h1>{pages.scenariosTitle}</h1>
+      <p>{pages.scenariosSub}</p>
+    </div>
+
+    {
+      ordered.length === 0 ? (
+        <p class="empty">{t('暂无场景方案，请在后台创建第一篇。', 'No scenario solutions yet — create the first one in the CMS.')}</p>
+      ) : (
+        <div class="grid">
+          {ordered.map((s, i) => (
+            <a class="sol-tile" href={`${lp}/solutions/${s.slug}`}>
+              <span class="sol-index" aria-hidden="true">{String(i + 1).padStart(2, '0')}</span>
+              <h3>{pickB(locale, s.name)}</h3>
+              {s.excerpt && <p>{pickB(locale, s.excerpt)}</p>}
+              {s.conclusion && <p class="sol-bottom">{pickB(locale, s.conclusion)}</p>}
+              <span class="sol-cta">{t('查看方案', 'Read the solution')} →</span>
+              {coverSrc(s.cover) && <img class="sol-cover" src={coverSrc(s.cover)} alt="" loading="lazy" />}
+            </a>
+          ))}
+        </div>
+      )
+    }
+  </section>
+</Base>
+
+<style>
+  .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 22px; }
+  .sol-tile {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    padding: 28px 26px;
+    border: 1px solid var(--border);
+    border-radius: var(--r-lg);
+    background: var(--surface);
+    box-shadow: var(--shadow-sm);
+    text-decoration: none;
+    color: var(--fg-soft);
+    overflow: hidden;
+    transition: transform var(--dur) var(--ease), box-shadow var(--dur) var(--ease),
+      border-color var(--dur) var(--ease);
+  }
+  .sol-tile:hover {
+    transform: translateY(-4px);
+    box-shadow: var(--shadow-md);
+    border-color: var(--border-strong);
+    text-decoration: none;
+  }
+  .sol-index {
+    font-family: var(--font-display);
+    font-size: 26px;
+    font-weight: 800;
+    color: var(--accent-soft);
+    line-height: 1;
+  }
+  .sol-tile h3 { margin: 0; font-size: 20px; font-weight: 700; color: var(--fg); }
+  .sol-tile p { margin: 0; font-size: 14px; color: var(--muted); line-height: 1.7; }
+  .sol-bottom {
+    font-size: 14px !important;
+    color: var(--fg-soft) !important;
+    padding: 10px 12px;
+    background: var(--surface-2);
+    border-left: 3px solid var(--accent);
+    border-radius: 0 var(--r-sm) var(--r-sm) 0;
+  }
+  .sol-cta {
+    margin-top: auto;
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--accent);
+    transition: gap var(--dur) var(--ease);
+  }
+  .sol-tile:hover .sol-cta { text-decoration: underline; text-underline-offset: 3px; }
+  .sol-cover {
+    position: absolute;
+    right: 0;
+    bottom: 0;
+    width: 96px;
+    height: 72px;
+    object-fit: cover;
+    opacity: 0.5;
+    border-top-left-radius: var(--r-md);
+    pointer-events: none;
+  }
+  @media (max-width: 700px) { .grid { grid-template-columns: minmax(0, 1fr); gap: 16px; } }
+</style>

@@ -1,0 +1,28 @@
+---
+import SolutionsDetail from '../../components/pages/SolutionsDetail.astro';
+import { createReader } from '@keystatic/core/reader';
+import keystaticConfig from '../../../keystatic.config';
+
+// 静态预渲染：枚举所有已发布场景生成对应 HTML（中文版 /）。
+export async function getStaticPaths() {
+  const reader = createReader(process.cwd(), keystaticConfig);
+  let slugs: string[] = [];
+  try {
+    slugs = await reader.collections.scenarios.list();
+  } catch {
+    slugs = [];
+  }
+  const out: { params: { slug: string } }[] = [];
+  for (const slug of slugs) {
+    try {
+      const item = await reader.collections.scenarios.read(slug);
+      if (item && item.published !== false) out.push({ params: { slug } });
+    } catch {
+      /* 跳过读取失败的单篇 */
+    }
+  }
+  return out;
+}
+---
+
+<SolutionsDetail locale="zh-CN" slug={Astro.params.slug!} />

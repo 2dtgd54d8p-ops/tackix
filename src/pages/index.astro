@@ -2,435 +2,241 @@
 import { createReader } from '@keystatic/core/reader';
 import keystaticConfig from '../../keystatic.config';
 import Base from '../layouts/Base.astro';
-import { loadSiteData, buildFilterOptions, loadContent } from '../lib/site-data';
+import { loadSiteData, loadContent } from '../lib/site-data';
+import { organizationSchema } from '../lib/schema';
+import { getLocale, pickB, type Locale } from '../lib/i18n';
+
+const { locale: localeProp } = Astro.props;
+const locale: Locale = localeProp ?? getLocale(Astro);
+const lp = locale === 'en' ? '/en' : '';
+const t = (zh: string, en: string) => (locale === 'en' ? en : zh);
 
 const reader = createReader(process.cwd(), keystaticConfig);
-let slugs = [];
+
+// 场景方案 & 知识库文章（已发布）。
+let scenarioSlugs: string[] = [];
+let knowledgeSlugs: string[] = [];
 try {
-  slugs = await reader.collections.posts.list();
+  scenarioSlugs = await reader.collections.scenarios.list();
 } catch (e) {
-  console.warn('[build] 读取文章列表失败（检查 KEYSTATIC_GITHUB_TOKEN 是否有效）：', e);
+  console.warn('[build] scenarios list failed（检查 KEYSTATIC_GITHUB_TOKEN 是否有效）：', e);
+}
+try {
+  knowledgeSlugs = await reader.collections.knowledge.list();
+} catch (e) {
+  console.warn('[build] knowledge list failed（检查 KEYSTATIC_GITHUB_TOKEN 是否有效）：', e);
 }
 
-const posts = (await Promise.all(
-  slugs.map(async (slug) => {
-    try {
-      const post = await reader.collections.posts.read(slug);
-      return post ? { slug, ...post } : null;
-    } catch (e) {
-      console.warn('[build] 读取文章失败：', slug, e);
-      return null;
-    }
-  })
-)).filter((p) => p && p.published !== false); // 仅展示已发布
+const scenarios = (
+  await Promise.all(
+    scenarioSlugs.map(async (slug) => {
+      try {
+        const s = await reader.collections.scenarios.read(slug);
+        return s ? { slug, ...s } : null;
+      } catch (e) {
+        console.warn('[build] 读取场景失败：', slug, e);
+        return null;
+      }
+    })
+  )
+).filter((s) => s && s.published !== false);
 
-// 估算阅读时长：中文约 400 字/分钟，英文约 200 词/分钟
-function readingMinutes(body) {
+const knowledge = (
+  await Promise.all(
+    knowledgeSlugs.map(async (slug) => {
+      try {
+        const p = await reader.collections.knowledge.read(slug);
+        return p ? { slug, ...p } : null;
+      } catch (e) {
+        console.warn('[build] 读取文章失败：', slug, e);
+        return null;
+      }
+    })
+  )
+).filter((p) => p && p.published !== false);
+
+// 估算阅读时长（英文约 200 词/分钟）
+function readingMinutes(body: unknown): number {
   if (!body || typeof body !== 'string') return 1;
-  const cjk = (body.match(/[一-龥]/g) || []).length;
-  const words = (body.replace(/[一-龥]/g, ' ').match(/[a-zA-Z0-9]+/g) || []).length;
-  return Math.max(1, Math.ceil(cjk / 400 + words / 200));
+  const words = (body.match(/[a-zA-Z0-9]+/g) || []).length;
+  return Math.max(1, Math.ceil(words / 200));
 }
 
-// 给每篇补上阅读时长，供卡片展示与排序使用
-const withMeta = posts.map((p) => ({ ...p, readMin: readingMinutes(p.body) }));
-
+const withMeta = knowledge.map((p) => ({ ...p, readMin: readingMinutes(pickB(locale, p.body)) }));
 // 按发布日期倒序
 withMeta.sort((a, b) => String(b.publishedAt ?? '').localeCompare(String(a.publishedAt ?? '')));
 
-// 置顶（后台勾选「首页置顶」）单独抽出来做大卡片；同一篇只出现一次
-const featured = withMeta.find((p) => p.featured);
-const rest = withMeta.filter((p) => p.slug !== featured?.slug);
+// 首页场景卡：优先展示后台「首页显示」勾选的，不足 4 个则用前几条补齐
+const featuredScenarios = scenarios.filter((s) => s.featured);
+const homeScenarios = (featuredScenarios.length ? featuredScenarios : scenarios).slice(0, 4);
+// 首页知识卡：最新 6 篇
+const latestKnowledge = withMeta.slice(0, 6);
 
-// 分类/标签/站点信息统一从公共模块读取（后台可增删改），读不到自动回落默认值
-const { site: siteInfo, categories: managedCategories, categoryLabel, tagLabel, tags } =
-  await loadSiteData();
-
-// T13：全站静态文案从后台单例读取（首页 hero / 解决方案 / 区块标题 / 色带等均可后台编辑）
-const L = await loadContent();
+// 站点信息 & 全站文案
+const { site: siteInfo, categories, categoryLabel, tagLabel, tags } = await loadSiteData(locale);
+const L = await loadContent(locale);
 const home = L.home;
-const z = (b: { zh: string; en: string }) => b.zh;
 
-// T11：首页新增「解决方案」引导区，串联 文章→产品→案例→询盘 内链闭环，
-// 卡片展示真实条目数（来自后台集合），锚文本使用描述性文案以利 SEO 内部链接。
-let productSlugs = [];
-let caseSlugs = [];
-try { productSlugs = await reader.collections.products.list(); } catch (e) {}
-try { caseSlugs = await reader.collections.cases.list(); } catch (e) {}
-const productCount = productSlugs.length;
-const caseCount = caseSlugs.length;
+// 参考站签名四色，依索引轮换（纯色，供 color-mix 使用）
+const SOL_COLORS = ['#7c4df0', '#18a06a', '#f0883e', '#3a7bff', '#e0457b', '#12a0c9'];
 
-// 列出后台「分类管理」的全部分类（含暂时没有文章的），保证前台与后台同步；
-// 空分类点进去由下方空态「该筛选下暂无文章。」兜底。
-const categories = buildFilterOptions(withMeta, managedCategories);
-const usedTags = tags.filter((t) => withMeta.some((p) => (p.tags ?? []).includes(t.value)));
+// Keystatic 图片字段可能返回文件名或带前缀的路径，统一归一成可访问的 URL
+function coverSrc(cover: unknown): string {
+  if (!cover || typeof cover !== 'string') return '';
+  return cover.startsWith('/') ? cover : `/uploads/${cover}`;
+}
 
-// 计数基于网格实际展示的 rest，避免筛选后数量对不上
-const catCounts = {};
-rest.forEach((p) => {
-  const k = p.category ?? 'uncategorized';
-  catCounts[k] = (catCounts[k] ?? 0) + 1;
-});
-const tagCounts = {};
-rest.forEach((p) => (p.tags ?? []).forEach((t) => { tagCounts[t] = (tagCounts[t] ?? 0) + 1; }));
-
-// 参考站签名四色渐变，依索引轮换
-const TILE_GRADS = [
-  'linear-gradient(135deg, #1ec8c8, #12a0c9)',
-  'linear-gradient(135deg, #f6a63c, #f2792f)',
-  'linear-gradient(135deg, #9b5cf5, #6f2fe0)',
-  'linear-gradient(135deg, #4f9bf5, #3d6ee8)',
-  'linear-gradient(135deg, #26c281, #12a150)',
-  'linear-gradient(135deg, #f2668b, #d63f6f)',
-];
-const categoryCards = categories.map((c, i) => ({
-  ...c,
-  count: c.value === 'all' ? rest.length : (catCounts[c.value] ?? 0),
-  grad: TILE_GRADS[i % TILE_GRADS.length],
-}));
-const tagCards = usedTags.map((t) => ({ ...t, count: tagCounts[t.value] ?? 0 }));
-
-// 结构化数据：首页文章列表（ItemList），利于搜索引擎理解
+// 结构化数据：首页文章列表（ItemList），利于搜索引擎/Ai 理解
 const jsonLd = {
   '@context': 'https://schema.org',
   '@type': 'ItemList',
-  itemListElement: rest.map((p, i) => ({
+  itemListElement: latestKnowledge.map((p, i) => ({
     '@type': 'ListItem',
     position: i + 1,
-    url: new URL(`/posts/${p.slug}`, Astro.site ?? Astro.url).toString(),
-    name: p.title,
+    url: new URL(`${lp}/knowledge/${p.slug}`, Astro.site ?? Astro.url).toString(),
+    name: pickB(locale, p.name),
   })),
+};
+// 组织实体（含 ContactPoint），强化 E-E-A-T 与「公司实体」识别
+const orgLd = {
+  '@context': 'https://schema.org',
+  ...organizationSchema(locale, siteInfo, Astro.site ?? Astro.url),
 };
 ---
 
-<Base
-  title="首页"
-  description={siteInfo.description || `${siteInfo.title} —— 记录技术、实践与思考的独立空间。`}
-  alternates={[
-    { lang: 'zh-CN', href: '/' },
-    { lang: 'en', href: '/en/' },
-    { lang: 'x-default', href: '/en/' },
-  ]}
->
+  <Base
+    description={siteInfo.description || t('Tackix 是面向海外承包商、安装商与 DIY 用户的场景化工业胶粘剂与密封剂选型知识平台。', 'Scenario-based industrial adhesive & sealant selection guides for contractors, installers and DIY users.')}
+  >
   <script type="application/ld+json" set:html={JSON.stringify(jsonLd)} />
+  <script type="application/ld+json" set:html={JSON.stringify(orgLd)} />
 
   <section class="hero">
     <div class="hero-glow" aria-hidden="true"></div>
     <div class="hero-inner">
-      <span class="hero-eyebrow">{z(home.heroEyebrow)}</span>
+      <span class="hero-eyebrow">{home.heroEyebrow}</span>
       <h1 class="hero-title">{siteInfo.title}</h1>
-      <p class="hero-sub">{siteInfo.tagline || '面向工业胶粘剂与密封剂行业的垂直平台：产品数据库、在线选型、技术文章与客户案例，支持多语言与在线询盘。'}</p>
+      <p class="hero-sub">
+        {siteInfo.tagline || 'Pick the right adhesive for the job — with scenario-based guides and direct inquiry.'}
+      </p>
       <div class="hero-actions">
-        <a class="btn btn-light" href="#solutions">{z(home.heroCta1)}</a>
-        <a class="btn btn-outline-light" href="/contact">{z(home.heroCta2)}</a>
+        <a class="btn btn-light" href="#solutions">{home.heroCta1}</a>
+        <a class="btn btn-outline-light" href={`${lp}/contact`}>{home.heroCta2}</a>
       </div>
       <div class="hero-stats">
-        <div class="stat"><strong>{productCount}</strong><span>产品库</span></div>
-        <div class="stat"><strong>{caseCount}</strong><span>客户案例</span></div>
-        <div class="stat"><strong>4</strong><span>方案模块</span></div>
-        <div class="stat"><strong>EN</strong><span>多语言</span></div>
+        <div class="stat"><strong>{scenarios.length}</strong><span>{t('场景方案', 'Scenario solutions')}</span></div>
+        <div class="stat"><strong>{knowledge.length}</strong><span>{t('知识文章', 'Knowledge articles')}</span></div>
+        <div class="stat"><strong>{categories.length}</strong><span>{t('分类', 'Categories')}</span></div>
+        <div class="stat"><strong>{tags.length}</strong><span>{t('主题', 'Topics')}</span></div>
       </div>
     </div>
   </section>
 
-  {/* T11：解决方案引导区 —— 串联 文章→产品→案例→询盘 内链闭环 */}
+  {/* 场景方案引导区 —— 串联 场景 → 知识库 → 询盘 内链闭环 */}
   <section class="block" id="solutions">
     <div class="section-head">
-      <h2>{z(home.solutionsTitle)}</h2>
-      <p>{z(home.solutionsSub)}</p>
+      <h2>{home.scenariosTitle}</h2>
+      <p>{home.scenariosSub}</p>
     </div>
-    <div class="sol-cards">
-      <a class="sol-card" href="/products">
-        <span class="sol-icon" style="--sol:#7c4df0" aria-hidden="true">
-          <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z" /><path d="M3.27 6.96 12 12.01l8.73-5.05M12 22.08V12" /></svg>
-        </span>
-        <h3>{z(home.solutionCards[0].title)}</h3>
-        <p>{z(home.solutionCards[0].desc)}</p>
-        <span class="sol-cta">{z(home.solutionCards[0].cta)} →</span>
-      </a>
-      <a class="sol-card" href="/selector">
-        <span class="sol-icon" style="--sol:#18a06a" aria-hidden="true">
-          <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="4" y1="21" x2="4" y2="14" /><line x1="4" y1="10" x2="4" y2="3" /><line x1="12" y1="21" x2="12" y2="12" /><line x1="12" y1="8" x2="12" y2="3" /><line x1="20" y1="21" x2="20" y2="16" /><line x1="20" y1="12" x2="20" y2="3" /><line x1="1" y1="14" x2="7" y2="14" /><line x1="9" y1="8" x2="15" y2="8" /><line x1="17" y1="16" x2="23" y2="16" /></svg>
-        </span>
-        <h3>{z(home.solutionCards[1].title)}</h3>
-        <p>{z(home.solutionCards[1].desc)}</p>
-        <span class="sol-cta">{z(home.solutionCards[1].cta)} →</span>
-      </a>
-      <a class="sol-card" href="/cases">
-        <span class="sol-icon" style="--sol:#f0883e" aria-hidden="true">
-          <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9H4.5a2.5 2.5 0 0 1 0-5H6m0 5h12m0 0h1.5a2.5 2.5 0 0 0 0-5H18m0 5v3a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2V9m0 0V6a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v3" /><path d="M9 17l3 3 3-3" /></svg>
-        </span>
-        <h3>{z(home.solutionCards[2].title)}</h3>
-        <p>{z(home.solutionCards[2].desc)}</p>
-        <span class="sol-cta">{z(home.solutionCards[2].cta)} →</span>
-      </a>
-      <a class="sol-card" href="/contact">
-        <span class="sol-icon" style="--sol:#3a7bff" aria-hidden="true">
-          <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 11.5a8.4 8.4 0 0 1-9 8.4 9.7 9.7 0 0 1-2.8-.4L4 21l1.4-4.2A8.4 8.4 0 0 1 3 11.5 8.4 8.4 0 0 1 12 3a8.4 8.4 0 0 1 9 8.5z" /><path d="M8.5 10.4h7M8.5 13.4h4" /></svg>
-        </span>
-        <h3>{z(home.solutionCards[3].title)}</h3>
-        <p>{z(home.solutionCards[3].desc)}</p>
-        <span class="sol-cta">{z(home.solutionCards[3].cta)} →</span>
-      </a>
+    {
+      homeScenarios.length === 0 ? (
+        <p class="empty">{t('暂无场景方案，请在后台创建第一篇。', 'No scenario solutions yet — create the first one in the CMS.')}</p>
+      ) : (
+        <div class="sol-cards">
+          {homeScenarios.map((s, i) => (
+            <a class="sol-card" href={`${lp}/solutions/${s.slug}`}>
+              <span class="sol-icon" style={`--sol:${SOL_COLORS[i % SOL_COLORS.length]}`} aria-hidden="true">
+                <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9" /><circle cx="12" cy="12" r="5" /><circle cx="12" cy="12" r="1.6" fill="currentColor" /></svg>
+              </span>
+              <h3>{pickB(locale, s.name)}</h3>
+              {s.excerpt && <p>{pickB(locale, s.excerpt)}</p>}
+              <span class="sol-cta">{t('查看方案', 'Read the solution')} →</span>
+            </a>
+          ))}
+        </div>
+      )
+    }
+    <div class="section-more">
+      <a class="btn btn-outline" href={`${lp}/solutions`}>{t('浏览全部场景方案', 'Browse all scenario solutions')} →</a>
     </div>
   </section>
 
+  {/* 最新知识库文章 */}
   {
-    posts.length === 0 ? (
-      <p class="empty">还没有文章，去后台创建第一篇吧。</p>
+    knowledge.length === 0 ? (
+      <p class="empty">{t('暂无文章，请在后台创建第一篇。', 'No articles yet — create the first one in the CMS.')}</p>
     ) : (
-      <>
-        {/* 浏览分类：彩色渐变瓷砖，点击筛选下方网格 */}
-        <section class="block">
-          <div class="section-head">
-            <h2>{z(home.browseTitle)}</h2>
-            <p>{z(home.browseSub)}</p>
-          </div>
-          <div class="cat-cards">
-            {categoryCards.map((c, i) => (
-              <button
-                type="button"
-                class={`tile cat-card${i === 0 ? ' is-active' : ''}`}
-                data-filter={c.value}
-                aria-pressed={i === 0 ? 'true' : 'false'}
-                style={`--tile-grad:${c.grad}`}
-              >
-                <span class="tile-name">{c.label}</span>
-                <span class="tile-count">{c.count} 篇</span>
-              </button>
-            ))}
-          </div>
-        </section>
-
-        {featured && (
-          <section class="block">
-            <div class="section-head">
-              <h2>{z(home.featuredTitle)}</h2>
-              <p>{z(home.featuredSub)}</p>
-            </div>
-            <article class="card card-featured">
-              {featured.cover && (
-                <div class="card-media">
-                  <img src={featured.cover} alt="" loading="eager" />
+      <section class="block" id="latest">
+        <div class="section-head">
+          <h2>{home.knowledgeTitle}</h2>
+          <p>{home.knowledgeSub}</p>
+        </div>
+        <div class="grid">
+          {latestKnowledge.map((post) => (
+            <article class="card" data-category={post.category ?? 'uncategorized'}>
+              {coverSrc(post.cover) && (
+                <div class="card-media card-media-sm">
+                  <img src={coverSrc(post.cover)} alt="" loading="lazy" />
                 </div>
               )}
               <div class="card-body">
                 <h3 class="card-title">
-                  <a href={`/posts/${featured.slug}`}>{featured.title}</a>
+                  <a href={`${lp}/knowledge/${post.slug}`}>{pickB(locale, post.name)}</a>
                 </h3>
-                {featured.excerpt && <p class="card-excerpt">{featured.excerpt}</p>}
+                {post.excerpt && <p class="card-excerpt">{pickB(locale, post.excerpt)}</p>}
                 <div class="card-meta">
-                  <span class="tag">{categoryLabel(featured.category)}</span>
-                  {(featured.tags ?? []).map((t) => (
+                  <span class="tag">{categoryLabel(post.category)}</span>
+                  {(post.tags ?? []).slice(0, 2).map((t: string) => (
                     <span class="tag tag-plain">{tagLabel(t)}</span>
                   ))}
-                  {featured.publishedAt && <span>{featured.publishedAt}</span>}
-                  <span class="read-time">· {featured.readMin} 分钟</span>
+                  {post.publishedAt && <span>{post.publishedAt}</span>}
+                  <span class="read-time">· {post.readMin}{t(' 分钟阅读', ' min read')}</span>
                 </div>
               </div>
             </article>
-          </section>
-        )}
+          ))}
+        </div>
+        <div class="section-more">
+          <a class="btn btn-outline" href={`${lp}/knowledge`}>{t('浏览全部文章', 'Browse all articles')} →</a>
+        </div>
+      </section>
+    )
+  }
 
-        <section class="block" id="latest">
-          <div class="section-head">
-            <h2>{z(home.latestTitle)}</h2>
-            <p>{z(home.latestSub)}</p>
-          </div>
-          <div class="sort-bar" role="group" aria-label="排序方式">
-            <button type="button" class="sort-btn is-active" data-sort="newest" aria-pressed="true">最新</button>
-            <button type="button" class="sort-btn" data-sort="title" aria-pressed="false">标题</button>
-            <span class="sort-count" data-count></span>
-          </div>
-          {rest.length === 0 ? (
-            <p class="empty">暂无更多文章。</p>
-          ) : (
-            <div class="grid">
-              {rest.map((post) => (
-                <article
-                  class="card"
-                  data-category={post.category ?? 'uncategorized'}
-                  data-tags={(post.tags ?? []).join(' ')}
-                  data-title={post.title}
-                  data-date={post.publishedAt ?? ''}
-                >
-                  {post.cover && (
-                    <div class="card-media card-media-sm">
-                      <img src={post.cover} alt="" loading="lazy" />
-                    </div>
-                  )}
-                  <div class="card-body">
-                    <h3 class="card-title">
-                      <a href={`/posts/${post.slug}`}>{post.title}</a>
-                    </h3>
-                    {post.excerpt && <p class="card-excerpt">{post.excerpt}</p>}
-                    <div class="card-meta">
-                      <span class="tag">{categoryLabel(post.category)}</span>
-                      {(post.tags ?? []).slice(0, 2).map((t) => (
-                        <span class="tag tag-plain">{tagLabel(t)}</span>
-                      ))}
-                      {post.publishedAt && <span>{post.publishedAt}</span>}
-                      <span class="read-time">· {post.readMin} 分钟</span>
-                    </div>
-                  </div>
-                </article>
+  {/* 信任带：认证徽章 + 一句话（来自后台「站点信息」trust / certBadges） */}
+  {
+    (siteInfo.trustTitle || siteInfo.trustSub || (siteInfo.certBadges?.length ?? 0) > 0) && (
+      <section class="trust">
+        <div class="trust-inner">
+          {siteInfo.trustTitle && <h2>{siteInfo.trustTitle}</h2>}
+          {siteInfo.trustSub && <p>{siteInfo.trustSub}</p>}
+          {(siteInfo.certBadges?.length ?? 0) > 0 && (
+            <div class="badges">
+              {siteInfo.certBadges.map((b) => (
+                <div class="badge">
+                  <span class="badge-label">{b.label}</span>
+                  {b.note && <span class="badge-note">{b.note}</span>}
+                </div>
               ))}
             </div>
           )}
-          <button type="button" class="load-more" data-loadmore hidden>加载更多</button>
-          <p class="empty" data-empty hidden>该筛选下暂无文章。</p>
-        </section>
-
-        {tagCards.length > 0 && (
-          <section class="block">
-            <div class="section-head">
-              <h2>{z(home.tagsTitle)}</h2>
-              <p>{z(home.tagsSub)}</p>
-            </div>
-            <div class="tag-pills">
-              {tagCards.map((t) => (
-                <button type="button" class="tag-pill" data-tagfilter={t.value} aria-pressed="false">
-                  #{tagLabel(t.value)} <span class="pill-count">{t.count}</span>
-                </button>
-              ))}
-            </div>
-          </section>
-        )}
-
-        {/* 关于本站 + 询盘闭环：引导从内容/案例走向联系页 */}
-        <section class="band">
-          <div class="band-inner">
-            <div class="section-head">
-              <h2>{z(home.bandTitle)}</h2>
-              <p>{z(home.bandSub)}</p>
-            </div>
-            <div class="band-actions">
-              <a class="btn btn-primary" href="/contact">{z(home.bandCta1)}</a>
-              <a class="btn" href="/posts">{z(home.bandCta2)}</a>
-            </div>
-          </div>
-        </section>
-
-        <script>
-          // 分类瓷砖 + 标签胶囊 + 排序 + 分页：纯前端统一处理，切换无需重新部署
-          const PAGE = 6;
-          const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-          const grid = document.querySelector('.grid');
-          const emptyHint = document.querySelector('[data-empty]');
-          const loadMoreBtn = document.querySelector('[data-loadmore]');
-          const counter = document.querySelector('[data-count]');
-          const cards = grid ? Array.from(grid.querySelectorAll('.card')) : [];
-          const catCards = Array.from(document.querySelectorAll('.cat-card'));
-          const tagPills = Array.from(document.querySelectorAll('.tag-pill'));
-          const sortBtns = Array.from(document.querySelectorAll('.sort-btn'));
-          const gridSection = document.getElementById('latest');
-
-          const state = { cat: 'all', tag: '', sort: 'newest', visible: PAGE };
-
-          function matches(card) {
-            const cat = card.getAttribute('data-category');
-            const tags = (card.getAttribute('data-tags') || '').split(' ').filter(Boolean);
-            if (state.cat !== 'all' && cat !== state.cat) return false;
-            if (state.tag && !tags.includes(state.tag)) return false;
-            return true;
-          }
-
-          function sorted() {
-            const list = cards.filter(matches);
-            list.sort((a, b) => {
-              if (state.sort === 'title') {
-                return (a.getAttribute('data-title') || '').localeCompare(
-                  b.getAttribute('data-title') || '',
-                  'zh'
-                );
-              }
-              return String(b.getAttribute('data-date') || '').localeCompare(
-                String(a.getAttribute('data-date') || '')
-              );
-            });
-            return list;
-          }
-
-          function render() {
-            const list = sorted();
-            cards.forEach((c) => (c.hidden = true));
-            list.slice(0, state.visible).forEach((c) => {
-              c.hidden = false;
-              grid.appendChild(c); // 按排序结果重排 DOM 顺序
-            });
-            if (loadMoreBtn) loadMoreBtn.hidden = list.length <= state.visible;
-            if (emptyHint) emptyHint.hidden = list.length > 0;
-            if (counter) counter.textContent = `共 ${list.length} 篇`;
-          }
-
-          function scrollToGrid() {
-            if (gridSection && (state.cat !== 'all' || state.tag)) {
-              gridSection.scrollIntoView({ behavior: reduceMotion ? 'auto' : 'smooth', block: 'start' });
-            }
-          }
-
-          catCards.forEach((btn) => {
-            btn.addEventListener('click', () => {
-              catCards.forEach((b) => {
-                const on = b === btn;
-                b.classList.toggle('is-active', on);
-                b.setAttribute('aria-pressed', on ? 'true' : 'false');
-              });
-              tagPills.forEach((p) => {
-                p.classList.remove('is-active');
-                p.setAttribute('aria-pressed', 'false');
-              });
-              state.cat = btn.getAttribute('data-filter') || 'all';
-              state.tag = '';
-              state.visible = PAGE;
-              render();
-              scrollToGrid();
-            });
-          });
-
-          tagPills.forEach((btn) => {
-            btn.addEventListener('click', () => {
-              tagPills.forEach((p) => {
-                const on = p === btn;
-                p.classList.toggle('is-active', on);
-                p.setAttribute('aria-pressed', on ? 'true' : 'false');
-              });
-              catCards.forEach((c) => {
-                c.classList.remove('is-active');
-                c.setAttribute('aria-pressed', 'false');
-              });
-              state.tag = btn.getAttribute('data-tagfilter') || '';
-              state.cat = 'all';
-              state.visible = PAGE;
-              render();
-              scrollToGrid();
-            });
-          });
-
-          sortBtns.forEach((btn) => {
-            btn.addEventListener('click', () => {
-              sortBtns.forEach((b) => {
-                const on = b === btn;
-                b.classList.toggle('is-active', on);
-                b.setAttribute('aria-pressed', on ? 'true' : 'false');
-              });
-              state.sort = btn.getAttribute('data-sort') || 'newest';
-              render();
-            });
-          });
-
-          if (loadMoreBtn) {
-            loadMoreBtn.addEventListener('click', () => {
-              state.visible += PAGE;
-              render();
-            });
-          }
-
-          render();
-        </script>
-      </>
+        </div>
+      </section>
     )
   }
+
+  {/* 关于本站 + 询盘闭环：引导从内容走向联系页 */}
+  <section class="band">
+    <div class="band-inner">
+      <div class="section-head">
+        <h2>{home.bandTitle}</h2>
+        <p>{home.bandSub}</p>
+      </div>
+      <div class="band-actions">
+        <a class="btn btn-primary" href={`${lp}/contact`}>{home.bandCta1}</a>
+        <a class="btn" href={`${lp}/knowledge`}>{home.bandCta2}</a>
+      </div>
+    </div>
+  </section>
 </Base>
 
 <style>
@@ -533,15 +339,9 @@ const jsonLd = {
   .block { margin: 92px 0; }
   .section-head { margin-bottom: 42px; }
   .section-head h2 { font-size: clamp(1.7rem, 3vw, 2.15rem); line-height: 1.25; }
+  .section-more { text-align: center; margin-top: 34px; }
 
-  /* 分类瓷砖网格 */
-  .cat-cards {
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(196px, 1fr));
-    gap: 18px;
-  }
-
-  /* T11：解决方案引导卡片 */
+  /* 场景方案卡片 */
   .sol-cards {
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
@@ -589,69 +389,43 @@ const jsonLd = {
     display: inline-flex;
     align-items: center;
     gap: 6px;
-    white-space: nowrap; /* 文案+箭头强制单行，避免「→」被挤到第二行 */
+    white-space: nowrap;
     transition: gap var(--dur) var(--ease);
   }
   .sol-card:hover .sol-cta { gap: 10px; }
 
-  /* 排序栏 */
-  .sort-bar { display: flex; align-items: center; justify-content: center; gap: 8px; margin: -12px 0 26px; }
-  .sort-btn {
-    padding: 6px 16px;
-    border: 1px solid var(--border-strong);
-    border-radius: var(--r-pill);
-    background: var(--surface);
-    color: var(--muted);
-    font: inherit;
-    font-size: 13px;
-    font-weight: 500;
-    cursor: pointer;
-    transition: border-color var(--dur) var(--ease), color var(--dur) var(--ease), background var(--dur) var(--ease);
-  }
-  .sort-btn:hover { border-color: var(--accent); color: var(--accent); }
-  .sort-btn.is-active { background: var(--accent); border-color: var(--accent); color: var(--on-accent); }
-  .sort-count { font-size: 12px; color: var(--faint); margin-left: 6px; }
-
   .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 22px; }
 
-  /* 加载更多 */
-  .load-more {
-    display: block;
-    margin: 30px auto 0;
-    padding: 11px 28px;
-    border: 1px solid var(--border-strong);
-    border-radius: var(--r-pill);
-    background: var(--surface);
-    color: var(--fg);
-    font: inherit;
-    font-size: 14px;
-    font-weight: 500;
-    cursor: pointer;
-    transition: border-color var(--dur) var(--ease), background var(--dur) var(--ease), color var(--dur) var(--ease);
+  /* 信任带 */
+  .trust {
+    background: var(--band);
+    border-top: 1px solid var(--border);
+    border-bottom: 1px solid var(--border);
+    margin: 64px calc(50% - 50vw) 0;
+    padding: 64px 24px;
   }
-  .load-more:hover { border-color: var(--accent); color: var(--accent); background: var(--accent-soft); }
-  .load-more[hidden] { display: none; }
-
-  /* 热门标签 */
-  .tag-pills { display: flex; flex-wrap: wrap; gap: 10px; justify-content: center; }
-  .tag-pill {
-    display: inline-flex;
-    align-items: center;
-    gap: 6px;
-    padding: 7px 16px;
-    border: 1px solid var(--border-strong);
-    border-radius: var(--r-pill);
-    background: var(--surface);
-    color: var(--fg-soft);
-    font: inherit;
-    font-size: 13px;
-    font-weight: 500;
-    cursor: pointer;
-    transition: border-color var(--dur) var(--ease), color var(--dur) var(--ease), background var(--dur) var(--ease), transform var(--dur) var(--ease);
+  .trust-inner { max-width: 880px; margin: 0 auto; text-align: center; }
+  .trust-inner h2 { font-size: clamp(1.5rem, 2.6vw, 1.9rem); margin: 0 0 12px; }
+  .trust-inner p { font-size: 16px; color: var(--muted); line-height: 1.8; margin: 0 0 28px; }
+  .badges {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 16px;
+    justify-content: center;
   }
-  .tag-pill:hover { border-color: var(--accent); color: var(--accent); transform: translateY(-2px); }
-  .tag-pill.is-active { background: var(--accent); border-color: var(--accent); color: var(--on-accent); }
-  .pill-count { font-size: 11px; opacity: 0.75; }
+  .badge {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    padding: 16px 22px;
+    min-width: 140px;
+    border: 1px solid var(--border);
+    border-radius: var(--r-md);
+    background: var(--surface);
+    box-shadow: var(--shadow-sm);
+  }
+  .badge-label { font-size: 15px; font-weight: 700; color: var(--fg); }
+  .badge-note { font-size: 12.5px; color: var(--faint); line-height: 1.5; }
 
   /* 关于本站：整幅色带 */
   .band {
@@ -671,8 +445,8 @@ const jsonLd = {
     .hero-stats { gap: 22px; margin-top: 40px; padding-top: 26px; }
     .hero-stats strong { font-size: 26px; }
     .block { margin: 56px 0; }
+    .trust { margin-top: 56px; padding: 56px 18px; }
     .band { margin-top: 56px; padding: 56px 18px; }
-    .cat-cards { grid-template-columns: repeat(2, 1fr); gap: 12px; }
     .grid { grid-template-columns: minmax(0, 1fr); gap: 18px; }
   }
 </style>

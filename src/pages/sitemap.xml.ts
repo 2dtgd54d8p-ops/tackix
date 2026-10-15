@@ -3,32 +3,12 @@ import keystaticConfig from '../../keystatic.config';
 import type { APIRoute } from 'astro';
 
 // 静态预渲染：构建期生成 /sitemap.xml，无需额外依赖。
-// 动态文章由 Keystatic reader 列出，保证新增文章后 sitemap 自动更新。
+// 动态文章/场景由 Keystatic reader 列出，保证新增内容后 sitemap 自动更新。
+// 全站中英双语（中文 / + 英文 /en），每个 URL 输出 zh-CN / en / x-default 的 hreflang 备用链接。
 export const prerender = true;
 
-// 路由 URL 与页面 canonical 保持一致（均带尾部斜杠）
-// zh-CN 为默认语言（无前缀）；en 有真实内容页。
-// ⚠️ vi / th 尚未产出内容页，**不写入** sitemap —— 声明不存在的 URL 会造成软 404。
-const STATIC_ROUTES = ['/', '/products/', '/selector/', '/cases/', '/posts/', '/contact/', '/search/'];
-const STATIC_ROUTES_EN = ['/en/', '/en/products/', '/en/selector/', '/en/cases/', '/en/posts/', '/en/contact/'];
-
-/**
- * 为单个 URL 生成 zh/en 互指的 hreflang 组（Sitemap 协议）。
- * 让 Google 把中英两版识别为「同一内容的两个语言版本」，
- * 而非两个独立页面互相竞争。
- */
-function alternatesFor(u: string, base: URL): string {
-  const isEn = u.startsWith('/en/');
-  const zhPath = isEn ? u.replace(/^\/en/, '') || '/' : u;
-  const enPath = isEn ? u : `/en${u === '/' ? '/' : u}`;
-  const zh = new URL(zhPath, base).href;
-  const en = new URL(enPath, base).href;
-  return (
-    `    <xhtml:link rel="alternate" hreflang="zh-CN" href="${zh}"/>\n` +
-    `    <xhtml:link rel="alternate" hreflang="en" href="${en}"/>\n` +
-    `    <xhtml:link rel="alternate" hreflang="x-default" href="${en}"/>`
-  );
-}
+// 中文版静态路由（无前缀）；英文版为 /en + 同路径
+const STATIC_ROUTES = ['/', '/solutions/', '/knowledge/', '/about/', '/contact/', '/search/'];
 
 /** 读取某集合中所有 published 的 slug（未发布的不进 sitemap） */
 async function publishedSlugs(reader: any, name: string): Promise<string[]> {
@@ -55,31 +35,42 @@ export const GET: APIRoute = async (Astro) => {
   const base = Astro.site ?? new URL('https://tackix.pages.dev');
   const reader = createReader(process.cwd(), keystaticConfig);
 
-  const posts = await publishedSlugs(reader, 'posts');
-  const products = await publishedSlugs(reader, 'products');
-  const cases = await publishedSlugs(reader, 'cases');
+  const knowledge = await publishedSlugs(reader, 'knowledge');
+  const scenarios = await publishedSlugs(reader, 'scenarios');
 
-  const urls = [
-    ...STATIC_ROUTES,
-    ...posts.map((s) => `/posts/${s}/`),
-    ...products.map((s) => `/products/${s}/`),
-    ...cases.map((s) => `/cases/${s}/`),
-    // 英文对应页
-    ...STATIC_ROUTES_EN,
-    ...posts.map((s) => `/en/posts/${s}/`),
-    ...products.map((s) => `/en/products/${s}/`),
-    ...cases.map((s) => `/en/cases/${s}/`),
+  // 每个「逻辑页」对应 [中文路径, 英文路径] 一组
+  const groups: [string, string][] = [
+    ...STATIC_ROUTES.map((r) => [r, r === '/' ? '/en/' : `/en${r}`] as [string, string]),
+    ...knowledge.map((s) => [`/knowledge/${s}/`, `/en/knowledge/${s}/`] as [string, string]),
+    ...scenarios.map((s) => [`/solutions/${s}/`, `/en/solutions/${s}/`] as [string, string]),
   ];
+
+  const alt = (hreflang: string, href: string) =>
+    `    <xhtml:link rel="alternate" hreflang="${hreflang}" href="${href}"/>`;
+
+  const entry = (zh: string, en: string): string => {
+    const zhLoc = new URL(zh, base).href;
+    const enLoc = new URL(en, base).href;
+    return [
+      `  <url>`,
+      `    <loc>${zhLoc}</loc>`,
+      alt('zh-CN', zhLoc),
+      alt('en', enLoc),
+      alt('x-default', zhLoc),
+      `  </url>`,
+      `  <url>`,
+      `    <loc>${enLoc}</loc>`,
+      alt('zh-CN', zhLoc),
+      alt('en', enLoc),
+      alt('x-default', zhLoc),
+      `  </url>`,
+    ].join('\n');
+  };
 
   const body =
     `<?xml version="1.0" encoding="UTF-8"?>\n` +
     `<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9" xmlns:xhtml="http://www.w3.org/1999/xhtml">\n` +
-    urls
-      .map(
-        (u) =>
-          `  <url>\n    <loc>${new URL(u, base).href}</loc>\n${alternatesFor(u, base)}\n  </url>`
-      )
-      .join('\n') +
+    groups.map(([z, e]) => entry(z, e)).join('\n') +
     `\n</urlset>\n`;
 
   return new Response(body, {

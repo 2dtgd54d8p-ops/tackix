@@ -1,0 +1,285 @@
+---
+import { createReader } from '@keystatic/core/reader';
+import keystaticConfig from '../../../keystatic.config';
+import Base from '../../layouts/Base.astro';
+import { loadSiteData, loadContent } from '../../lib/site-data';
+import { renderMarkdown, coverSrc } from '../../lib/markdown';
+import { howToSchema, inLanguage } from '../../lib/schema';
+import { pickB, type Locale } from '../../lib/i18n';
+
+interface Props {
+  locale: Locale;
+  slug: string;
+}
+const { locale, slug } = Astro.props;
+const lp = locale === 'en' ? '/en' : '';
+const t = (zh: string, en: string) => (locale === 'en' ? en : zh);
+
+const reader = createReader(process.cwd(), keystaticConfig);
+let item: any = null;
+try {
+  item = await reader.collections.scenarios.read(slug);
+} catch (e) {
+  console.warn('[build] 读取场景失败：', slug, e);
+}
+
+if (!item) {
+  Astro.response.status = 404;
+}
+
+const { site } = await loadSiteData(locale);
+const L = await loadContent(locale);
+const detail = L.detail;
+
+const post = item ? { slug, ...item } : null;
+const html = post ? await renderMarkdown(pickB(locale, post.body)) : '';
+
+const faqItems = post
+  ? (post.faq ?? [])
+      .filter((f: any) => f?.question && f?.answer)
+      .map((f: any) => ({
+        '@type': 'Question',
+        name: pickB(locale, f.question),
+        acceptedAnswer: { '@type': 'Answer', text: pickB(locale, f.answer) },
+      }))
+  : [];
+
+const jsonLd: any = post
+  ? {
+      '@context': 'https://schema.org',
+      '@type': 'Article',
+      headline: pickB(locale, post.name),
+      inLanguage: inLanguage(locale),
+      ...(pickB(locale, post.excerpt) && { description: pickB(locale, post.excerpt) }),
+      ...(coverSrc(post.cover) && {
+        image: new URL(coverSrc(post.cover), Astro.site ?? Astro.url).href,
+      }),
+      author: { '@type': 'Organization', name: site.title },
+      publisher: { '@type': 'Organization', name: site.title },
+    }
+  : null;
+if (jsonLd && faqItems.length) {
+  jsonLd.mainEntity = { '@type': 'FAQPage', mainEntity: faqItems, inLanguage: inLanguage(locale) };
+}
+// 选型逻辑要点 → HowTo（独立节点），争取步骤类富媒体结果
+const howTo = post
+  ? howToSchema(
+      locale,
+      pickB(locale, post.name),
+      (post.selectionLogic ?? []).map((p: any) => p?.point)
+    )
+  : null;
+---
+
+{
+  !post ? (
+    <Base title={t('未找到', 'Not found')}>
+      <section>
+        <div class="page-head">
+          <h1>{t('方案未找到', 'Scenario not found')}</h1>
+          <p>{t('该方案可能已下架或移动。', 'This scenario may have been unpublished or moved.')}</p>
+          <a class="btn btn-primary" href={`${lp}/solutions`}>{t('返回方案列表', 'Back to Solutions')}</a>
+        </div>
+      </section>
+    </Base>
+  ) : (
+    <Base title={pickB(locale, post.name)} description={pickB(locale, post.excerpt) || ''}>
+      {jsonLd && <script type="application/ld+json" set:html={JSON.stringify(jsonLd)} />}
+      {howTo && <script type="application/ld+json" set:html={JSON.stringify(howTo)} />}
+      <article class="prose scenario">
+        <header class="article-head">
+          <nav class="crumbs" aria-label="Breadcrumb">
+            <a href={`${lp}/solutions`}>{t('方案', 'Solutions')}</a>
+            <span aria-hidden="true">›</span>
+            <span>{pickB(locale, post.name)}</span>
+          </nav>
+          <h1>{pickB(locale, post.name)}</h1>
+          {pickB(locale, post.excerpt) && <p class="lede">{pickB(locale, post.excerpt)}</p>}
+          {coverSrc(post.cover) && <img class="cover" src={coverSrc(post.cover)} alt="" />}
+        </header>
+
+        <!-- 首句结论：回答「这个场景该用什么」 -->
+        {
+          post.conclusion && (
+            <section class="conclusion">
+              <h2>{detail.scenarioConclusionTitle}</h2>
+              <p class="bottomline">{pickB(locale, post.conclusion)}</p>
+            </section>
+          )
+        }
+
+        <!-- 选型逻辑要点 -->
+        {
+          (post.selectionLogic ?? []).length > 0 && (
+            <section>
+              <h2>{detail.scenarioSelectionTitle}</h2>
+              <ul class="logic">
+                {post.selectionLogic.map((p: any) => (
+                  <li>
+                    <span class="dot" aria-hidden="true" />
+                    {pickB(locale, p.point)}
+                  </li>
+                ))}
+              </ul>
+            </section>
+          )
+        }
+
+        <!-- 正文（可选） -->
+        {html && <div class="article-body" set:html={html} />}
+
+        <!-- 推荐产品占位 -->
+        {
+          (post.recommendedProducts ?? []).length > 0 && (
+            <section class="products">
+              <h2>{detail.scenarioProductsTitle}</h2>
+              <div class="product-grid">
+                {post.recommendedProducts.map((pr: any) => (
+                  <div class="product">
+                    <h3>{pickB(locale, pr.name)}</h3>
+                    {pr.params && <p>{pickB(locale, pr.params)}</p>}
+                  </div>
+                ))}
+              </div>
+            </section>
+          )
+        }
+
+        <!-- FAQ -->
+        {
+          faqItems.length > 0 && (
+            <section class="faq">
+              <h2>{detail.articleFaqTitle}</h2>
+              {faqItems.map((f: any) => (
+                <details class="faq-item">
+                  <summary>{f.name}</summary>
+                  <p>{f.acceptedAnswer.text}</p>
+                </details>
+              ))}
+            </section>
+          )
+        }
+
+        <!-- 询盘 CTA -->
+        <section class="inquiry">
+          <h2>{detail.scenarioInquiryTitle}</h2>
+          <a class="btn btn-primary" href={`${lp}/contact`}>
+            {pickB(locale, post.inquiryCta) || t('获取量身定制的建议', 'Get a tailored recommendation')}
+          </a>
+        </section>
+      </article>
+
+      <div class="post-foot">
+        <a class="btn" href={`${lp}/solutions`}>← {t('全部方案', 'All Solutions')}</a>
+        <a class="btn btn-primary" href={`${lp}/contact`}>{t('联系我们', 'Contact us')}</a>
+      </div>
+    </Base>
+  )
+}
+
+<style>
+  .article-head { margin-bottom: 8px; }
+  .crumbs {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+    font-size: 13px;
+    color: var(--faint);
+    margin-bottom: 18px;
+  }
+  .crumbs a { color: var(--faint); }
+  .crumbs a:hover { color: var(--accent); }
+  .lede {
+    font-size: 18px;
+    line-height: 1.7;
+    color: var(--muted);
+    margin: 0 0 16px;
+  }
+
+  .conclusion {
+    margin: 28px 0;
+    padding: 22px 24px;
+    border-radius: var(--r-lg);
+    background: var(--accent-soft);
+    border: 1px solid color-mix(in srgb, var(--accent) 22%, transparent);
+  }
+  .conclusion h2 { margin: 0 0 8px; font-size: 18px; color: var(--accent-strong); }
+  .conclusion .bottomline {
+    margin: 0;
+    font-size: 17px;
+    line-height: 1.7;
+    color: var(--fg);
+    font-weight: 500;
+  }
+
+  .logic { list-style: none; padding: 0; margin: 14px 0 0; }
+  .logic li {
+    display: flex;
+    gap: 10px;
+    align-items: flex-start;
+    padding: 9px 0;
+    border-bottom: 1px solid var(--border);
+    color: var(--fg-soft);
+  }
+  .logic li:last-child { border-bottom: 0; }
+  .logic .dot {
+    flex: none;
+    width: 8px;
+    height: 8px;
+    margin-top: 8px;
+    border-radius: 50%;
+    background: var(--accent);
+  }
+
+  .article-body { margin-top: 24px; }
+
+  .products { margin-top: 34px; }
+  .product-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 16px; }
+  .product {
+    padding: 18px 20px;
+    border: 1px solid var(--border);
+    border-radius: var(--r-md);
+    background: var(--surface);
+  }
+  .product h3 { margin: 0 0 6px; font-size: 16px; color: var(--fg); }
+  .product p { margin: 0; font-size: 13px; color: var(--muted); line-height: 1.6; }
+
+  .faq { margin-top: 40px; padding-top: 28px; border-top: 1px solid var(--border); }
+  .faq-item {
+    border: 1px solid var(--border);
+    border-radius: var(--r-md);
+    padding: 4px 18px;
+    margin-bottom: 10px;
+    background: var(--surface);
+  }
+  .faq-item summary {
+    cursor: pointer;
+    font-weight: 600;
+    color: var(--fg);
+    padding: 12px 0;
+    list-style: none;
+  }
+  .faq-item summary::-webkit-details-marker { display: none; }
+  .faq-item summary::after { content: '+'; float: right; color: var(--accent); font-weight: 700; }
+  .faq-item[open] summary::after { content: '−'; }
+  .faq-item p { margin: 0 0 14px; color: var(--muted); }
+
+  .inquiry {
+    margin-top: 38px;
+    padding: 28px 24px;
+    text-align: center;
+    border-radius: var(--r-lg);
+    background: var(--band);
+    border: 1px solid var(--border);
+  }
+  .inquiry h2 { margin: 0 0 16px; font-size: 20px; }
+
+  .post-foot {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
+    justify-content: center;
+    margin: 44px auto 0;
+    max-width: var(--readw);
+  }
+</style>

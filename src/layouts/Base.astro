@@ -1,22 +1,29 @@
 ---
 import { loadSiteData, loadContent } from '../lib/site-data';
+import { getLocale, ogLocale, type Locale } from '../lib/i18n';
 import SEO from '../components/SEO.astro';
-import { LOCALES, I18N_EMBED_JSON } from '../lib/i18n';
 
 interface Props {
   title?: string;
   description?: string;
-  /** hreflang 多语言链接（T12）：由各语言页面传入，透传给 SEO 组件输出 */
-  alternates?: { lang: string; href: string }[];
-  /** 页面语种（og:locale），多语言页面传入 */
-  locale?: string;
+  /** 可选：显式指定语种（/en 镜像页用），缺省时按 Astro i18n 路由取 */
+  locale?: Locale;
+  type?: 'website' | 'article';
+  publishedTime?: string;
+  modifiedTime?: string;
+  keywords?: string[];
+  image?: string;
 }
-const { title, description, alternates, locale } = Astro.props;
+const { title, description, locale: localeProp, type, publishedTime, modifiedTime, keywords, image } =
+  Astro.props;
+// 当前语种：优先用显式传入的（镜像页），否则按 Astro i18n 路由取（/en/* → en）。
+const locale = localeProp ?? getLocale(Astro);
 // 预上线闸门：未正式上线时全站输出 noindex 并显示顶部提示条
 import { prelaunchBanner } from '../lib/prelaunch';
 const prelaunchNotice = prelaunchBanner();
-// 站名/描述/页脚统一读后台「站点信息」singleton，读不到自动回落默认值。
-const { site } = await loadSiteData();
+const localePrefix = locale === 'en' ? '/en' : '';
+// 站名/描述/页脚统一读后台「站点信息」singleton，读不到自动回落默认值（按语种取词）。
+const { site } = await loadSiteData(locale);
 const siteTitle = site.title;
 // WhatsApp 号码（来自后台「站点信息」）；为空则不显示 WhatsApp 悬浮按钮
 const whatsappNumber = (site.whatsapp ?? '').trim();
@@ -25,32 +32,33 @@ const whatsappNumber = (site.whatsapp ?? '').trim();
 const contactEmail = (site.email ?? '').trim();
 const contactPhone = (site.phone ?? '').trim();
 const contactCompany = (site.company ?? '').trim();
-const contactWechat = (site.wechat ?? '').trim();
 // WhatsApp 预填话术：后台可配，避免所有入口共用一句硬编码文案
-const waPrefill = (site.whatsappPrefill ?? '').trim() || '您好，我想咨询工业胶粘剂/密封剂产品与选型。';
+const waPrefill = (site.whatsappPrefill ?? '').trim() || 'Hello, I would like a quotation for industrial adhesives and sealants. Could you share technical specs and support?';
 
-// 导航当前页高亮 + 语言感知：在 /en /vi /th 路径下，导航/品牌链接自动加对应前缀，
-// 保证切换语言后站内跳转保持在同语种（前端展示与 /en 内容路由贯通）。
 const path = Astro.url.pathname;
-const localeMatch = path.match(/^\/(en|vi|th)(?=\/|$)/);
-const localePrefix = localeMatch ? '/' + localeMatch[1] : '';
 /** 把裸路径拼上当前语种前缀（首页特殊处理） */
 function navHref(href: string): string {
   if (href === '/') return localePrefix ? localePrefix + '/' : '/';
   return localePrefix + href;
 }
 // 主导航与页脚署名来自后台「全局界面文案」singleton（可编辑、前后端贯通）。
-// 任一语种路径前缀（/en /vi /th）下显示 en 标签；中文路径下显示 zh 标签。
+// 英文路径(/en)下显示 en 标签；中文路径下显示 zh 标签（loadContent(locale) 已取词）。
 // 后台未配置时回退 keystatic.config 的 UI_NAV_DEFAULT（与既有导航一致）。
-const uiContent = await loadContent();
+const uiContent = await loadContent(locale);
 const navItems = uiContent.ui.navItems.map((n) => ({
   href: n.href,
-  label: localePrefix ? n.label.en : n.label.zh,
+  label: n.label,
 }));
-const fb = uiContent.ui.footerText;
-const footerText = (localePrefix ? fb.en : fb.zh) || `Powered by ${siteTitle}`;
+const footerText = uiContent.ui.footerText;
 // 全局搜索框占位符（后台「列表页标题」singleton 可编辑）
-const searchPlaceholder = (localePrefix ? uiContent.pages.searchPlaceholder.en : uiContent.pages.searchPlaceholder.zh);
+const searchPlaceholder = uiContent.pages.searchPlaceholder;
+
+// hreflang 备用语言链接：当前语种 + 另一语种（先去 /en 前缀再重组）。
+const basePath = path.replace(/^\/en(?=\/|$)/, '') || '/';
+const alternates = [
+  { lang: 'zh-CN', href: basePath },
+  { lang: 'en', href: '/en' + (basePath === '/' ? '' : basePath) },
+];
 /** 归一化路径（去尾斜杠）用于高亮比对，避免 /en/products 与 /en/products/ 不一致 */
 function norm(p: string) { return p.replace(/\/+$/, '') || '/'; }
 function isActive(href: string) {
@@ -66,7 +74,7 @@ const showFloatContact =
 ---
 
 <!doctype html>
-<html lang="zh-CN">
+<html lang={locale === 'en' ? 'en' : 'zh-CN'}>
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
@@ -82,7 +90,17 @@ const showFloatContact =
         } catch (e) {}
       })();
     </script>
-    <SEO title={title} description={description} alternates={alternates} locale={locale} />
+    <SEO
+      title={title}
+      description={description}
+      alternates={alternates}
+      locale={ogLocale(locale)}
+      type={type}
+      publishedTime={publishedTime}
+      modifiedTime={modifiedTime}
+      keywords={keywords}
+      image={image}
+    />
     <meta name="theme-color" content="#ffffff" media="(prefers-color-scheme: light)" />
     <meta name="theme-color" content="#12101c" media="(prefers-color-scheme: dark)" />
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
@@ -105,11 +123,11 @@ const showFloatContact =
         <span>{siteTitle}</span>
       </a>
       <div class="header-right">
-        <form class="header-search" role="search" action="/search" method="get">
+        <form class="header-search" role="search" action={navHref('/search')} method="get">
           <button type="submit" class="hs-submit" aria-label="搜索">
             <svg class="hs-icon" viewBox="0 0 24 24" width="16" height="16" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7" /><path d="M21 21l-4.35-4.35" /></svg>
           </button>
-          <input class="hs-input" type="search" name="q" placeholder={searchPlaceholder} aria-label="站内搜索" enterkeyhint="search" />
+          <input class="hs-input" type="search" name="q" placeholder={searchPlaceholder} aria-label="Search" enterkeyhint="search" />
         </form>
         <nav aria-label="主导航">
           {
@@ -124,59 +142,62 @@ const showFloatContact =
             ))
           }
         </nav>
-        <div class="lang-wrap">
-          <button
-            id="lang-btn"
-            class="appearance-btn"
-            type="button"
-            aria-label="语言 / Language"
-            aria-haspopup="true"
-            aria-expanded="false"
-          >
-            <svg class="icon" viewBox="0 0 24 24" width="20" height="20" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9" /><path d="M3 12h18M12 3a15 15 0 0 1 0 18M12 3a15 15 0 0 0 0 18" /></svg>
-          </button>
-          <div id="lang-pop" class="appearance-pop lang-pop" role="menu" aria-label="语言选择">
-            {
-              LOCALES.map((l) => (
-                <button class="lang-opt" type="button" role="menuitemradio" aria-checked="false" data-lang={l.code} data-html={l.htmlLang}>
-                  <span class="lang-name">{l.label}</span>
-                  <span class="lang-code">{l.code}</span>
-                </button>
-              ))
-            }
+        <!-- 图标按钮组（语言切换 + 外观）：桌面端跟在导航后，窄屏独占一行排在导航下方 -->
+        <div class="header-actions">
+          <!-- 语言切换（中文默认 / + 英文 /en）：点选即跳转对应语种版本并记忆偏好 -->
+          <div class="lang-wrap">
+            <button
+              id="lang-btn"
+              class="appearance-btn lang-btn"
+              type="button"
+              aria-label="Language"
+              aria-haspopup="true"
+              aria-expanded="false"
+            >
+              <svg class="icon" viewBox="0 0 24 24" width="20" height="20" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9" /><path d="M3 12h18" /><path d="M12 3a15 15 0 0 1 0 18a15 15 0 0 1 0-18z" /><path d="M3.5 9h17M3.5 15h17" /></svg>
+            </button>
+            <div id="lang-pop" class="lang-pop appearance-pop" role="menu" aria-label="Language">
+              <button class="lang-opt" type="button" data-lang="zh-CN" aria-pressed={locale !== 'en'}>
+                <span class="lang-name"><span class="lang-flag" aria-hidden="true">🇨🇳</span>中文</span>
+                <span class="lang-code">ZH</span>
+              </button>
+              <button class="lang-opt" type="button" data-lang="en" aria-pressed={locale === 'en'}>
+                <span class="lang-name"><span class="lang-flag" aria-hidden="true">🇬🇧</span>English</span>
+                <span class="lang-code">EN</span>
+              </button>
+            </div>
           </div>
-        </div>
-        <div class="appearance-wrap">
+          <div class="appearance-wrap">
           <button
             id="appearance-btn"
             class="appearance-btn"
             type="button"
-            aria-label="外观设置"
+            aria-label="Appearance"
             aria-haspopup="true"
             aria-expanded="false"
           >
             <svg class="icon" viewBox="0 0 24 24" width="20" height="20" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2C6.5 2 2 6.5 2 12s4.5 10 10 10c1.1 0 1.8-.9 1.8-1.8 0-.5-.2-.9-.5-1.2-.3-.4-.5-.8-.5-1.3 0-1 .8-1.7 1.7-1.7H16c3.3 0 6-2.7 6-6 0-4.4-4.5-8-10-8z" /><circle cx="7.5" cy="10.5" r="1.1" fill="currentColor" stroke="none" /><circle cx="12" cy="7.5" r="1.1" fill="currentColor" stroke="none" /><circle cx="16.5" cy="8.5" r="1.1" fill="currentColor" stroke="none" /><circle cx="8.5" cy="15" r="1.1" fill="currentColor" stroke="none" /></svg>
           </button>
-          <div id="appearance-pop" class="appearance-pop" role="menu" aria-label="外观设置">
+          <div id="appearance-pop" class="appearance-pop" role="menu" aria-label="Appearance">
             <div class="ap-section">
-              <div class="ap-title" data-i18n="appearance.mode" data-i18n-zh="明暗模式">明暗模式</div>
+              <div class="ap-title">Theme</div>
               <div class="mode-row" role="group" aria-label="明暗模式">
                 <button class="mode-btn" type="button" data-mode="auto" aria-pressed="true">
                   <svg class="icon" viewBox="0 0 24 24" width="16" height="16" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="12" rx="2" /><path d="M8 20h8M12 16v4" /></svg>
-                  <span data-i18n="appearance.auto" data-i18n-zh="自动">自动</span>
+                  <span>Auto</span>
                 </button>
                 <button class="mode-btn" type="button" data-mode="light" aria-pressed="false">
                   <svg class="icon" viewBox="0 0 24 24" width="16" height="16" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="4.2" /><path d="M12 2v2.5M12 19.5V22M4.22 4.22l1.77 1.77M18.01 18.01l1.77 1.77M2 12h2.5M19.5 12H22M4.22 19.78l1.77-1.77M18.01 5.99l1.77-1.77" /></svg>
-                  <span data-i18n="appearance.light" data-i18n-zh="浅色">浅色</span>
+                  <span>Light</span>
                 </button>
                 <button class="mode-btn" type="button" data-mode="dark" aria-pressed="false">
                   <svg class="icon" viewBox="0 0 24 24" width="16" height="16" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z" /></svg>
-                  <span data-i18n="appearance.dark" data-i18n-zh="深色">深色</span>
+                  <span>Dark</span>
                 </button>
               </div>
             </div>
             <div class="ap-section">
-              <div class="ap-title" data-i18n="appearance.accent" data-i18n-zh="主题色">主题色</div>
+              <div class="ap-title">Accent</div>
               <div class="swatch-row" role="group" aria-label="主题色切换">
                 <button class="swatch is-active" type="button" data-accent="violet" style="--sw:#7c4df0" aria-label="紫色主题" aria-pressed="true"></button>
                 <button class="swatch" type="button" data-accent="blue" style="--sw:#3a7bff" aria-label="蓝色主题" aria-pressed="false"></button>
@@ -186,7 +207,7 @@ const showFloatContact =
               </div>
             </div>
           </div>
-        </div>
+        </div><!-- /.header-actions -->
       </div>
     </header>
     {
@@ -202,19 +223,18 @@ const showFloatContact =
     </main>
       <footer class="site-footer">
       {
-        (contactEmail || contactPhone || contactCompany || contactWechat) && (
+        (contactEmail || contactPhone || contactCompany) && (
           <div class="footer-contact">
             {contactCompany && <span class="fc-company">{contactCompany}</span>}
             {contactEmail && (
               <a href={`mailto:${contactEmail}`}>{contactEmail}</a>
             )}
-            {contactWechat && <span class="fc-wechat">{localePrefix ? 'WeChat: ' : '微信：'}{contactWechat}</span>}
             {contactPhone && <a href={`tel:${contactPhone.replace(/[^\d+]/g, '')}`}>{contactPhone}</a>}
           </div>
         )
       }
       <span>{footerText}</span>
-      <a class="footer-admin" href="/keystatic" data-i18n="footer.admin" data-i18n-zh="管理后台">管理后台</a>
+      <a class="footer-admin" href="/keystatic">Admin</a>
     </footer>
     {showFloatContact && (
       <div class="float-cluster" id="float-cluster">
@@ -225,16 +245,16 @@ const showFloatContact =
               href={`https://wa.me/${whatsappNumber}?text=` + encodeURIComponent(waPrefill)}
               target="_blank"
               rel="noopener noreferrer"
-              aria-label="通过 WhatsApp 联系我们"
+              aria-label="Contact us on WhatsApp"
             >
               <svg class="wa-icon" viewBox="0 0 24 24" width="22" height="22" aria-hidden="true" fill="currentColor"><path d="M.057 24l1.687-6.163a11.867 11.867 0 0 1-1.587-5.946C.16 5.335 5.495 0 12.05 0a11.82 11.82 0 0 1 8.413 3.488 11.82 11.82 0 0 1 3.48 8.414c-.003 6.557-5.338 11.892-11.893 11.892a11.9 11.9 0 0 1-5.688-1.448L.057 24zm6.597-3.807c1.676.995 3.276 1.591 5.392 1.592 5.448 0 9.886-4.434 9.889-9.885.002-5.462-4.415-9.89-9.881-9.892-5.452 0-9.887 4.434-9.889 9.884a9.86 9.86 0 0 0 1.51 5.26l-.999 3.648 3.978-1.04zm11.387-5.464c-.074-.124-.272-.198-.57-.347-.297-.149-1.758-.868-2.031-.967-.272-.099-.47-.149-.669.149-.198.297-.768.967-.941 1.165-.173.198-.347.223-.644.074-.297-.149-1.255-.462-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.297-.347.446-.521.151-.172.2-.296.3-.495.099-.198.05-.372-.025-.521-.075-.148-.669-1.611-.916-2.206-.242-.579-.487-.501-.669-.51l-.57-.01c-.198 0-.52.074-.792.372s-1.04 1.016-1.04 2.479 1.065 2.876 1.213 3.074c.149.198 2.096 3.2 5.077 4.487.709.306 1.263.489 1.694.626.712.226 1.36.194 1.872.118.571-.085 1.758-.719 2.006-1.413.248-.695.248-1.29.173-1.414z" /></svg>
               <span class="wa-label">WhatsApp</span>
             </a>
           )
         }
-        <a class="float-contact" id="float-contact" href="/contact" aria-label="联系我们">
+        <a class="float-contact" id="float-contact" href={navHref('/contact')} aria-label="Contact us">
           <svg class="fc-icon" viewBox="0 0 24 24" width="22" height="22" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 11.5a8.4 8.4 0 0 1-9 8.4 9.7 9.7 0 0 1-2.8-.4L4 21l1.4-4.2A8.4 8.4 0 0 1 3 11.5 8.4 8.4 0 0 1 12 3a8.4 8.4 0 0 1 9 8.5z" /><path d="M8.5 10.4h7M8.5 13.4h4" /></svg>
-          <span class="fc-label" data-i18n="float.contact" data-i18n-zh="联系我们">联系我们</span>
+          <span class="fc-label">Contact</span>
         </a>
       </div>
     )}
@@ -330,90 +350,35 @@ const showFloatContact =
         onScroll();
       })();
     </script>
-    <script is:inline type="application/json" id="i18n-data" set:html={I18N_EMBED_JSON}></script>
     <script is:inline>
-      // 多语言切换：T10 外壳本地化 + T12 内容路由跳转。
-      // - 外壳文案跟随「当前路径语种」优先，其次用户历史选择（localStorage.lang）；
-      // - 选中 zh-CN/en 时真正跳转到对应语种路由（/en 内容树由 T12 生成）；
-      // - vi/th 暂无独立内容路由，按 T12 设计回退到 /en，仅做外壳切换。
+      // 语言切换：在当前页面两种语种间跳转（/en 前缀互换），并记忆偏好。
       (function () {
-        var dataEl = document.getElementById('i18n-data');
-        var I18N = dataEl ? JSON.parse(dataEl.textContent || '{}') : {};
-        function applyI18n(lang, htmlLang) {
-          var dict = lang && lang !== 'zh-CN' && I18N[lang] ? I18N[lang] : null;
-          document.querySelectorAll('[data-i18n]').forEach(function (el) {
-            var key = el.getAttribute('data-i18n');
-            var zh = el.getAttribute('data-i18n-zh') || '';
-            var txt = (dict && dict[key]) ? dict[key] : zh;
-            if (!txt) return;
-            if (el.tagName === 'INPUT') el.placeholder = txt;
-            else el.textContent = txt;
+        var btn = document.getElementById('lang-btn');
+        var pop = document.getElementById('lang-pop');
+        if (!btn || !pop) return;
+        function open() { pop.classList.add('is-open'); btn.setAttribute('aria-expanded', 'true'); }
+        function close() { pop.classList.remove('is-open'); btn.setAttribute('aria-expanded', 'false'); }
+        btn.addEventListener('click', function (e) {
+          e.stopPropagation();
+          pop.classList.contains('is-open') ? close() : open();
+        });
+        document.addEventListener('click', function (e) {
+          if (pop.classList.contains('is-open') && !pop.contains(e.target) && e.target !== btn) close();
+        });
+        document.addEventListener('keydown', function (e) { if (e.key === 'Escape') close(); });
+        var opts = pop.querySelectorAll('.lang-opt');
+        opts.forEach(function (o) {
+          o.addEventListener('click', function () {
+            var target = o.getAttribute('data-lang'); // 'zh-CN' | 'en'
+            var cur = document.documentElement.getAttribute('lang'); // 'zh-CN' | 'en'
+            if (target === cur) { close(); return; }
+            var p = window.location.pathname;
+            var base = p.replace(/^\/en(?=\/|$)/, '') || '/'; // 去 /en 前缀
+            var dest = target === 'en' ? ('/en' + (base === '/' ? '' : base)) : base;
+            try { localStorage.setItem('locale', target); } catch (e) {}
+            window.location.href = dest;
           });
-          document.documentElement.setAttribute('lang', htmlLang || (lang === 'zh-CN' ? 'zh-CN' : lang));
-        }
-        // 当前语种：路径前缀优先（/en /vi /th），否则读用户历史选择
-        function currentLocale() {
-          var m = location.pathname.match(/^\/(en|vi|th)(?=\/|$)/);
-          if (m) return m[1];
-          try { return localStorage.getItem('lang') || 'zh-CN'; } catch (e) { return 'zh-CN'; }
-        }
-        function paintLang() {
-          var cur = currentLocale();
-          document.querySelectorAll('.lang-opt').forEach(function (b) {
-            var on = b.getAttribute('data-lang') === cur;
-            b.classList.toggle('is-active', on);
-            b.setAttribute('aria-checked', on ? 'true' : 'false');
-          });
-        }
-        // 初次应用：根据当前语种替换外壳文案（英文页外壳直接英化）
-        var initLang = currentLocale();
-        if (initLang && initLang !== 'zh-CN') {
-          var initBtn = document.querySelector('.lang-opt[data-lang="' + initLang + '"]');
-          var initHtml = initBtn ? initBtn.getAttribute('data-html') : initLang;
-          applyI18n(initLang, initHtml);
-        }
-        paintLang();
-
-        // 路径按语种互转：zh-CN 去前缀；en/vi/th 加 /en 前缀（vi/th 暂回退到 /en 内容树）
-        function stripLocale(p) { return p.replace(/^\/(en|vi|th)(?=\/|$)/, '') || '/'; }
-        function toLocalePath(target, current) {
-          var base = stripLocale(current);
-          if (target === 'zh-CN') return base;
-          return '/en' + (base === '/' ? '/' : base);
-        }
-
-        // 切换器交互
-        var langBtn = document.getElementById('lang-btn');
-        var langPop = document.getElementById('lang-pop');
-        if (langBtn && langPop) {
-          function openLang() { langPop.classList.add('is-open'); langBtn.setAttribute('aria-expanded', 'true'); }
-          function closeLang() { langPop.classList.remove('is-open'); langBtn.setAttribute('aria-expanded', 'false'); }
-          langBtn.addEventListener('click', function (e) {
-            e.stopPropagation();
-            if (langPop.classList.contains('is-open')) closeLang(); else openLang();
-          });
-          document.addEventListener('click', function (e) {
-            if (langPop.classList.contains('is-open') && !langPop.contains(e.target) && e.target !== langBtn) closeLang();
-          });
-          document.addEventListener('keydown', function (e) { if (e.key === 'Escape') closeLang(); });
-          langPop.querySelectorAll('.lang-opt').forEach(function (b) {
-            b.addEventListener('click', function () {
-              var code = b.getAttribute('data-lang');
-              var html = b.getAttribute('data-html') || code;
-              try { localStorage.setItem('lang', code); } catch (e) {}
-              applyI18n(code, html);
-              paintLang();
-              closeLang();
-              // 仅 zh-CN / en 有真实内容路由才跳转；vi/th 暂无独立路由，保持外壳切换
-              if (code === 'zh-CN' || code === 'en') {
-                var target = toLocalePath(code, location.pathname);
-                if (target && target !== location.pathname) {
-                  window.location.pathname = target;
-                }
-              }
-            });
-          });
-        }
+        });
       })();
     </script>
     <style is:global>
@@ -657,6 +622,8 @@ const showFloatContact =
         opacity: 0.9;
       }
       .header-right { display: flex; align-items: center; gap: 10px; }
+      /* 图标按钮组（语言 + 外观）：桌面端紧跟导航行内；窄屏整行移到导航下方居中 */
+      .header-actions { display: flex; align-items: center; gap: 10px; }
 
       /* 顶部常驻搜索栏 */
       .header-search {
@@ -803,23 +770,9 @@ const showFloatContact =
       /* 语言切换器（复用 appearance-pop 弹层样式） */
       .lang-wrap { position: relative; flex: none; }
       .lang-pop { width: 172px; gap: 4px; }
-      .lang-opt {
-        display: flex;
-        align-items: center;
-        justify-content: space-between;
-        gap: 10px;
-        width: 100%;
-        padding: 8px 10px;
-        border: 0;
-        border-radius: var(--r-sm);
-        background: transparent;
-        color: var(--fg-soft);
-        font: inherit;
-        font-size: 14px;
-        cursor: pointer;
-        text-align: left;
-        transition: color var(--dur) var(--ease), background var(--dur) var(--ease);
-      }
+      .lang-opt { display: flex; align-items: center; justify-content: space-between; gap: 10px; width: 100%; padding: 8px 10px; border: 0; border-radius: var(--r-sm); background: transparent; color: var(--fg-soft); font: inherit; font-size: 14px; cursor: pointer; text-align: left; transition: color var(--dur) var(--ease), background var(--dur) var(--ease); }
+      .lang-opt .lang-name { display: inline-flex; align-items: center; gap: 8px; }
+      .lang-opt .lang-flag { font-size: 17px; line-height: 1; }
       .lang-opt:hover { background: var(--surface-2); color: var(--accent); }
       .lang-opt.is-active { background: var(--accent-soft); color: var(--accent-strong); }
       .lang-opt .lang-code { font-size: 11px; color: var(--faint); }
@@ -1255,9 +1208,9 @@ const showFloatContact =
         .float-contact .fc-label,
         .float-wa .wa-label { max-width: 120px; opacity: 1; margin-left: 8px; }
         .header-right { flex-wrap: wrap; justify-content: center; width: 100%; gap: 8px; }
-        /* 自适应/窄屏：导航行在上，搜索框独占其下方一行 */
+        /* 窄屏：导航行在上 → 图标按钮组（语言+外观）整行居中 → 搜索框独占一行 */
         .header-right > nav { order: 1; }
-        .header-right > .appearance-wrap { order: 2; }
+        .header-right > .header-actions { order: 2; justify-content: center; gap: 14px; }
         .header-search { order: 3; flex: 1 1 100%; width: 100%; max-width: none; }
         .header-search .hs-input { width: 100%; }
         nav { flex-wrap: wrap; gap: 2px; }

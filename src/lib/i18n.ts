@@ -1,108 +1,56 @@
+// @ts-check
 /**
- * 多语言 i18n 脚手架（T10）
+ * 多语言（i18n）基础设施
  * ---------------------------------------------------------------
- * 目标：先「本地化站点外壳」（顶栏导航、搜索框、外观面板、页脚、悬浮按钮等
- *       UI 文案），为后续真实多语言内容页（/en、/vi、/th 路由）打好基础。
+ * 站点采用「中文默认（无前缀 /）+ 英文 /en 前缀」的双语结构：
+ *   - defaultLocale: 'zh-CN'，路由无前缀（首页 = / ）
+ *   - 英文位于 /en/ 下（首页 = /en/ ）
+ * 切换方式为顶部语言按钮 + localStorage 记忆（见 Base.astro）。
  *
- * 设计要点：
- * 1. 默认语言 zh-CN，当前静态站尚未生成 /en /vi /th 内容路由，因此语言
- *    切换器采用「客户端外壳替换」策略：把偏好存进 localStorage，刷新时
- *    用字典替换 [data-i18n] 元素的文案，并改写 <html lang>。
- * 2. 内容页（文章/产品/案例正文）的多语言版本待补；届时再走 Astro i18n
- *    路由（astro.config 已声明 locales，prefixDefaultLocale:false），
- *    由页面级 getStaticPaths 产出对应语种 slug 并接入 SEO alternates。
- * 3. UI_STRINGS 以 zh-CN 为基准键（DOM 中直接渲染中文），仅导出非默认语言
- *    字典给客户端做替换，减少内嵌体积。
+ * 数据层（site-data.ts）中所有展示文案均为 Bilingual 对象 { zh, en }，
+ * 页面按当前 locale 用 pickB() 取值；后台留空则回落默认值。
  */
 
-export interface LocaleDef {
-  /** 内部 locale 键，与 astro.config i18n.locales 对齐 */
-  code: string;
-  /** 展示名（原生语言自名，如 中文 / English / Tiếng Việt / ไทย） */
-  label: string;
-  /** 写入 <html lang> 的值（zh-CN 用完整 BCP-47，其余用短码） */
-  htmlLang: string;
+export type Locale = 'zh-CN' | 'en';
+export const LOCALES: Locale[] = ['zh-CN', 'en'];
+export const DEFAULT_LOCALE: Locale = 'zh-CN';
+
+/** 双语字段标准形态 */
+export type Bilingual = { zh: string; en: string };
+
+/** 从 Astro 上下文取当前语种（默认中文） */
+export function getLocale(astro: { currentLocale?: string | undefined }): Locale {
+  return astro.currentLocale === 'en' ? 'en' : DEFAULT_LOCALE;
 }
 
-export const LOCALES: LocaleDef[] = [
-  { code: 'zh-CN', label: '中文', htmlLang: 'zh-CN' },
-  { code: 'en', label: 'English', htmlLang: 'en' },
-  { code: 'vi', label: 'Tiếng Việt', htmlLang: 'vi' },
-  { code: 'th', label: 'ไทย', htmlLang: 'th' },
-];
+/** 语种对应的 URL 前缀：中文为 ''，英文为 '/en' */
+export function localePrefix(locale: Locale): string {
+  return locale === 'en' ? '/en' : '';
+}
 
-export const DEFAULT_LOCALE = 'zh-CN';
-
-/** 仅非默认（zh-CN）语言的 UI 字典，供客户端 [data-i18n] 替换 */
-export const UI_STRINGS_NONDEFAULT: Record<string, Record<string, string>> = {
-  en: {
-    'nav.home': 'Home',
-    'nav.products': 'Products',
-    'nav.selector': 'Selector',
-    'nav.cases': 'Cases',
-    'nav.posts': 'Articles',
-    'nav.contact': 'Contact',
-    'search.placeholder': 'Search…',
-    'appearance.title': 'Appearance',
-    'appearance.mode': 'Theme',
-    'appearance.auto': 'Auto',
-    'appearance.light': 'Light',
-    'appearance.dark': 'Dark',
-    'appearance.accent': 'Accent',
-    'footer.admin': 'Admin',
-    'float.contact': 'Contact us',
-  },
-  vi: {
-    'nav.home': 'Trang chủ',
-    'nav.products': 'Sản phẩm',
-    'nav.selector': 'Bộ chọn',
-    'nav.cases': 'Dự án',
-    'nav.posts': 'Bài viết',
-    'nav.contact': 'Liên hệ',
-    'search.placeholder': 'Tìm kiếm…',
-    'appearance.title': 'Giao diện',
-    'appearance.mode': 'Sáng / Tối',
-    'appearance.auto': 'Tự động',
-    'appearance.light': 'Sáng',
-    'appearance.dark': 'Tối',
-    'appearance.accent': 'Màu nhấn',
-    'footer.admin': 'Quản trị',
-    'float.contact': 'Liên hệ',
-  },
-  th: {
-    'nav.home': 'หน้าแรก',
-    'nav.products': 'ผลิตภัณฑ์',
-    'nav.selector': 'เลือกผลิตภัณฑ์',
-    'nav.cases': 'กรณีศึกษา',
-    'nav.posts': 'บทความ',
-    'nav.contact': 'ติดต่อ',
-    'search.placeholder': 'ค้นหา…',
-    'appearance.title': 'รูปแบบ',
-    'appearance.mode': 'ธีม',
-    'appearance.auto': 'อัตโนมัติ',
-    'appearance.light': 'สว่าง',
-    'appearance.dark': 'มืด',
-    'appearance.accent': 'สีเน้น',
-    'footer.admin': 'ผู้ดูแล',
-    'float.contact': 'ติดต่อเรา',
-  },
-};
-
-/** 服务端取 UI 文案（当前静态站只渲染 zh-CN；供未来页面级调用） */
-export function t(code: string, key: string): string {
-  if (code === DEFAULT_LOCALE) return key; // zh-CN 基准即 key 本身
-  return UI_STRINGS_NONDEFAULT[code]?.[key] ?? key;
+/** 站点的 BCP-47 语言码（用于 og:locale） */
+export function ogLocale(locale: Locale): string {
+  return locale === 'en' ? 'en_US' : 'zh_CN';
 }
 
 /**
- * 从路径解析 locale（为未来 /en /vi /th 内容路由预留）。
- * 静态站当前所有页面都在默认 locale 下，返回 DEFAULT_LOCALE。
+ * 取双语字段中当前语种的值；当前语种为空时回落到另一语种，再回落到空串。
+ * 用法：pickB(locale, item.title)
  */
-export function getLocaleFromPath(pathname: string): string {
-  const seg = pathname.split('/').filter(Boolean)[0];
-  if (seg && LOCALES.some((l) => l.code === seg)) return seg;
-  return DEFAULT_LOCALE;
+export function pickB(locale: Locale, v?: Bilingual | null | undefined): string {
+  if (!v) return '';
+  const primary = locale === 'en' ? v.en : v.zh;
+  if (primary && primary.trim()) return primary.trim();
+  const fallback = locale === 'en' ? v.zh : v.en;
+  return (fallback ?? '').trim();
 }
 
-/** 客户端内嵌 JSON（挂在 window.__I18N__），供 [data-i18n] 替换脚本使用 */
-export const I18N_EMBED_JSON = JSON.stringify(UI_STRINGS_NONDEFAULT);
+/** 纯字符串回退（兼容部分字段本就是单语，如邮箱/电话） */
+export function pickStr(def: string, v?: string | null): string {
+  return v && v.trim() ? v : def;
+}
+
+/** 取双语字段的另一语种值（用于「阅读英文/中文」互链场景，可选） */
+export function otherLocale(locale: Locale): Locale {
+  return locale === 'en' ? 'zh-CN' : 'en';
+}
