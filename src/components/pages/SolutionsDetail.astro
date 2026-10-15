@@ -2,10 +2,8 @@
 import { createReader } from '@keystatic/core/reader';
 import keystaticConfig from '../../../keystatic.config';
 import Base from '../../layouts/Base.astro';
-import { loadSiteData, loadContent } from '../../lib/site-data';
-import { renderMarkdown, coverSrc } from '../../lib/markdown';
-import { howToSchema, inLanguage } from '../../lib/schema';
-import { normalizeSections } from '../../lib/custom-sections';
+import { loadSiteData } from '../../lib/site-data';
+import { readingMinutes, coverSrc } from '../../lib/markdown';
 import CtxSuggest from '../CtxSuggest.astro';
 import { pickB, type Locale } from '../../lib/i18n';
 
@@ -16,6 +14,7 @@ interface Props {
 const { locale, slug } = Astro.props;
 const lp = locale === 'en' ? '/en' : '';
 const t = (zh: string, en: string) => (locale === 'en' ? en : zh);
+const detail_bottomline_label = t('一句话结论', 'Bottom line');
 
 const reader = createReader(process.cwd(), keystaticConfig);
 let item: any = null;
@@ -29,75 +28,58 @@ if (!item) {
   Astro.response.status = 404;
 }
 
-const { site } = await loadSiteData(locale);
-const L = await loadContent(locale);
-const detail = L.detail;
+const { categoryLabel, tagLabel } = await loadSiteData(locale);
 
-const post = item ? { slug, ...item } : null;
-const html = post ? await renderMarkdown(pickB(locale, post.body)) : '';
+const scenario = item ? { slug, ...item } : null;
 
-const faqItems = post
-  ? (post.faq ?? [])
-      .filter((f: any) => f?.question && f?.answer)
-      .map((f: any) => ({
-        '@type': 'Question',
-        name: pickB(locale, f.question),
-        acceptedAnswer: { '@type': 'Answer', text: pickB(locale, f.answer) },
-      }))
-  : [];
+// 分类页主内容：该场景下的知识库文章（按 scenario 字段过滤到当前场景 slug）。
+let articles: any[] = [];
+if (scenario) {
+  try {
+    const kSlugs = await reader.collections.knowledge.list();
+    const kItems = await Promise.all(
+      kSlugs.map(async (kslug: string) => {
+        try {
+          const k: any = await reader.collections.knowledge.read(kslug);
+          if (!k || k.published === false) return null;
+          if ((k.scenario ?? 'none') !== slug) return null;
+          return { slug: kslug, ...k };
+        } catch {
+          return null;
+        }
+      })
+    );
+    articles = kItems.filter(Boolean);
+  } catch {
+    /* 知识库读取失败则列表为空，不影响分类页其余部分 */
+  }
+}
+articles.sort((a: any, b: any) =>
+  String(b.publishedAt ?? '').localeCompare(String(a.publishedAt ?? ''))
+);
 
-const jsonLd: any = post
+// 分类页结构化数据：CollectionPage + ItemList（逐篇文章为 Article 条目）
+const jsonLd: any = scenario
   ? {
       '@context': 'https://schema.org',
-      '@type': 'Article',
-      headline: pickB(locale, post.name),
-      inLanguage: inLanguage(locale),
-      ...(pickB(locale, post.excerpt) && { description: pickB(locale, post.excerpt) }),
-      ...(coverSrc(post.cover) && {
-        image: new URL(coverSrc(post.cover), Astro.site ?? Astro.url).href,
-      }),
-      author: { '@type': 'Organization', name: site.title },
-      publisher: { '@type': 'Organization', name: site.title },
+      '@type': 'CollectionPage',
+      name: pickB(locale, scenario.name),
+      description: pickB(locale, scenario.excerpt) || '',
+      url: (Astro.site ?? Astro.url).href,
+      inLanguage: locale === 'en' ? 'en' : 'zh-CN',
+      hasPart: articles.map((a) => ({
+        '@type': 'Article',
+        '@id': new URL(`${lp}/knowledge/${a.slug}`, Astro.site ?? Astro.url).href,
+        headline: pickB(locale, a.name),
+        url: new URL(`${lp}/knowledge/${a.slug}`, Astro.site ?? Astro.url).href,
+        description: pickB(locale, a.excerpt) || '',
+      })),
     }
-  : null;
-if (jsonLd && faqItems.length) {
-  jsonLd.mainEntity = { '@type': 'FAQPage', mainEntity: faqItems, inLanguage: inLanguage(locale) };
-}
-// 自定义内容区块：后台自由组合的结构化区块（标题/段落/图片/提示框/引用）
-const customSections = normalizeSections(post?.customSections);
-// 该场景下的相关知识库文章（内链闭环）：按 knowledge 的 scenario 字段过滤到当前场景 slug。
-// 前台改文章「所属场景」即同步，无需改代码。
-let relatedArticles: { slug: string; name: string; excerpt: string }[] = [];
-try {
-  const kSlugs = await reader.collections.knowledge.list();
-  const kItems = await Promise.all(
-    kSlugs.map(async (kslug: string) => {
-      try {
-        const k: any = await reader.collections.knowledge.read(kslug);
-        if (!k || k.published === false) return null;
-        if ((k.scenario ?? 'none') !== slug) return null;
-        return {
-          slug: kslug,
-          name: pickB(locale, (k.name as Bilingual) ?? ({ zh: kslug, en: kslug } as Bilingual)),
-          excerpt: pickB(locale, (k.excerpt as Bilingual) ?? ({ zh: '', en: '' } as Bilingual)),
-        };
-      } catch {
-        return null;
-      }
-    })
-  );
-  relatedArticles = kItems.filter(Boolean) as any;
-} catch {
-  /* 知识库读取失败则相关内容区置空，不影响场景页其余部分 */
-}
-// 选型逻辑要点 → HowTo（独立节点），争取步骤类富媒体结果
-const howTo = post
-  ? howToSchema(locale, pickB(locale, post.name), post.selectionLogic ?? [])
   : null;
 ---
 
 {
-  !post ? (
+  !scenario ? (
     <Base title={t('未找到', 'Not found')}>
       <section>
         <div class="page-head">
@@ -108,147 +90,60 @@ const howTo = post
       </section>
     </Base>
   ) : (
-    <Base title={pickB(locale, post.name)} description={pickB(locale, post.excerpt) || ''}>
+    <Base title={pickB(locale, scenario.name)} description={pickB(locale, scenario.excerpt) || ''}>
       {jsonLd && <script type="application/ld+json" set:html={JSON.stringify(jsonLd)} />}
-      {howTo && <script type="application/ld+json" set:html={JSON.stringify(howTo)} />}
-      <article class="prose scenario">
-        <header class="article-head">
+      <section class="cat-page" data-section="listing">
+        <header class="cat-head">
           <nav class="crumbs" aria-label="Breadcrumb">
             <a href={`${lp}/solutions`}>{t('方案', 'Solutions')}</a>
             <span aria-hidden="true">›</span>
-            <span>{pickB(locale, post.name)}</span>
+            <span>{pickB(locale, scenario.name)}</span>
           </nav>
-          <h1>{pickB(locale, post.name)}</h1>
-          {pickB(locale, post.excerpt) && <p class="lede">{pickB(locale, post.excerpt)}</p>}
-          {coverSrc(post.cover) && <img class="cover" src={coverSrc(post.cover)} alt="" />}
+          <h1>{pickB(locale, scenario.name)}</h1>
+          {pickB(locale, scenario.excerpt) && <p class="lede">{pickB(locale, scenario.excerpt)}</p>}
+          {
+            scenario.conclusion && (
+              <p class="bottomline">
+                <span class="bl-tag">{detail_bottomline_label}</span>
+                {pickB(locale, scenario.conclusion)}
+              </p>
+            )
+          }
         </header>
 
-        <!-- 首句结论：回答「这个场景该用什么」 -->
         {
-          post.conclusion && (
-            <section class="conclusion" data-section="conclusion">
-              <h2>{detail.scenarioConclusionTitle}</h2>
-              <p class="bottomline">{pickB(locale, post.conclusion)}</p>
-            </section>
-          )
-        }
-
-        <!-- 选型逻辑要点 -->
-        {
-          (post.selectionLogic ?? []).length > 0 && (
-            <section data-section="logic">
-              <h2>{detail.scenarioSelectionTitle}</h2>
-              <ul class="logic">
-                {post.selectionLogic.map((p: any) => (
-                  <li>
-                    <span class="dot" aria-hidden="true" />
-                    <span class="logic-text">
-                      {pickB(locale, p.title) && <strong class="logic-title">{pickB(locale, p.title)}</strong>}
-                      {pickB(locale, p.point) && <span class="logic-desc">{pickB(locale, p.point)}</span>}
-                    </span>
-                  </li>
-                ))}
-              </ul>
-            </section>
-          )
-        }
-
-        <!-- 正文（可选） -->
-        {html && <div class="article-body" set:html={html} />}
-
-        <!-- 推荐产品占位 -->
-        {
-          (post.recommendedProducts ?? []).length > 0 && (
-            <section class="products" data-section="products">
-              <h2>{detail.scenarioProductsTitle}</h2>
-              <div class="product-grid">
-                {post.recommendedProducts.map((pr: any) => (
-                  <div class="product">
-                    <h3>{pickB(locale, pr.name)}</h3>
-                    {pr.params && <p>{pickB(locale, pr.params)}</p>}
-                  </div>
-                ))}
-              </div>
-            </section>
-          )
-        }
-
-        <!-- FAQ -->
-        {
-          faqItems.length > 0 && (
-            <section class="faq" data-section="faq">
-              <h2>{detail.articleFaqTitle}</h2>
-              {faqItems.map((f: any) => (
-                <details class="faq-item">
-                  <summary>{f.name}</summary>
-                  <p>{f.acceptedAnswer.text}</p>
-                </details>
-              ))}
-            </section>
-          )
-        }
-
-        <!-- 自定义内容区块（标题/段落/图片/提示框/引用） -->
-        {
-          customSections.length > 0 && (
-            <section class="custom-sections" aria-label={t('自定义内容', 'Custom content')}>
-              {customSections.map((s: any) => {
-                if (s.type === 'heading')
-                  return <h2 class="csec csec-heading">{s.heading}</h2>;
-                if (s.type === 'paragraph')
-                  return <p class="csec csec-text" style="white-space:pre-line">{s.text}</p>;
-                if (s.type === 'image')
-                  return (
-                    <figure class="csec csec-image">
-                      {s.image && <img src={s.image} alt={s.imageCaption || ''} loading="lazy" />}
-                      {s.imageCaption && <figcaption>{s.imageCaption}</figcaption>}
-                    </figure>
-                  );
-                if (s.type === 'callout')
-                  return (
-                    <div class={`csec csec-callout tone-${s.calloutTone}`}>
-                      {s.heading && <strong class="csec-callout-title">{s.heading}</strong>}
-                      {s.text && <p>{s.text}</p>}
+          articles.length === 0 ? (
+            <p class="empty">{t('该分类下暂无文章。', 'No articles in this category yet.')}</p>
+          ) : (
+            <div class="grid">
+              {articles.map((article: any) => (
+                <article class="card">
+                  {coverSrc(article.cover) && (
+                    <div class="card-media">
+                      <img src={coverSrc(article.cover)} alt="" loading="lazy" />
                     </div>
-                  );
-                if (s.type === 'quote')
-                  return (
-                    <blockquote class="csec csec-quote">
-                      {s.text}
-                      {s.heading && <cite>— {s.heading}</cite>}
-                    </blockquote>
-                  );
-                return null;
-              })}
-            </section>
+                  )}
+                  <div class="card-body">
+                    <h3 class="card-title">
+                      <a href={`${lp}/knowledge/${article.slug}`}>{pickB(locale, article.name)}</a>
+                    </h3>
+                    {pickB(locale, article.excerpt) && (
+                      <p class="card-excerpt">{pickB(locale, article.excerpt)}</p>
+                    )}
+                    <div class="card-meta">
+                      <span class="tag">{categoryLabel(article.category)}</span>
+                      {(article.tags ?? []).slice(0, 2).map((tg: string) => (
+                        <span class="tag tag-plain">{tagLabel(tg)}</span>
+                      ))}
+                      <span class="read-time">· {readingMinutes(pickB(locale, article.body))}{t(' 分钟阅读', ' min read')}</span>
+                    </div>
+                  </div>
+                </article>
+              ))}
+            </div>
           )
         }
-
-        <!-- 该场景下的相关内容（内链闭环到知识库文章） -->
-        {
-          relatedArticles.length > 0 && (
-            <section class="related" data-section="related">
-              <h2>{detail.scenarioArticlesTitle}</h2>
-              <div class="rel-grid">
-                {relatedArticles.map((a) => (
-                  <a class="rel-card" href={`${lp}/knowledge/${a.slug}`}>
-                    <span class="rel-title">{a.name}</span>
-                    {a.excerpt && <span class="rel-excerpt">{a.excerpt}</span>}
-                  </a>
-                ))}
-              </div>
-            </section>
-          )
-        }
-
-        <!-- 询盘 CTA -->
-        <section class="inquiry" data-section="inquiry">
-          <h2>{detail.scenarioInquiryTitle}</h2>
-          <a class="btn btn-primary" href={`${lp}/contact`}>
-            {pickB(locale, post.inquiryCta) || t('获取量身定制的建议', 'Get a tailored recommendation')}
-          </a>
-        </section>
-      </article>
+      </section>
 
       <div class="post-foot">
         <a class="btn" href={`${lp}/solutions`}>← {t('全部方案', 'All Solutions')}</a>
@@ -260,164 +155,59 @@ const howTo = post
 }
 
 <style>
-  .article-head { margin-bottom: 8px; }
+  .cat-page { max-width: var(--maxw); margin: 0 auto; }
+  .cat-head {
+    text-align: center;
+    max-width: 720px;
+    margin: 8px auto 36px;
+  }
   .crumbs {
     display: flex;
     gap: 8px;
     align-items: center;
+    justify-content: center;
     font-size: 13px;
     color: var(--faint);
     margin-bottom: 18px;
   }
   .crumbs a { color: var(--faint); }
   .crumbs a:hover { color: var(--accent); }
+  .cat-head h1 {
+    font-family: var(--font-display);
+    font-size: 32px;
+    font-weight: 800;
+    color: var(--fg);
+    margin: 0 0 10px;
+    letter-spacing: -0.015em;
+  }
   .lede {
-    font-size: 18px;
+    font-size: 17px;
     line-height: 1.7;
     color: var(--muted);
-    margin: 0 0 16px;
+    margin: 0;
   }
-
-  .conclusion {
-    margin: 28px 0;
-    padding: 22px 24px;
+  .bottomline {
+    margin: 18px auto 0;
+    max-width: 620px;
+    padding: 14px 18px;
     border-radius: var(--r-lg);
     background: var(--accent-soft);
     border: 1px solid color-mix(in srgb, var(--accent) 22%, transparent);
-  }
-  .conclusion h2 { margin: 0 0 8px; font-size: 18px; color: var(--accent-strong); }
-  .conclusion .bottomline {
-    margin: 0;
-    font-size: 17px;
+    color: var(--fg);
+    font-size: 15px;
     line-height: 1.7;
-    color: var(--fg);
-    font-weight: 500;
   }
-
-  .logic { list-style: none; padding: 0; margin: 14px 0 0; }
-  .logic li {
-    display: flex;
-    gap: 10px;
-    align-items: flex-start;
-    padding: 9px 0;
-    border-bottom: 1px solid var(--border);
-    color: var(--fg-soft);
+  .bl-tag {
+    display: inline-block;
+    margin-right: 8px;
+    font-size: 12px;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--accent-strong);
   }
-  .logic li:last-child { border-bottom: 0; }
-  .logic .dot {
-    flex: none;
-    width: 8px;
-    height: 8px;
-    margin-top: 8px;
-    border-radius: 50%;
-    background: var(--accent);
-  }
-  .logic-text { display: flex; flex-direction: column; gap: 3px; }
-  .logic-title { font-weight: 600; color: var(--fg); }
-  .logic-desc { color: var(--fg-soft); line-height: 1.6; }
-
-  .article-body { margin-top: 24px; }
-
-  .products { margin-top: 34px; }
-  .product-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 16px; }
-  .product {
-    padding: 18px 20px;
-    border: 1px solid var(--border);
-    border-radius: var(--r-md);
-    background: var(--surface);
-  }
-  .product h3 { margin: 0 0 6px; font-size: 16px; color: var(--fg); }
-  .product p { margin: 0; font-size: 13px; color: var(--muted); line-height: 1.6; }
-
-  .faq { margin-top: 40px; padding-top: 28px; border-top: 1px solid var(--border); }
-  .faq-item {
-    border: 1px solid var(--border);
-    border-radius: var(--r-md);
-    padding: 4px 18px;
-    margin-bottom: 10px;
-    background: var(--surface);
-  }
-  .faq-item summary {
-    cursor: pointer;
-    font-weight: 600;
-    color: var(--fg);
-    padding: 12px 0;
-    list-style: none;
-  }
-  .faq-item summary::-webkit-details-marker { display: none; }
-  .faq-item summary::after { content: '+'; float: right; color: var(--accent); font-weight: 700; }
-  .faq-item[open] summary::after { content: '−'; }
-  .faq-item p { margin: 0 0 14px; color: var(--muted); }
-
-  /* 自定义内容区块（标题/段落/图片/提示框/引用） */
-  .custom-sections { margin-top: 40px; display: grid; gap: 22px; }
-  .csec-heading { font-size: 22px; line-height: 1.4; margin: 0; color: var(--fg); }
-  .csec-text { margin: 0; color: var(--fg-soft); line-height: 1.8; }
-  .csec-image { margin: 0; }
-  .csec-image img { width: 100%; border-radius: var(--r-md); display: block; box-shadow: var(--shadow-sm); }
-  .csec-image figcaption { margin-top: 8px; font-size: 13px; color: var(--faint); text-align: center; }
-  .csec-callout {
-    border: 1px solid var(--border-strong);
-    border-left-width: 4px;
-    border-radius: var(--r-md);
-    padding: 14px 18px;
-    background: var(--surface-2);
-  }
-  .csec-callout-title { display: block; margin-bottom: 4px; color: var(--fg); }
-  .csec-callout p { margin: 0; color: var(--muted); line-height: 1.7; }
-  .csec-callout.tone-info { border-left-color: var(--accent); }
-  .csec-callout.tone-warn { border-left-color: var(--warn-accent, #e08a2b); }
-  .csec-callout.tone-danger { border-left-color: var(--danger); }
-  .csec-quote {
-    margin: 0;
-    padding: 10px 20px;
-    border-left: 3px solid var(--accent);
-    background: var(--surface-2);
-    border-radius: 0 var(--r-sm) var(--r-sm) 0;
-    color: var(--muted);
-    font-style: italic;
-  }
-  .csec-quote cite { display: block; margin-top: 6px; font-size: 13px; color: var(--faint); font-style: normal; }
-
-  .inquiry {
-    margin-top: 38px;
-    padding: 28px 24px;
-    text-align: center;
-    border-radius: var(--r-lg);
-    background: var(--band);
-    border: 1px solid var(--border);
-  }
-  .inquiry h2 { margin: 0 0 16px; font-size: 20px; }
-
-  /* 该场景下的相关内容：内链卡片网格 */
-  .related { margin-top: 44px; }
-  .related h2 { font-size: 20px; margin: 0 0 18px; color: var(--fg); }
-  .rel-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 16px; }
-  .rel-card {
-    display: flex;
-    flex-direction: column;
-    gap: 6px;
-    padding: 18px 20px;
-    border: 1px solid var(--border);
-    border-radius: var(--r-md);
-    background: var(--surface);
-    text-decoration: none;
-    color: inherit;
-    transition: border-color var(--dur) var(--ease), box-shadow var(--dur) var(--ease),
-      transform var(--dur) var(--ease);
-  }
-  .rel-card:hover {
-    border-color: var(--accent);
-    box-shadow: var(--shadow-sm);
-    transform: translateY(-2px);
-    text-decoration: none;
-  }
-  .rel-title { font-size: 15px; font-weight: 600; color: var(--fg); line-height: 1.5; }
-  .rel-excerpt { font-size: 13px; color: var(--muted); line-height: 1.65; }
-  @media (max-width: 700px) {
-    .rel-grid { grid-template-columns: minmax(0, 1fr); }
-  }
-
+  .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 22px; }
+  .empty { text-align: center; color: var(--muted); padding: 44px 0; }
   .post-foot {
     display: flex;
     flex-wrap: wrap;
@@ -426,4 +216,5 @@ const howTo = post
     margin: 44px auto 0;
     max-width: var(--readw);
   }
+  @media (max-width: 700px) { .grid { grid-template-columns: minmax(0, 1fr); gap: 18px; } }
 </style>
