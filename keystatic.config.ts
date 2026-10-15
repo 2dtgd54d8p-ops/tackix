@@ -316,6 +316,9 @@ export default config({
         info: fields.object(
           {
             title: bi('站点标题'),
+            brandName: bi('页头品牌名', {
+              description: '左上角页头显示的品牌名，留空则回退到站点标题。用于品牌名与完整站点标题不同的场合。',
+            }),
             description: bi('站点描述', { multiline: true }),
             // 首页 Hero 区那句主标语，留空则回落到默认文案
             tagline: bi('首页标语'),
@@ -345,6 +348,13 @@ export default config({
             whatsappPrefill: fields.text({
               label: 'WhatsApp 预填话术',
               description: 'Text pre-filled when a buyer opens the WhatsApp chat. Falls back to a default if empty.',
+            }),
+            // WhatsApp 悬浮按钮开关：默认关闭（右下角只保留「联系我们」按钮）。
+            // 关闭时即使填了号码也不显示绿色悬浮按钮，但页脚/联系页的 WhatsApp 入口不受影响。
+            showWhatsappFloat: fields.checkbox({
+              label: '显示 WhatsApp 悬浮按钮',
+              description: '开启后右下角显示绿色 WhatsApp 悬浮按钮；默认关闭，只保留「联系我们」按钮。',
+              defaultValue: false,
             }),
           },
           { label: '站点与联系信息' }

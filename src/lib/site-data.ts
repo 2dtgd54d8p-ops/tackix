@@ -49,6 +49,8 @@ export const DEFAULT_TAGS: { label: Bilingual; value: string }[] = [
 
 export const DEFAULT_SITE = {
   title: { zh: 'Tackix', en: 'Tackix' } as Bilingual,
+  // 页头左上角品牌名；留空则前台回退到站点标题
+  brandName: { zh: 'Tackix', en: 'Tackix' } as Bilingual,
   description: {
     zh: 'Tackix 是面向海外承包商、安装商与 DIY 用户的场景化工业胶粘剂与密封剂选型知识平台——提供场景方案、应用知识与直接询盘。',
     en: 'Tackix helps overseas contractors, installers and DIY users choose the right industrial adhesive or sealant for the job — with scenario-based guides, application know-how and direct inquiry.',
@@ -65,6 +67,8 @@ export const DEFAULT_SITE = {
   hours: '',
   whatsapp: '',
   whatsappPrefill: '',
+  // 右下角 WhatsApp 悬浮按钮默认关闭（只保留「联系我们」按钮）
+  showWhatsappFloat: false,
 };
 
 const UNCATEGORIZED_LABEL: Record<Locale, string> = {
@@ -111,6 +115,7 @@ export async function loadSiteData(locale: Locale = DEFAULT_LOCALE) {
       const info = s.info ?? s;
       site = {
         title: info.title as Bilingual,
+        brandName: (info.brandName as Bilingual) ?? { zh: '', en: '' },
         description: info.description as Bilingual,
         tagline: info.tagline as Bilingual,
         email: info.email || '',
@@ -120,6 +125,7 @@ export async function loadSiteData(locale: Locale = DEFAULT_LOCALE) {
         hours: info.hours || '',
         whatsapp: info.whatsapp || '',
         whatsappPrefill: info.whatsappPrefill || '',
+        showWhatsappFloat: !!info.showWhatsappFloat,
       };
       const trust = s.trust ?? {};
       trustTitle = (trust.trustTitle as Bilingual) ?? { zh: '', en: '' };
@@ -141,6 +147,7 @@ export async function loadSiteData(locale: Locale = DEFAULT_LOCALE) {
   return {
     site: {
       title: pickB(locale, site.title) || 'Tackix',
+      brandName: pickB(locale, site.brandName) || '',
       description: pickB(locale, site.description) || '',
       tagline: pickB(locale, site.tagline) || '',
       email: site.email,
@@ -150,6 +157,7 @@ export async function loadSiteData(locale: Locale = DEFAULT_LOCALE) {
       hours: site.hours,
       whatsapp: site.whatsapp,
       whatsappPrefill: site.whatsappPrefill,
+      showWhatsappFloat: !!site.showWhatsappFloat,
       trustTitle: pickB(locale, trustTitle),
       trustSub: pickB(locale, trustSub),
       certBadges: certBadges.map((b) => ({

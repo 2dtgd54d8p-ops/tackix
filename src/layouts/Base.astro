@@ -25,6 +25,9 @@ const localePrefix = locale === 'en' ? '/en' : '';
 // 站名/描述/页脚统一读后台「站点信息」singleton，读不到自动回落默认值（按语种取词）。
 const { site } = await loadSiteData(locale);
 const siteTitle = site.title;
+// 页头左上角品牌名：后台「站点信息 · 页头品牌名」可编辑；留空则回退到站点标题。
+// 与 SEO/JSON-LD 的完整站点标题（siteTitle）解耦，品牌名可更简短。
+const brandText = site.brandName || siteTitle;
 // WhatsApp 号码（来自后台「站点信息」）；为空则不显示 WhatsApp 悬浮按钮
 const whatsappNumber = (site.whatsapp ?? '').trim();
 // 联系方式（P0-3）：页脚每页可达，是预上线期最主要的转化入口。
@@ -119,9 +122,13 @@ const showFloatContact =
   </head>
   <body>
     <header class="site-header">
-      <a href={localePrefix || '/'} class="brand" aria-label={`${siteTitle} 首页`}>
+      <a
+        href={localePrefix || '/'}
+        class="brand"
+        aria-label={locale === 'en' ? `${brandText} home` : `${brandText} 首页`}
+      >
         <img src="/favicon.svg" alt="" width="26" height="26" />
-        <span>{siteTitle}</span>
+        <span>{brandText}</span>
       </a>
       <div class="header-right">
         <form class="header-search" role="search" action={navHref('/search')} method="get">
@@ -240,7 +247,7 @@ const showFloatContact =
     {showFloatContact && (
       <div class="float-cluster" id="float-cluster">
         {
-          whatsappNumber && (
+          whatsappNumber && site.showWhatsappFloat && (
             <a
               class="float-wa"
               href={`https://wa.me/${whatsappNumber}?text=` + encodeURIComponent(waPrefill)}
@@ -1204,7 +1211,6 @@ const showFloatContact =
           opacity: 1;
           visibility: visible;
           transform: none;
-          box-shadow: 0 8px 22px rgba(0, 0, 0, 0.24);
         }
         .float-contact .fc-label,
         .float-wa .wa-label { max-width: 120px; opacity: 1; margin-left: 8px; }
