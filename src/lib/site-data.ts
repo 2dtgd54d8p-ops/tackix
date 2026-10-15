@@ -281,6 +281,8 @@ const PAGES_DEFAULT: Record<string, Bilingual> = {
 // 详情页区块标题
 const DETAIL_DEFAULT: Record<string, Bilingual> = {
   articleFaqTitle: { zh: '常见问题', en: 'Frequently Asked Questions' },
+  articleStepsTitle: { zh: '操作步骤', en: 'Step-by-step' },
+  articlePitfallsTitle: { zh: '施工避坑', en: 'Common pitfalls to avoid' },
   scenarioConclusionTitle: { zh: '一句话结论', en: 'The bottom line' },
   scenarioSelectionTitle: { zh: '选型逻辑', en: 'How to choose' },
   scenarioProductsTitle: { zh: '推荐产品', en: 'Recommended products' },

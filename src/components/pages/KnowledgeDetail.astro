@@ -4,7 +4,7 @@ import keystaticConfig from '../../../keystatic.config';
 import Base from '../../layouts/Base.astro';
 import { loadSiteData, loadContent } from '../../lib/site-data';
 import { renderMarkdown, readingMinutes, coverSrc } from '../../lib/markdown';
-import { inLanguage } from '../../lib/schema';
+import { inLanguage, howToFromSteps } from '../../lib/schema';
 import { pickB, type Locale } from '../../lib/i18n';
 
 interface Props {
@@ -66,6 +66,11 @@ const jsonLd: any = post
 if (jsonLd && faqItems.length) {
   jsonLd.mainEntity = { '@type': 'FAQPage', mainEntity: faqItems, inLanguage: inLanguage(locale) };
 }
+// 结构化步骤 → HowTo（仅 pitfall=false 计入编号步骤）
+const howTo = post ? howToFromSteps(locale, pickB(locale, post.name), post.steps) : null;
+// 拆出「操作步骤」与「施工避坑」两组，分别渲染
+const procSteps = (post?.steps ?? []).filter((s: any) => s && !s.pitfall);
+const pitfallSteps = (post?.steps ?? []).filter((s: any) => s && s.pitfall);
 const keywords = post ? (post.tags ?? []).map((tag: string) => tagLabel(tag)) : [];
 ---
 
@@ -89,6 +94,7 @@ const keywords = post ? (post.tags ?? []).map((tag: string) => tagLabel(tag)) : 
       keywords={keywords}
     >
       {jsonLd && <script type="application/ld+json" set:html={JSON.stringify(jsonLd)} />}
+      {howTo && <script type="application/ld+json" set:html={JSON.stringify(howTo)} />}
       <article class="prose">
         <header class="article-head">
           <nav class="crumbs" aria-label="Breadcrumb">
@@ -110,6 +116,38 @@ const keywords = post ? (post.tags ?? []).map((tag: string) => tagLabel(tag)) : 
         </header>
 
         <div class="article-body" set:html={html} />
+
+        {
+          procSteps.length > 0 && (
+            <section class="steps">
+              <h2>{detail.articleStepsTitle}</h2>
+              <ol class="step-list">
+                {procSteps.map((s: any) => (
+                  <li class="step">
+                    {pickB(locale, s.title) && <h3 class="step-title">{pickB(locale, s.title)}</h3>}
+                    {pickB(locale, s.text) && <p class="step-text">{pickB(locale, s.text)}</p>}
+                  </li>
+                ))}
+              </ol>
+            </section>
+          )
+        }
+
+        {
+          pitfallSteps.length > 0 && (
+            <section class="pitfalls">
+              <h2>{detail.articlePitfallsTitle}</h2>
+              <ul class="pitfall-list">
+                {pitfallSteps.map((s: any) => (
+                  <li class="pitfall">
+                    {pickB(locale, s.title) && <strong class="pitfall-title">{pickB(locale, s.title)}</strong>}
+                    {pickB(locale, s.text) && <p class="pitfall-text">{pickB(locale, s.text)}</p>}
+                  </li>
+                ))}
+              </ul>
+            </section>
+          )
+        }
 
         {
           faqItems.length > 0 && (
@@ -164,6 +202,78 @@ const keywords = post ? (post.tags ?? []).map((tag: string) => tagLabel(tag)) : 
     font-size: 13px;
   }
   .article-body { margin-top: 24px; }
+  .steps {
+    margin-top: 40px;
+    padding-top: 28px;
+    border-top: 1px solid var(--border);
+  }
+  .steps h2,
+  .pitfalls h2 {
+    font-size: 20px;
+    margin: 0 0 18px;
+    color: var(--fg);
+  }
+  .step-list {
+    list-style: none;
+    counter-reset: step;
+    margin: 0;
+    padding: 0;
+    display: grid;
+    gap: 18px;
+  }
+  .step {
+    position: relative;
+    padding: 4px 0 4px 52px;
+    counter-increment: step;
+  }
+  .step::before {
+    content: counter(step);
+    position: absolute;
+    left: 0;
+    top: 2px;
+    width: 34px;
+    height: 34px;
+    border-radius: 50%;
+    background: var(--accent);
+    color: #fff;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 700;
+    font-size: 15px;
+  }
+  .step-title { font-size: 16px; margin: 0 0 4px; color: var(--fg); }
+  .step-text { margin: 0; color: var(--muted); line-height: 1.7; }
+  .pitfalls {
+    margin-top: 40px;
+    padding: 22px 22px 8px;
+    border: 1px solid var(--warn-border, #f0c9a0);
+    border-radius: var(--r-md);
+    background: var(--warn-bg, #fff8f0);
+  }
+  .pitfall-list { list-style: none; margin: 0; padding: 0; display: grid; gap: 14px; }
+  .pitfall {
+    position: relative;
+    padding-left: 30px;
+  }
+  .pitfall::before {
+    content: '!';
+    position: absolute;
+    left: 0;
+    top: 1px;
+    width: 20px;
+    height: 20px;
+    border-radius: 50%;
+    background: var(--warn-accent, #e08a2b);
+    color: #fff;
+    font-weight: 700;
+    font-size: 13px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .pitfall-title { display: block; color: var(--fg); margin-bottom: 2px; }
+  .pitfall-text { margin: 0; color: var(--muted); line-height: 1.6; }
   .faq {
     margin-top: 40px;
     padding-top: 28px;

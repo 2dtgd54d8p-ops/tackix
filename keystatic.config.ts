@@ -180,6 +180,23 @@ export default config({
           ),
           { label: 'FAQ' }
         ),
+        // 结构化步骤：驱动详情页「操作步骤」区块 + HowTo 结构化数据。
+        // 勾选 pitfall 的条目以「避坑提示」警示样式渲染，并【不】计入 HowTo 的编号步骤，
+        // 从而把「施工避坑」类内容自然转成 HowTo 富媒体结果，又不污染步骤序列。
+        steps: fields.array(
+          fields.object(
+            {
+              title: bi('Step title'),
+              text: bi('Step description', { multiline: true }),
+              pitfall: fields.checkbox({
+                label: 'Pitfall / caution (render as warning, exclude from numbered steps)',
+                defaultValue: false,
+              }),
+            },
+            { label: 'Step' }
+          ),
+          { label: 'Step-by-step (drives HowTo)' }
+        ),
         // 图片会经 GitHub App 提交到仓库 public/uploads/，构建时由静态资源直接产出
         cover: fields.image({
           label: 'Cover image',
@@ -460,6 +477,8 @@ export default config({
         content: fields.object(
           {
             articleFaqTitle: bi('Article FAQ title'),
+            articleStepsTitle: bi('Article: steps title'),
+            articlePitfallsTitle: bi('Article: pitfalls (caution) title'),
             scenarioConclusionTitle: bi('Scenario: bottom-line title'),
             scenarioSelectionTitle: bi('Scenario: selection logic title'),
             scenarioProductsTitle: bi('Scenario: recommended products title'),

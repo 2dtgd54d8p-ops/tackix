@@ -92,3 +92,48 @@ export function howToSchema(
     step: steps,
   };
 }
+
+/**
+ * 知识库文章的「结构化步骤」→ HowTo。steps 为 knowledge 集合的 steps 字段，
+ * 每个元素结构：{ title?: Bilingual, text?: Bilingual, pitfall?: boolean }。
+ *
+ * 设计要点（与场景页 howToSchema 区分）：
+ *   - 只取 pitfall=false 的条目作为 HowToStep（带编号），pitfall=true 的「避坑要点」
+ *     在页面以警示样式单独成段，但不进入 HowTo，避免把「不要做」混进「步骤」。
+ *   - 每步优先用 title 作 HowToStep.name，text 作正文；两者都空则跳过该步。
+ *   - 无任何有效步骤返回 null，调用方据此决定是否注入 script。
+ */
+export interface KnowledgeStep {
+  title?: { zh?: string; en?: string } | null;
+  text?: { zh?: string; en?: string } | null;
+  pitfall?: boolean;
+}
+
+export function howToFromSteps(
+  locale: Locale,
+  name: string,
+  steps: Array<KnowledgeStep | undefined | null> | undefined | null
+) {
+  if (!steps || !steps.length) return null;
+  const proc = steps
+    .filter((s) => s && !s.pitfall)
+    .map((s) => ({
+      title: pickB(locale, (s as KnowledgeStep).title as any),
+      text: pickB(locale, (s as KnowledgeStep).text as any),
+    }))
+    .filter((s) => (s.title && s.title.trim()) || (s.text && s.text.trim()))
+    .map((s, i) => ({
+      '@type': 'HowToStep' as const,
+      position: i + 1,
+      ...(s.title && s.title.trim() ? { name: s.title.trim() } : {}),
+      // schema.org 的 HowToStep.text 为必填；title 已单独作 name 时，text 仍保留完整描述
+      text: (s.text && s.text.trim()) || (s.title && s.title.trim()) || '',
+    }));
+  if (!proc.length) return null;
+  return {
+    '@type': 'HowTo' as const,
+    name,
+    inLanguage: inLanguage(locale),
+    step: proc,
+  };
+}

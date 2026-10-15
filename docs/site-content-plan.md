@@ -140,7 +140,18 @@ mould-resistant, tile-stone, expansion-joints, surface-prep, substrate, temperat
 8. **Adhesive failed under load — root causes** — `troubleshooting`, tags: epoxy, substrate. *FAQ: "Was it the primer or the mix ratio?"*
 9. **Discoloration on natural stone and how to avoid it** — `troubleshooting`, tags: tile-stone, mould-resistant. *FAQ: "Is the stain reversible?"*
 
-Each article template (Markdown body):
+### Structured `steps` field (drives HowTo + 施工避坑)
+
+每篇文章后台新增 **Step-by-step (drives HowTo)** 结构化字段（`steps`，数组），与正文 Markdown 解耦：
+- 每个 step 含 `title`(双语) / `text`(双语) / `pitfall`(勾选框)。
+- **pitfall=false 的条目** → 渲染为「操作步骤」编号区块，并生成 **HowTo + HowToStep** JSON-LD（争取富媒体步骤结果）。
+- **pitfall=true 的条目** → 单独渲染为「施工避坑」警示区块（橙色 ! 标记），**不**进入 HowTo 编号步骤，避免把「不要做」混进步骤序列。
+- 区块标题来自 `detail` 单例的 `articleStepsTitle` / `articlePitfallsTitle`（默认「操作步骤」/「施工避坑」），可在后台改。
+- 无有效步骤时 HowTo 不注入，详情页仅显示 FAQ 区块，向后兼容旧文章。
+
+> 适用：Application Pitfalls / Troubleshooting 类文章应充分利用 `pitfall` 标记；Selection Guide 类可只填操作步骤。
+
+Each article template (Markdown body **plus** the structured `steps` field above):
 ```
 ## Background
 [1–2 sentences on the user's situation and the cost of getting it wrong]
@@ -150,18 +161,14 @@ Each article template (Markdown body):
 - [bullet: key principle 2]
 - [bullet: key principle 3]
 
-## Step-by-step
-1. [action]
-2. [action]
-3. [action]
-
-## Quick checklist
-- [ ] [check 1]
-- [ ] [check 2]
-
 ## FAQ
 **Q: [question]**
 A: [answer — also emitted as FAQPage structured data]
+
+# 结构化步骤（后台 Step-by-step 字段，非正文 Markdown）：
+#   step 1  title="清洁并干燥基面"  text="用无绒布拭净，确保无油无尘，完全干燥后再施工"
+#   step 2  title="打胶与刮平"      text="连续均匀打胶，用刮板一次成型，避免反复涂抹带入气泡"
+#   pitfall title="勿在潮湿基面施工" text="基面含水会破坏附着，雨季或刚清洁后需充分晾干"
 ```
 
 ---
