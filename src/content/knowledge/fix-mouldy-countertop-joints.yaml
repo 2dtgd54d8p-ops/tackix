@@ -1,0 +1,60 @@
+title: fix-mouldy-countertop-joints
+name:
+  zh: 厨房台面接缝发霉怎么修
+  en: How to fix mouldy kitchen countertop joints
+excerpt:
+  zh: 台面与墙、水槽之间的接缝发黑发霉，多因旧胶失效、基材潮湿。正确做法是清旧胶、除霉、干燥后再打防霉胶。
+  en: >-
+    Black mould at countertop-to-wall or sink joints usually means failed old sealant and a damp substrate. Remove,
+    clean, dry, then re-seal with a mould-resistant product.
+publishedAt: '2026-10-15'
+published: true
+featured: false
+category: application-pitfalls
+tags:
+  - mould-resistant
+  - surface-prep
+  - diy
+scenario: kitchen-bath-mould
+faq:
+  - question:
+      zh: 除霉后还需要打胶吗？
+      en: After removing mould, do I still need to re-seal?
+    answer:
+      zh: 需要。除霉只是清除表面菌丝，接缝若不重新打防霉胶，水汽仍会进入并复发。
+      en: >-
+        Yes. Killing surface mould does not seal the joint; without fresh mould-resistant sealant, moisture returns and
+        it recurs.
+steps:
+  - title:
+      zh: 清除旧胶
+      en: Remove old sealant
+    text:
+      zh: 用美工刀或除胶剂把发黑旧胶彻底刮净，露出干净基材。
+      en: Scrape out all blackened old sealant with a knife or remover until clean substrate shows.
+    pitfall: false
+  - title:
+      zh: 除霉并干燥
+      en: Kill mould and dry
+    text:
+      zh: 用稀释漂白水或专用除霉剂擦拭，待基材完全干燥（至少数小时）。
+      en: Wipe with diluted bleach or a mould remover, then let the substrate dry fully (several hours).
+    pitfall: false
+  - title:
+      zh: 打防霉胶
+      en: Apply mould-resistant sealant
+    text:
+      zh: 贴美纹纸后打中性防霉硅酮胶，刮平、撕纸，静置固化。
+      en: Tape edges, apply neutral mould-resistant silicone, tool smooth, remove tape, and let it cure.
+    pitfall: false
+body:
+  zh: |-
+    台面接缝发霉的根因几乎都是旧胶失效 + 基材长期潮湿。只喷除霉剂治标不治本，水汽会从缝隙继续渗入。标准修复流程：清旧胶 → 除霉 → 干燥 → 打防霉胶。
+
+    **避坑**：不要在基材还潮湿时打胶，胶层底部不固化会整条脱落；也不要用酸性胶打在石材台面上，酸性会腐蚀大理石、花岗岩导致变色。
+  en: >-
+    The root cause of countertop joint mould is almost always failed old sealant plus a persistently damp substrate.
+    Spraying remover alone treats the symptom; moisture keeps entering. The fix: remove old sealant → kill mould → dry →
+    re-seal with mould-resistant product. Pitfalls: never seal a damp substrate (the bead won't cure and detaches), and
+    never use acidic sealant on stone tops (it etches marble/granite and discolours).
+customSections: []

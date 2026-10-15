@@ -295,6 +295,7 @@ const DETAIL_DEFAULT: Record<string, Bilingual> = {
   scenarioSelectionTitle: { zh: '选型逻辑', en: 'How to choose' },
   scenarioProductsTitle: { zh: '推荐产品', en: 'Recommended products' },
   scenarioInquiryTitle: { zh: '获取量身定制的建议', en: 'Get a tailored recommendation' },
+  scenarioArticlesTitle: { zh: '该场景下的内容', en: 'Articles in this scenario' },
 };
 
 // 关于页

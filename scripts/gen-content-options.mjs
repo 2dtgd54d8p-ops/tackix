@@ -56,15 +56,45 @@ export function readSingletonItems(relPath) {
     .map((x) => ({ label: optionLabel(x.label), value: x.value.trim() }));
 }
 
+/**
+ * 读取 scenarios 集合（src/content/scenarios/*.yaml），返回 [{label,value}] 用于文章
+ * 「所属场景」下拉。value 取 YAML 的 title（即场景 slug），label 取双语 name（英文优先，
+ * 回落中文，与 CATEGORY_OPTIONS / TAG_OPTIONS 的显示规则一致）。
+ */
+export function readScenarioItems() {
+  const dir = path.join(ROOT, 'src/content/scenarios');
+  if (!fs.existsSync(dir)) return [];
+  const files = fs
+    .readdirSync(dir)
+    .filter((f) => f.endsWith('.yaml') || f.endsWith('.yml'));
+  const out = [];
+  for (const f of files) {
+    let data;
+    try {
+      data = yaml.load(fs.readFileSync(path.join(dir, f), 'utf8'));
+    } catch (e) {
+      console.warn(`[gen-content-options] 解析 scenarios/${f} 失败，跳过：${e.message}`);
+      continue;
+    }
+    if (!data) continue;
+    const value = typeof data.title === 'string' ? data.title.trim() : '';
+    const label = optionLabel(data.name);
+    if (value && label) out.push({ label, value });
+  }
+  return out;
+}
+
 export function generateContentOptions() {
   const categories = readSingletonItems('categories/index.yaml');
   const tags = readSingletonItems('tags/index.yaml');
+  const scenarios = readScenarioItems();
 
   const out = `// ⚠️ 本文件由 scripts/gen-content-options.mjs 自动生成，请勿手动编辑。
 // 数据来源：仓库根目录 categories/index.yaml（后台「分类管理」）、
-//          tags/index.yaml（后台「标签管理」）。
-// 生成时机：postinstall / predev / prebuild，以及 dev 期间这两个文件变化触发的重启。
-// 作用：文章编辑器的「分类」下拉与「标签」多选框选项跟随后台 singleton，无需手改代码。
+//          tags/index.yaml（后台「标签管理」）；
+//          src/content/scenarios/*.yaml（场景方案集合，提供「所属场景」下拉）。
+// 生成时机：postinstall / predev / prebuild，以及 dev 期间这些文件变化触发的重启。
+// 作用：文章编辑器的「分类」「标签」下拉与「所属场景」下拉跟随后台数据，无需手改代码。
 export const CATEGORY_OPTIONS: ReadonlyArray<{ label: string; value: string }> = ${JSON.stringify(
     categories,
     null,
@@ -76,6 +106,12 @@ export const TAG_OPTIONS: ReadonlyArray<{ label: string; value: string }> = ${JS
     null,
     2
   )};
+
+export const SCENARIO_OPTIONS: ReadonlyArray<{ label: string; value: string }> = ${JSON.stringify(
+    scenarios,
+    null,
+    2
+  )};
 `;
 
   fs.mkdirSync(path.dirname(DEST), { recursive: true });
@@ -83,14 +119,14 @@ export const TAG_OPTIONS: ReadonlyArray<{ label: string; value: string }> = ${JS
   if (prev !== out) {
     fs.writeFileSync(DEST, out);
     console.log(
-      `[gen-content-options] 已更新 src/generated/content-options.ts（分类 ${categories.length} / 标签 ${tags.length}）`
+      `[gen-content-options] 已更新 src/generated/content-options.ts（分类 ${categories.length} / 标签 ${tags.length} / 场景 ${scenarios.length}）`
     );
   } else {
     console.log(
-      `[gen-content-options] 无变化（分类 ${categories.length} / 标签 ${tags.length}）`
+      `[gen-content-options] 无变化（分类 ${categories.length} / 标签 ${tags.length} / 场景 ${scenarios.length}）`
     );
   }
-  return { categories, tags };
+  return { categories, tags, scenarios };
 }
 
 const isMain =

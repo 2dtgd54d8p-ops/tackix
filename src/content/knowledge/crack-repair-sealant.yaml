@@ -1,0 +1,45 @@
+title: crack-repair-sealant
+name:
+  zh: 屋顶裂缝补漏选什么胶
+  en: What sealant to choose for roof crack repair
+excerpt:
+  zh: 屋顶裂缝补漏要先分静裂还是动裂。动裂用高弹性聚氨酯/硅酮，静裂可用刚性防水涂料封闭。
+  en: >-
+    Roof crack repair starts by telling static from moving cracks. Use high-elasticity PU/silicone for moving cracks;
+    rigid coating seals static ones.
+publishedAt: '2026-10-15'
+published: true
+featured: false
+category: selection-guide
+tags:
+  - waterproofing
+  - expansion-joints
+  - substrate
+  - professional
+scenario: roof-waterproof
+faq:
+  - question:
+      zh: 所有裂缝都能用弹性胶吗？
+      en: Can every crack use elastic sealant?
+    answer:
+      zh: 动裂（随温差开合）必须弹性胶；但正在扩大的结构裂缝应先做结构补强，再封缝，否则胶会被拉开。
+      en: >-
+        Moving (thermal) cracks need elastic sealant, but an actively widening structural crack must be reinforced
+        first, or the sealant will simply be pulled apart.
+steps: []
+body:
+  zh: >-
+    屋顶裂缝补漏，先判断裂缝性质。**动裂**（随温度、沉降反复开合）：必须用能跟随变形的高弹性材料，如单组分湿固化聚氨酯密封胶或高位移硅酮，位移能力
+    ≥25%，否则一胀一缩就重新拉开。**静裂**（稳定不发展）：可用刚性或柔性防水涂料封闭，如聚合物水泥防水涂料（JS）薄涂多遍。
+
+
+    **通用做法**：清缝（扩成 V 形槽、去松动物）→ 基层润湿/底涂 → 填弹性胶或刷防水涂料 → 必要时加胎体增强（聚酯布）。注意：正在扩大的结构性裂缝要先做结构补强，单靠封缝解决不了。
+  en: >-
+    Start roof crack repair by classifying the crack. **Moving cracks** (open/close with temperature or settlement) need
+    a material that follows movement — a one-part moisture-curing polyurethane or high-movement silicone, ≥25% movement,
+    or it re-opens. **Static cracks** (stable) can be sealed with a rigid or flexible waterproof coating, e.g.
+    polymer-cement (JS) in multiple thin coats. General method: clean and widen to a V, remove loose material →
+    dampen/prime the substrate → fill with elastic sealant or brush coating → add a reinforcement carrier (polyester
+    mat) where needed. An actively widening structural crack must be structurally repaired first; sealing alone won't
+    hold.
+customSections: []

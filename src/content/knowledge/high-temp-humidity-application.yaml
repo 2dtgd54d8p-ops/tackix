@@ -1,0 +1,47 @@
+title: high-temp-humidity-application
+name:
+  zh: 高温高湿环境施工要点
+  en: Application notes for high-temperature, high-humidity conditions
+excerpt:
+  zh: 夏季屋面高温、南方回南天高湿，防水施工易起泡、不固化。控温、避午、除湿、选对材料是关键。
+  en: >-
+    Hot summer roofs and humid southern conditions cause bubbling and non-curing. Control temperature, avoid midday,
+    dehumidify and pick the right product.
+publishedAt: '2026-10-15'
+published: true
+featured: false
+category: application-pitfalls
+tags:
+  - temperature
+  - waterproofing
+  - surface-prep
+  - professional
+scenario: roof-waterproof
+faq:
+  - question:
+      zh: 回南天能刷防水吗？
+      en: Can I apply waterproofing during humid "returning-spring" days?
+    answer:
+      zh: 高湿会拖慢固化、引发发粘起泡，建议等湿度下降或改用湿固化型材料并加强通风除湿。
+      en: >-
+        High humidity slows curing and causes tackiness/bubbling; wait for lower humidity or use a moisture-curing
+        product with ventilation and dehumidification.
+steps: []
+body:
+  zh: >-
+    高温高湿是防水施工的两大敌人。**高温**（尤其深色屋面正午可达 60℃+）：材料表干过快、内部溶剂/水分来不及逸出而鼓泡，且工人作业危险。对策——避开
+    11:00–15:00，选早晚施工，对基面适当润湿降温，使用耐高温配方。**高湿/回南天**：水汽被封闭在涂层下，导致发粘、不固化、后期起鼓。对策——关注露点，相对湿度 >85%
+    或临近结露时停工，加强通风除湿，必要时改用湿固化型聚氨酯（靠水反应反而受益）。
+
+
+    **通用避坑**：基层含水率达标再施工（可用薄膜法初判）；材料现用现配、控制用量避免浪费；每层干透再上第二层；外露层做好 UV 防护。
+  en: >-
+    Heat and humidity are the two enemies of waterproofing work. **High heat** (dark roofs can exceed 60°C at noon)
+    makes the surface skin over while solvent/water is still trapped, causing bubbles, and it is dangerous for workers.
+    Counter it by avoiding 11:00–15:00, working mornings/evenings, lightly damping and cooling the substrate, and using
+    heat-tolerant formulas. **High humidity / "returning-spring" days** trap moisture under the film, causing tackiness,
+    non-curing and later blistering. Watch the dew point; stop when RH >85% or condensation is near, ventilate and
+    dehumidify, or switch to a moisture-curing PU that actually benefits from water. General pitfalls: only build on a
+    substrate at the right moisture content (film test), mix fresh and in working quantities, let each coat dry before
+    the next, and protect exposed layers from UV.
+customSections: []

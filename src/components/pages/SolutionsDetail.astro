@@ -65,6 +65,31 @@ if (jsonLd && faqItems.length) {
 }
 // 自定义内容区块：后台自由组合的结构化区块（标题/段落/图片/提示框/引用）
 const customSections = normalizeSections(post?.customSections);
+// 该场景下的相关知识库文章（内链闭环）：按 knowledge 的 scenario 字段过滤到当前场景 slug。
+// 前台改文章「所属场景」即同步，无需改代码。
+let relatedArticles: { slug: string; name: string; excerpt: string }[] = [];
+try {
+  const kSlugs = await reader.collections.knowledge.list();
+  const kItems = await Promise.all(
+    kSlugs.map(async (kslug: string) => {
+      try {
+        const k: any = await reader.collections.knowledge.read(kslug);
+        if (!k || k.published === false) return null;
+        if ((k.scenario ?? 'none') !== slug) return null;
+        return {
+          slug: kslug,
+          name: pickB(locale, (k.name as Bilingual) ?? ({ zh: kslug, en: kslug } as Bilingual)),
+          excerpt: pickB(locale, (k.excerpt as Bilingual) ?? ({ zh: '', en: '' } as Bilingual)),
+        };
+      } catch {
+        return null;
+      }
+    })
+  );
+  relatedArticles = kItems.filter(Boolean) as any;
+} catch {
+  /* 知识库读取失败则相关内容区置空，不影响场景页其余部分 */
+}
 // 选型逻辑要点 → HowTo（独立节点），争取步骤类富媒体结果
 const howTo = post
   ? howToSchema(locale, pickB(locale, post.name), post.selectionLogic ?? [])
@@ -195,6 +220,23 @@ const howTo = post
                   );
                 return null;
               })}
+            </section>
+          )
+        }
+
+        <!-- 该场景下的相关内容（内链闭环到知识库文章） -->
+        {
+          relatedArticles.length > 0 && (
+            <section class="related" data-section="related">
+              <h2>{detail.scenarioArticlesTitle}</h2>
+              <div class="rel-grid">
+                {relatedArticles.map((a) => (
+                  <a class="rel-card" href={`${lp}/knowledge/${a.slug}`}>
+                    <span class="rel-title">{a.name}</span>
+                    {a.excerpt && <span class="rel-excerpt">{a.excerpt}</span>}
+                  </a>
+                ))}
+              </div>
             </section>
           )
         }
@@ -346,6 +388,35 @@ const howTo = post
     border: 1px solid var(--border);
   }
   .inquiry h2 { margin: 0 0 16px; font-size: 20px; }
+
+  /* 该场景下的相关内容：内链卡片网格 */
+  .related { margin-top: 44px; }
+  .related h2 { font-size: 20px; margin: 0 0 18px; color: var(--fg); }
+  .rel-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 16px; }
+  .rel-card {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    padding: 18px 20px;
+    border: 1px solid var(--border);
+    border-radius: var(--r-md);
+    background: var(--surface);
+    text-decoration: none;
+    color: inherit;
+    transition: border-color var(--dur) var(--ease), box-shadow var(--dur) var(--ease),
+      transform var(--dur) var(--ease);
+  }
+  .rel-card:hover {
+    border-color: var(--accent);
+    box-shadow: var(--shadow-sm);
+    transform: translateY(-2px);
+    text-decoration: none;
+  }
+  .rel-title { font-size: 15px; font-weight: 600; color: var(--fg); line-height: 1.5; }
+  .rel-excerpt { font-size: 13px; color: var(--muted); line-height: 1.65; }
+  @media (max-width: 700px) {
+    .rel-grid { grid-template-columns: minmax(0, 1fr); }
+  }
 
   .post-foot {
     display: flex;

@@ -1,0 +1,45 @@
+title: elastic-vs-rigid-waterproofing
+name:
+  zh: 弹性防水胶与刚性防水胶怎么选
+  en: Elastic vs rigid waterproofing adhesive
+excerpt:
+  zh: 有裂缝、会变形的部位用弹性防水；结构稳定、需贴砖或受踩踏的用刚性。常二者复合：刚性打底、弹性封面。
+  en: >-
+    Use elastic where there are cracks and movement; rigid where the structure is stable and tiled or walked on. Often
+    combine: rigid base, elastic top.
+publishedAt: '2026-10-15'
+published: true
+featured: false
+category: selection-guide
+tags:
+  - waterproofing
+  - expansion-joints
+  - temperature
+  - substrate
+scenario: roof-waterproof
+faq:
+  - question:
+      zh: 能不能只刷刚性防水？
+      en: Can I just use rigid waterproofing?
+    answer:
+      zh: 若基层有细微裂缝或会沉降，纯刚性易开裂失效；建议弹性覆盖裂缝区，或刚性打底+弹性面层复合。
+      en: >-
+        On cracked or settling substrates, rigid alone cracks and fails; cover crack zones elastically, or use a rigid
+        base with an elastic topcoat.
+steps: []
+body:
+  zh: >-
+    弹性与刚性不是优劣之分，而是分工不同。**弹性防水**（聚氨酯、JS
+    高弹、丙烯酸弹性涂料、硅酮胶）能拉伸回弹，专治会变形的裂缝、伸缩缝、管根节点；缺点是强度较低、多数不耐长期踩踏、部分怕紫外线需覆护层。**刚性防水**（水泥基渗透结晶、刚性防水砂浆）强度高、耐踩、易贴砖，但几乎不跟随变形，基层一裂就跟着裂。
+
+
+    **工程上常复合使用**：结构稳定区用刚性打底找平，变形缝、管根、阴阳角等节点用弹性材料加强并外覆胎体。选材料时还要看基层类型（混凝土/金属/卷材）、是否外露、是否上人。
+  en: >-
+    Elastic and rigid are not better-or-worse, they divide the labour. **Elastic** (PU, high-elastic JS, acrylic
+    elastomeric, silicone) stretches and recovers — ideal for moving cracks, expansion joints and pipe penetrations —
+    but is weaker, mostly not walkable, and some need a UV-protective cover. **Rigid** (crystalline, rigid waterproof
+    mortar) is strong, walkable and tile-friendly but follows no movement, so it cracks with the substrate. In practice
+    they combine: a rigid base on stable areas, with elastic reinforcement and a carrier over joints, corners and
+    penetrations. Also match the material to the substrate (concrete/metal/membrane), exposure and whether it is
+    trafficked.
+customSections: []

@@ -1,0 +1,64 @@
+title: hollow-tile-repair
+name:
+  zh: 瓷砖空鼓怎么修复
+  en: How to repair hollow (debonded) tiles
+excerpt:
+  zh: 空鼓是瓷砖与基层脱粘、敲击发空响。小面积可注浆加固，大面积或已松动需起砖重铺。
+  en: >-
+    Hollowing means the tile has debonded from the substrate and sounds empty when tapped. Small areas can be re-adhered
+    by injection; large or loose tiles need lifting and re-bedding.
+publishedAt: '2026-10-15'
+published: true
+featured: false
+category: troubleshooting
+tags:
+  - tile-stone
+  - substrate
+  - surface-prep
+  - diy
+scenario: tile-grout
+faq:
+  - question:
+      zh: 空鼓不处理会怎样？
+      en: What if I leave hollow tiles alone?
+    answer:
+      zh: 空鼓处受力易碎裂、进水后冻胀或霉变，还会牵连周边。建议尽早处理，尤其厨卫湿区。
+      en: >-
+        Hollow spots crack under load, admit water that freezes or moulds, and spread to neighbours. Fix early,
+        especially in wet kitchen/bath areas.
+steps:
+  - title:
+      zh: 定位空鼓
+      en: Locate hollows
+    text:
+      zh: 用空鼓锤或硬币轻敲，听空响圈定范围并标记。
+      en: Tap with a hollow-tile hammer or coin; mark the empty-sounding area.
+    pitfall: false
+  - title:
+      zh: 钻孔注浆
+      en: Drill and inject
+    text:
+      zh: 在砖面钻 2–3 个小孔，注入瓷砖粘接剂/环氧灌浆，压实排气。
+      en: Drill 2–3 small holes, inject tile adhesive/epoxy grout, compact and bleed air.
+    pitfall: false
+  - title:
+      zh: 清理养护
+      en: Clean and cure
+    text:
+      zh: 擦净溢胶，封孔，静置固化后再使用。
+      en: Wipe squeeze-out, plug holes, and leave to cure before use.
+    pitfall: false
+body:
+  zh: >-
+    空鼓本质是瓷砖背面的粘结层失效，敲击呈空响。成因多为铺贴时背胶不满、基层浮灰、吸水率不匹配或养护不足。
+
+
+    **小面积空鼓**（单块局部、未松动）：采用注浆法——在砖面钻小孔，注入瓷砖粘接剂或低粘度环氧灌浆，边注边按压排气，固化后封孔，基本不破坏饰面。**大面积或已松动、翘起**：注浆补不牢，应起砖、清理旧浆、重新薄贴，并排查基层是否空鼓、是否需做防水补强。厨卫湿区空鼓进水后易引发霉变和冻胀，优先处理。
+  en: >-
+    Hollowing is failure of the bond layer behind the tile, heard as an empty ring when tapped. Causes: incomplete
+    back-buttering, dusty substrate, mismatched absorption, or poor curing. **Small, still-fixed hollows**: inject —
+    drill small holes, inject tile adhesive or low-viscosity epoxy grout while pressing out air, then plug and cure,
+    with minimal surface disruption. **Large or loose/lifted tiles**: injection won't hold; lift, clean old mortar,
+    re-trowel with thin-set, and check whether the substrate itself is hollow or needs waterproofing. In wet
+    kitchen/bath zones, hollows let water in and invite mould and freeze-thaw — prioritise these.
+customSections: []

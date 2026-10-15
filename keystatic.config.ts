@@ -3,7 +3,7 @@ import { createElement } from 'react';
 // 文章「分类」「标签」下拉选项：由 scripts/gen-content-options.mjs 从后台
 // 「分类管理」「标签管理」singleton（仓库根 categories/index.yaml、tags/index.yaml）
 // 在构建期生成。改后台即自动跟随，不再手改本文件。
-import { CATEGORY_OPTIONS, TAG_OPTIONS } from './src/generated/content-options';
+import { CATEGORY_OPTIONS, TAG_OPTIONS, SCENARIO_OPTIONS } from './src/generated/content-options';
 
 // 存储后端切换（仅决定 /keystatic 后台 UI 的数据读写来源，不影响静态站点的构建）：
 // - 生产（构建 + Cloudflare Worker 运行时）一律使用 github 模式，后台经 GitHub App 读写仓库
@@ -202,6 +202,18 @@ export default config({
         tags: fields.multiselect({
           label: '标签',
           options: TAG_OPTIONS,
+        }),
+        // 所属场景：把文章关联到某个场景方案（下拉来自 SCENARIO_OPTIONS，构建期 codegen 自
+        // src/content/scenarios/*.yaml）。选「无」则不在任何场景分类页展示；选具体场景后会出现在
+        // 该场景分类页的「相关内容」区，打通「场景方案 → 知识库文章」的内链闭环。
+        scenario: fields.select({
+          label: '所属场景',
+          description: '把该文章归入某个场景方案，会在对应场景分类页的「相关内容」区展示。',
+          options: [
+            { label: '无', value: 'none' },
+            ...SCENARIO_OPTIONS,
+          ],
+          defaultValue: 'none',
         }),
         // 常见问题：渲染为 FAQ 区块并生成 FAQPage 结构化数据，利于 AI/搜索直接抽取答案
         // ⚠️ 两个 Keystatic 0.6.9 的坑（叠加后会让**所有**文章读取失败）：
@@ -546,6 +558,7 @@ export default config({
             scenarioSelectionTitle: bi('场景：选型逻辑标题'),
             scenarioProductsTitle: bi('场景：推荐产品标题'),
             scenarioInquiryTitle: bi('场景：询盘 CTA 标题'),
+            scenarioArticlesTitle: bi('场景：相关内容标题', { description: '场景分类页底部「该场景下的内容」区块标题。' }),
           },
           { label: '详情页区块标题' }
         ),

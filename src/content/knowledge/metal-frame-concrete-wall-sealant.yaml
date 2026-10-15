@@ -1,0 +1,44 @@
+title: metal-frame-concrete-wall-sealant
+name:
+  zh: 金属窗框与水泥墙怎么选胶
+  en: Sealant for metal window frames against concrete walls
+excerpt:
+  zh: 金属框与水泥墙热胀冷缩差异大、缝隙易开裂漏水。应选高位移能力、粘结力强、耐候的中性硅酮耐候胶。
+  en: >-
+    Metal frames and concrete move differently and crack at the joint. Use a high-movement, strongly bonding,
+    weather-resistant neutral silicone.
+publishedAt: '2026-10-15'
+published: true
+featured: false
+category: selection-guide
+tags:
+  - silicone-sealant
+  - waterproofing
+  - expansion-joints
+  - substrate
+scenario: window-door-leak
+faq:
+  - question:
+      zh: 能用聚氨酯胶吗？
+      en: Can I use polyurethane sealant?
+    answer:
+      zh: 可以用，但聚氨酯耐候性、抗 UV 不如硅酮，长期户外易粉化；金属+水泥这种大位移接缝更推荐中性硅酮耐候胶。
+      en: >-
+        You can, but PU weathers and UV-degrades worse than silicone and chalks outdoors; for this high-movement joint a
+        neutral silicone weatherproofing grade is preferred.
+steps: []
+body:
+  zh: >-
+    金属窗框与水泥/砖墙的线胀系数差异很大：夏天金属框膨胀、冬天收缩，接缝反复位移，普通胶易撕裂漏水。选型抓住三点：**高位移能力**（建议
+    ≥25%，应对框墙伸缩）、**强粘结**（对阳极氧化铝、镀锌钢、混凝土都粘得住，必要时配底涂）、**耐候抗 UV**（户外长期不粉化、不龟裂）。
+
+
+    中性硅酮耐候胶是这类接缝的常规选择；若对气味/可涂饰有要求，可换改性硅烷（MS）但需确认位移等级足够。施工前用底涂处理多孔水泥面，能显著提升耐久。
+  en: >-
+    Metal frames and concrete/brick have very different thermal expansion; the joint cycles year-round and ordinary
+    sealants tear and leak. Choose on three points: high movement capability (≥25% to absorb frame-wall movement),
+    strong adhesion (to anodised aluminium, galvanised steel and concrete — use a primer if needed), and weather/UV
+    resistance (no chalking or cracking outdoors). Neutral silicone weatherproofing grade is the standard choice; MS
+    polymer works where low odour or paintability matters, if its movement rating is sufficient. Prime porous concrete
+    before sealing for durability.
+customSections: []

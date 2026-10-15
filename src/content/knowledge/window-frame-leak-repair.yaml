@@ -1,0 +1,68 @@
+title: window-frame-leak-repair
+name:
+  zh: 窗框渗水修复步骤
+  en: Step-by-step window frame leak repair
+excerpt:
+  zh: 窗框渗水多发生在外侧打胶开裂或泄水孔堵塞。按「查孔→清旧胶→补耐候胶→试水」四步修复。
+  en: >-
+    Leaks usually come from cracked outer bead or blocked weep holes. Repair in four steps: check holes, remove old
+    sealant, re-bead, then test with water.
+publishedAt: '2026-10-15'
+published: true
+featured: false
+category: application-pitfalls
+tags:
+  - waterproofing
+  - surface-prep
+  - diy
+scenario: window-door-leak
+faq:
+  - question:
+      zh: 内侧墙面渗水但外侧胶完好？
+      en: Water inside but the outer bead looks intact?
+    answer:
+      zh: 很可能是窗框泄水孔堵塞，雨水排不出倒灌。先通泄水孔，再检查外侧胶是否实质开裂。
+      en: >-
+        Likely blocked weep holes causing backflow. Clear the weeps first, then check whether the outer bead is actually
+        cracked.
+steps:
+  - title:
+      zh: 查泄水孔
+      en: Check weep holes
+    text:
+      zh: 确认窗框底部泄水孔无堵塞，用细铁丝或水冲通。
+      en: Confirm the bottom weep holes are clear; rod or flush them open.
+    pitfall: false
+  - title:
+      zh: 清旧胶
+      en: Remove old sealant
+    text:
+      zh: 铲除外侧开裂、起翘的旧耐候胶，露出基材。
+      en: Cut out cracked or lifting outer weatherproofing bead to bare substrate.
+    pitfall: false
+  - title:
+      zh: 补耐候胶
+      en: Re-bead with weatherproof sealant
+    text:
+      zh: 沿框墙接缝打中性硅酮耐候胶，刮平连续无断点。
+      en: Run a continuous neutral silicone weatherproofing bead along the frame-wall joint, tooled smooth with no gaps.
+    pitfall: false
+  - title:
+      zh: 试水验证
+      en: Test with water
+    text:
+      zh: 用喷壶对外侧淋水观察内侧是否渗水，确认修复。
+      en: Spray the outside and watch indoors for leaks to confirm the repair.
+    pitfall: false
+body:
+  zh: |-
+    窗框渗水修复要先分清原因：约半数情况是外侧打胶开裂，另一半是泄水孔堵塞导致雨水排不出、倒灌进墙。所以第一步永远是先通泄水孔。
+
+    确认排水通畅后，再处理打胶层：铲掉开裂起翘的旧胶（不要直接在旧胶上叠打，粘结差），基材清洁干燥后打中性硅酮耐候胶，沿框墙接缝连续刮平、不留断点。最后务必做试水验证——很多师傅省掉这步，结果下雨才发现没修好。
+  en: >-
+    First find the cause: about half of window leaks are cracked outer sealant, the other half are blocked weep holes
+    causing backflow into the wall. So step one is always to clear the weeps. Once drainage is proven, fix the bead: cut
+    out the cracked, lifting old sealant (don't just layer new over old — adhesion is poor), clean and dry the
+    substrate, then run a continuous neutral silicone weatherproofing bead along the frame-wall joint, tooled smooth
+    with no gaps. Always water-test at the end; many skip this and find it still leaks in the next rain.
+customSections: []
