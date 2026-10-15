@@ -5,6 +5,7 @@ import Base from '../../layouts/Base.astro';
 import { loadSiteData, loadContent } from '../../lib/site-data';
 import { renderMarkdown, readingMinutes, coverSrc } from '../../lib/markdown';
 import { inLanguage, howToFromSteps } from '../../lib/schema';
+import { normalizeSections } from '../../lib/custom-sections';
 import { pickB, type Locale } from '../../lib/i18n';
 
 interface Props {
@@ -71,6 +72,8 @@ const howTo = post ? howToFromSteps(locale, pickB(locale, post.name), post.steps
 // 拆出「操作步骤」与「施工避坑」两组，分别渲染
 const procSteps = (post?.steps ?? []).filter((s: any) => s && !s.pitfall);
 const pitfallSteps = (post?.steps ?? []).filter((s: any) => s && s.pitfall);
+// 自定义内容区块：后台自由组合的结构化区块（标题/段落/图片/提示框/引用）
+const customSections = normalizeSections(post?.customSections);
 const keywords = post ? (post.tags ?? []).map((tag: string) => tagLabel(tag)) : [];
 ---
 
@@ -159,6 +162,43 @@ const keywords = post ? (post.tags ?? []).map((tag: string) => tagLabel(tag)) : 
                   <p>{f.acceptedAnswer.text}</p>
                 </details>
               ))}
+            </section>
+          )
+        }
+
+        {
+          customSections.length > 0 && (
+            <section class="custom-sections" aria-label={t('自定义内容', 'Custom content')}>
+              {customSections.map((s: any) => {
+                if (s.type === 'heading')
+                  return <h2 class="csec csec-heading">{s.heading}</h2>;
+                if (s.type === 'paragraph')
+                  return (
+                    <p class="csec csec-text" style="white-space:pre-line">{s.text}</p>
+                  );
+                if (s.type === 'image')
+                  return (
+                    <figure class="csec csec-image">
+                      {s.image && <img src={s.image} alt={s.imageCaption || ''} loading="lazy" />}
+                      {s.imageCaption && <figcaption>{s.imageCaption}</figcaption>}
+                    </figure>
+                  );
+                if (s.type === 'callout')
+                  return (
+                    <div class={`csec csec-callout tone-${s.calloutTone}`}>
+                      {s.heading && <strong class="csec-callout-title">{s.heading}</strong>}
+                      {s.text && <p>{s.text}</p>}
+                    </div>
+                  );
+                if (s.type === 'quote')
+                  return (
+                    <blockquote class="csec csec-quote">
+                      {s.text}
+                      {s.heading && <cite>— {s.heading}</cite>}
+                    </blockquote>
+                  );
+                return null;
+              })}
             </section>
           )
         }
@@ -274,6 +314,35 @@ const keywords = post ? (post.tags ?? []).map((tag: string) => tagLabel(tag)) : 
   }
   .pitfall-title { display: block; color: var(--fg); margin-bottom: 2px; }
   .pitfall-text { margin: 0; color: var(--muted); line-height: 1.6; }
+  /* 自定义内容区块（标题/段落/图片/提示框/引用） */
+  .custom-sections { margin-top: 40px; display: grid; gap: 22px; }
+  .csec-heading { font-size: 22px; line-height: 1.4; margin: 0; color: var(--fg); }
+  .csec-text { margin: 0; color: var(--fg-soft); line-height: 1.8; }
+  .csec-image { margin: 0; }
+  .csec-image img { width: 100%; border-radius: var(--r-md); display: block; box-shadow: var(--shadow-sm); }
+  .csec-image figcaption { margin-top: 8px; font-size: 13px; color: var(--faint); text-align: center; }
+  .csec-callout {
+    border: 1px solid var(--border-strong);
+    border-left-width: 4px;
+    border-radius: var(--r-md);
+    padding: 14px 18px;
+    background: var(--surface-2);
+  }
+  .csec-callout-title { display: block; margin-bottom: 4px; color: var(--fg); }
+  .csec-callout p { margin: 0; color: var(--muted); line-height: 1.7; }
+  .csec-callout.tone-info { border-left-color: var(--accent); }
+  .csec-callout.tone-warn { border-left-color: var(--warn-accent, #e08a2b); }
+  .csec-callout.tone-danger { border-left-color: var(--danger); }
+  .csec-quote {
+    margin: 0;
+    padding: 10px 20px;
+    border-left: 3px solid var(--accent);
+    background: var(--surface-2);
+    border-radius: 0 var(--r-sm) var(--r-sm) 0;
+    color: var(--muted);
+    font-style: italic;
+  }
+  .csec-quote cite { display: block; margin-top: 6px; font-size: 13px; color: var(--faint); font-style: normal; }
   .faq {
     margin-top: 40px;
     padding-top: 28px;

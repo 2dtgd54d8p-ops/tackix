@@ -50,6 +50,7 @@ const navItems = uiContent.ui.navItems.map((n) => ({
   label: n.label,
 }));
 const footerText = uiContent.ui.footerText;
+const footerAdminLabel = uiContent.ui.footerAdminLabel;
 // 全局搜索框占位符（后台「列表页标题」singleton 可编辑）
 const searchPlaceholder = uiContent.pages.searchPlaceholder;
 
@@ -234,7 +235,7 @@ const showFloatContact =
         )
       }
       <span>{footerText}</span>
-      <a class="footer-admin" href="/keystatic">Admin</a>
+      <a class="footer-admin" href="/keystatic">{footerAdminLabel}</a>
     </footer>
     {showFloatContact && (
       <div class="float-cluster" id="float-cluster">

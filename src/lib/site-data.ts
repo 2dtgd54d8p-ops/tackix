@@ -341,6 +341,11 @@ export async function loadContent(locale: Locale = DEFAULT_LOCALE) {
     typeof fbRaw === 'string' ? fbRaw.trim() : pickB(locale, fbRaw as Bilingual | null | undefined);
   const footerText = fbText || `Powered by ${DEFAULT_SITE.title[locale] || 'Tackix'}`;
 
+  // 后台入口标签：双语对象 {zh,en}，留空回退默认
+  const faRaw: unknown = ui?.content?.footerAdminLabel;
+  const footerAdminLabel =
+    typeof faRaw === 'string' ? faRaw.trim() : pickB(locale, faRaw as Bilingual | null | undefined);
+
   const c = contact?.content ?? contact ?? {};
   const contactOut = Object.fromEntries(
     Object.keys(CONTACT_DEFAULT).map((k) => [k, pickB(locale, (c[k] as Bilingual) ?? CONTACT_DEFAULT[k])])
@@ -375,6 +380,7 @@ export async function loadContent(locale: Locale = DEFAULT_LOCALE) {
     ui: {
       navItems: navOut,
       footerText,
+      footerAdminLabel: footerAdminLabel || (locale === 'en' ? 'Admin' : '后台管理'),
     },
     contact: contactOut,
     pages: pagesOut,

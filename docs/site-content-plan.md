@@ -209,3 +209,44 @@ Certifications block: reuse `site.certBadges` (label + note) — e.g. ISO 9001 /
 - [ ] Replace placeholder TDS/SDS PDFs with real files (currently English placeholders).
 - [ ] Flip prelaunch gate to live (`launch.js --revert` or set `PRELAUNCH=0`) — this also enables hreflang + canonical.
 - [ ] Rebuild & verify `/sitemap.xml` (en alternates), `/llms.txt` (bilingual), `/pagefind` (zh+en indexes).
+
+---
+
+## 8. 内容生成模板规范（含 HowTo，便于 AI 解析与搜索引擎收录）
+
+所有「知识库文章」与「场景方案」统一遵循下列模板结构。模板的字段即结构化数据的唯一来源，
+确保前端展示、AI 抽取、Google 富媒体结果三者一致，避免「内容与结构化数据两张皮」。
+
+### 8.1 字段 → 结构化数据映射
+| 后台字段 | 作用 | 产出的 Schema |
+|---|---|---|
+| `name`（双语） | 展示标题 | `Article.headline` |
+| `excerpt`（双语） | 摘要 | `Article.description` + `<meta name="description">` |
+| `publishedAt` | 发布日期 | `Article.datePublished` / `dateModified` |
+| `category` / `tags` | 分类 / 标签 | 内部筛选 + 页面关键词（Keywords） |
+| `conclusion`（场景方案） | 首句结论（答案前置） | 页面顶部高亮，强化 E-E-A-T |
+| `steps`（结构化步骤） | 操作要点 | **HowTo + HowToStep**（见下） |
+| `body`（Markdown） | 正文主体 | 页面主内容 |
+| `customSections`（自定义区块） | 标题/段落/图片/提示框/引用 | 页面结构化版式 |
+| `faq`（问答对） | 常见问题 | **FAQPage** |
+
+### 8.2 HowTo 规范（核心）
+- 用后台 **结构化 `steps` 字段** 写步骤，**不要**把步骤写成正文里的 Markdown 列表——
+  只有结构化 steps 才会生成 `HowTo` / `HowToStep` JSON-LD，被 Google 富媒体与 AI 直接抽取。
+- 每条 step 含 `title`（步骤名）+ `text`（说明）。
+- 勾选 `pitfall`（避坑）的条目以「施工避坑」警示区块渲染，**不计入** HowTo 编号步骤，
+  避免把「不要做」混进步骤序列。
+- 输出形态：`Article`（`inLanguage`）+ `FAQPage` + `HowTo`（`inLanguage`）三块并列 JSON-LD。
+
+### 8.3 写作规则（利于 AI / SEO 收录）
+1. **答案前置**：场景方案首句即结论（写进 `conclusion`），让 AI 摘要与搜索片段直接命中。
+2. **步骤结构化**：所有操作型内容走 `steps` 字段，而非纯文本。
+3. **问答成对**：FAQ 用「问题 → 答案」成对填写，自动生成 FAQPage。
+4. **内部链接用描述性锚文本**：禁止「点击这里」；用「查看厨卫防霉方案」之类。
+5. **双语对齐**：每个 bi() 字段的 zh 与 en 都要填，保证 `/` 与 `/en` 两套内容完整。
+6. **每页独立 title / description**：列表与详情页 title 由路由 + `name` 自动拼装，
+   description 取自 `excerpt`；上线后自动输出 canonical / hreflang（预上线期按设计抑制）。
+
+> 后台同时支持「自定义内容区块（customSections）」：编辑者可在正文之外自由组合
+> 标题 / 段落 / 图片 / 提示框 / 引用 任意区块，满足任意自定义内容的填报与发布需求。
+

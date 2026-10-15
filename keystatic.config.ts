@@ -80,8 +80,47 @@ const bi = (
   fields.object(
     {
       zh: fields.text({ label: '中文', multiline: opts.multiline, description: opts.description }),
-      en: fields.text({ label: 'English', multiline: opts.multiline, description: opts.description }),
+      en: fields.text({ label: '英文', multiline: opts.multiline, description: opts.description }),
     },
+    { label }
+  );
+
+/**
+ * 自定义内容区块：后台可自由组合任意类型的结构化区块（标题 / 段落 / 图片 / 提示框 / 引用），
+ * 与正文（Markdown）互补，满足「任意自定义内容的填报与发布」。
+ * 详情页组件负责按 type 渲染（见 src/lib/custom-sections.ts 与详情页组件）。
+ */
+const customSectionsField = (label: string) =>
+  fields.array(
+    fields.object(
+      {
+        type: fields.select({
+          label: '区块类型',
+          options: [
+            { label: '标题', value: 'heading' },
+            { label: '段落', value: 'paragraph' },
+            { label: '图片', value: 'image' },
+            { label: '提示框', value: 'callout' },
+            { label: '引用', value: 'quote' },
+          ],
+          defaultValue: 'paragraph',
+        }),
+        heading: fields.text({ label: '标题文字' }),
+        text: fields.text({ label: '文字内容', multiline: true }),
+        image: fields.image({ label: '图片', directory: 'public/uploads', publicPath: '/uploads/' }),
+        imageCaption: fields.text({ label: '图片说明' }),
+        calloutTone: fields.select({
+          label: '提示级别',
+          options: [
+            { label: '提示', value: 'info' },
+            { label: '警告', value: 'warn' },
+            { label: '危险', value: 'danger' },
+          ],
+          defaultValue: 'info',
+        }),
+      },
+      { label: '自定义区块' }
+    ),
     { label }
   );
 
@@ -135,33 +174,33 @@ export default config({
   collections: {
     // 知识库文章（中英双语）。分类下拉选项来自 CATEGORY_OPTIONS（构建期 codegen）。
     knowledge: collection({
-      label: 'Knowledge Articles',
+      label: '知识库文章',
       slugField: 'title', // 由标题自动生成 URL 友好的 slug（单一英文标题，作为 URL slug 来源）
       path: 'src/content/knowledge/*',
       schema: {
         // 标题：单一字段，同时作为 URL slug 来源（建议用英文，保证 URL 稳定）
-        title: fields.slug({ name: fields.text({ label: 'Title (also URL slug, English recommended)' }) }),
+        title: fields.slug({ name: fields.text({ label: '标题（同时作为 URL slug，建议英文）' }) }),
         // 展示标题：中英双语，卡片/详情页按当前语种取用
-        name: bi('Display title'),
-        excerpt: bi('Excerpt', { multiline: true }),
-        publishedAt: fields.date({ label: 'Publish date' }),
+        name: bi('展示标题'),
+        excerpt: bi('摘要', { multiline: true }),
+        publishedAt: fields.date({ label: '发布日期' }),
         // 草稿开关：false 的文章不会被构建进站点
-        published: fields.checkbox({ label: 'Published', defaultValue: true }),
-        featured: fields.checkbox({ label: 'Show on home', defaultValue: false }),
+        published: fields.checkbox({ label: '已发布', defaultValue: true }),
+        featured: fields.checkbox({ label: '在首页展示', defaultValue: false }),
         // 分类下拉选项来自 `src/generated/content-options.ts` 的 CATEGORY_OPTIONS，
         // 该文件由 `scripts/gen-content-options.mjs` 在 predev/prebuild 阶段从
         // 后台「分类管理」singleton（categories/index.yaml）构建期生成。
         category: fields.select({
-          label: 'Category',
+          label: '分类',
           options: [
-            { label: 'Uncategorized', value: 'uncategorized' },
+            { label: '未分类', value: 'uncategorized' },
             ...CATEGORY_OPTIONS,
           ],
           defaultValue: 'uncategorized',
         }),
         // 标签多选选项来自 `src/generated/content-options.ts` 的 TAG_OPTIONS
         tags: fields.multiselect({
-          label: 'Tags',
+          label: '标签',
           options: TAG_OPTIONS,
         }),
         // 常见问题：渲染为 FAQ 区块并生成 FAQPage 结构化数据，利于 AI/搜索直接抽取答案
@@ -173,12 +212,12 @@ export default config({
         faq: fields.array(
           fields.object(
             {
-              question: bi('Question'),
-              answer: bi('Answer', { multiline: true }),
+              question: bi('问题'),
+              answer: bi('答案', { multiline: true }),
             },
-            { label: 'Q&A' }
+            { label: '问答' }
           ),
-          { label: 'FAQ' }
+          { label: '常见问题' }
         ),
         // 结构化步骤：驱动详情页「操作步骤」区块 + HowTo 结构化数据。
         // 勾选 pitfall 的条目以「避坑提示」警示样式渲染，并【不】计入 HowTo 的编号步骤，
@@ -186,20 +225,20 @@ export default config({
         steps: fields.array(
           fields.object(
             {
-              title: bi('Step title'),
-              text: bi('Step description', { multiline: true }),
+              title: bi('步骤标题'),
+              text: bi('步骤说明', { multiline: true }),
               pitfall: fields.checkbox({
-                label: 'Pitfall / caution (render as warning, exclude from numbered steps)',
+                label: '避坑提示（以警示样式渲染，不计入编号步骤）',
                 defaultValue: false,
               }),
             },
-            { label: 'Step' }
+            { label: '步骤' }
           ),
-          { label: 'Step-by-step (drives HowTo)' }
+          { label: '结构化步骤（驱动 HowTo）' }
         ),
         // 图片会经 GitHub App 提交到仓库 public/uploads/，构建时由静态资源直接产出
         cover: fields.image({
-          label: 'Cover image',
+          label: '封面图',
           directory: 'public/uploads',
           publicPath: '/uploads/',
         }),
@@ -208,58 +247,62 @@ export default config({
         body: fields.object(
           {
             zh: fields.mdx.inline({ label: '正文（中文）' }),
-            en: fields.mdx.inline({ label: 'Body (English)' }),
+            en: fields.mdx.inline({ label: '正文（英文）' }),
           },
-          { label: 'Body' }
+          { label: '正文' }
         ),
+        // 自定义内容区块：后台自由组合结构化区块，满足任意自定义内容的填报与发布
+        customSections: customSectionsField('自定义内容区块'),
       },
     }),
     // 场景方案：4 个高频场景，产品以占位嵌入，不单独建库。中英双语。
     scenarios: collection({
-      label: 'Scenario Solutions',
+      label: '场景方案',
       slugField: 'title',
       path: 'src/content/scenarios/*',
       schema: {
-        title: fields.slug({ name: fields.text({ label: 'Scenario title (also URL slug, English recommended)' }) }),
-        name: bi('Display title'),
-        excerpt: bi('Excerpt', { multiline: true }),
-        published: fields.checkbox({ label: 'Published', defaultValue: true }),
-        featured: fields.checkbox({ label: 'Show on home', defaultValue: false }),
+        title: fields.slug({ name: fields.text({ label: '场景标题（同时作为 URL slug，建议英文）' }) }),
+        name: bi('展示标题'),
+        excerpt: bi('摘要', { multiline: true }),
+        published: fields.checkbox({ label: '已发布', defaultValue: true }),
+        featured: fields.checkbox({ label: '在首页展示', defaultValue: false }),
         // 首句直接结论（双语）：回答「这个场景该用什么」，置于页面顶部
-        conclusion: bi('Bottom-line recommendation', {
+        conclusion: bi('一句话结论', {
           multiline: true,
           description:
-            'e.g. For mould and leaks in kitchens and bathrooms, use a fungicidal flexible sealant rated for continuous water contact.',
+            '例如：厨卫防霉防漏请选用耐持续浸水的防霉柔性密封胶。',
         }),
         // 选型逻辑要点（3-5 条）
         selectionLogic: fields.array(
-          fields.object({ point: bi('Point') }, { label: 'Point' }),
-          { label: 'Selection logic' }
+          fields.object({ point: bi('要点') }, { label: '要点' }),
+          { label: '选型逻辑' }
         ),
         // 推荐产品占位（2-3 个），参数用占位符如 [movement capability] / [temperature range]
         recommendedProducts: fields.array(
           fields.object({
-            name: bi('Recommended product placeholder (e.g. Product A)'),
-            params: bi('Parameter placeholders (e.g. [movement capability] / [temperature range])'),
-          }, { label: 'Recommended product' }),
-          { label: 'Recommended products' }
+            name: bi('推荐产品占位（例如：产品 A）'),
+            params: bi('参数占位符（例如：[位移能力] / [温度范围]）'),
+          }, { label: '推荐产品' }),
+          { label: '推荐产品' }
         ),
         faq: fields.array(
           fields.object(
-            { question: bi('Question'), answer: bi('Answer', { multiline: true }) },
-            { label: 'Q&A' }
+            { question: bi('问题'), answer: bi('答案', { multiline: true }) },
+            { label: '问答' }
           ),
-          { label: 'FAQ' }
+          { label: '常见问题' }
         ),
-        inquiryCta: bi('Inquiry button text', { description: 'e.g. Get a tailored recommendation' }),
-        cover: fields.image({ label: 'Cover image', directory: 'public/uploads', publicPath: '/uploads/' }),
+        inquiryCta: bi('询盘按钮文案', { description: '例如：获取量身定制的建议' }),
+        cover: fields.image({ label: '封面图', directory: 'public/uploads', publicPath: '/uploads/' }),
         body: fields.object(
           {
             zh: fields.mdx.inline({ label: '正文（中文，可选）' }),
-            en: fields.mdx.inline({ label: 'Body (English, optional)' }),
+            en: fields.mdx.inline({ label: '正文（英文，可选）' }),
           },
-          { label: 'Body' }
+          { label: '正文' }
         ),
+        // 自定义内容区块：后台自由组合结构化区块，满足任意自定义内容的填报与发布
+        customSections: customSectionsField('自定义内容区块'),
       },
     }),
   },
@@ -267,86 +310,86 @@ export default config({
   singletons: {
     // 站点 & 公司信息（中英双语）。联系方式留空则不渲染对应入口。
     site: {
-      label: 'Site & Company',
+      label: '站点与公司信息',
       schema: {
         // 站点/联系信息分组
         info: fields.object(
           {
-            title: bi('Site title'),
-            description: bi('Site description', { multiline: true }),
+            title: bi('站点标题'),
+            description: bi('站点描述', { multiline: true }),
             // 首页 Hero 区那句主标语，留空则回落到默认文案
-            tagline: bi('Homepage tagline'),
+            tagline: bi('首页标语'),
             // 商务邮箱（询盘主通道，兼顾 Gmail/Outlook/企业邮箱）—— 语言无关，单语
             email: fields.text({
-              label: 'Business email',
-              description: 'e.g. sales@tackix.com. Leave empty to hide the email entry.',
-              validation: { pattern: { regex: /^[^\s@]+@[^\s@]+\.[^\s@]+$/, message: 'Invalid email format' } },
+              label: '商务邮箱',
+              description: '例如 sales@tackix.com。留空则不显示邮箱入口。',
+              validation: { pattern: { regex: /^[^\s@]+@[^\s@]+\.[^\s@]+$/, message: '邮箱格式无效' } },
             }),
             // 公司全称：用于页脚署名与联系页主体信息，影响 B2B 买家的商业信任判断
-            company: fields.text({ label: 'Company name', description: 'e.g. Tackix Materials Co., Ltd.' }),
+            company: fields.text({ label: '公司名称', description: '例如：Tackix Materials Co., Ltd.（公司全称）' }),
             // 办公电话（含国家码，用于电话咨询与部分地区的采购流程要求）
             phone: fields.text({
-              label: 'Phone',
+              label: '电话',
               description: 'Include country code, e.g. +65 6xxx xxxx. Leave empty to hide.',
             }),
             // 全站 WhatsApp 号码（仅数字，含国家码）；留空则前台不显示 WhatsApp 悬浮按钮
             whatsapp: fields.text({
-              label: 'WhatsApp number',
+              label: 'WhatsApp 号码',
               description: 'Digits only, with country code. Leave empty to hide the WhatsApp entry.',
             }),
             // 办公地址（部分工程/采购流程需要登记供应商地址，影响资质审核）
-            address: fields.text({ label: 'Address', multiline: true, description: 'Leave empty to hide.' }),
+            address: fields.text({ label: '地址', multiline: true, description: 'Leave empty to hide.' }),
             // 营业时间：海外买家判断能否及时回复的参考
-            hours: fields.text({ label: 'Business hours', description: 'e.g. Mon-Fri 09:00-18:00 (GMT+8)' }),
+            hours: fields.text({ label: '营业时间', description: '例如：周一至周五 09:00-18:00（GMT+8）' }),
             // WhatsApp 预填话术：不同页面入口用不同引导语，提升回复率
             whatsappPrefill: fields.text({
-              label: 'WhatsApp prefill message',
+              label: 'WhatsApp 预填话术',
               description: 'Text pre-filled when a buyer opens the WhatsApp chat. Falls back to a default if empty.',
             }),
           },
-          { label: 'Site & Contact Info' }
+          { label: '站点与联系信息' }
         ),
         // 信任带（首页 CTA 之上 / 关于页）：一句话 + 副标题
         trust: fields.object(
           {
-            trustTitle: bi('Trust band title'),
-            trustSub: bi('Trust band subtitle', { multiline: true }),
+            trustTitle: bi('信任带标题'),
+            trustSub: bi('信任带副标题', { multiline: true }),
           },
-          { label: 'Trust Band' }
+          { label: '信任带' }
         ),
         // 认证 / 信任徽章（关于页与首页信任带可复用）
         certBadges: fields.array(
           fields.object(
             {
-              label: bi('Badge label', { description: 'e.g. ISO 9001' }),
-              note: bi('Badge note', { multiline: true, description: 'Short description shown under the badge.' }),
+              label: bi('徽章标签', { description: '例如 ISO 9001' }),
+              note: bi('徽章说明', { multiline: true, description: '显示在徽章下方的简短说明。' }),
             },
-            { label: 'Badge' }
+            { label: '徽章' }
           ),
-          { label: 'Certifications / Trust Badges' }
+          { label: '认证与信任徽章' }
         ),
       },
     },
     // 分类管理：分类从此处可增删改，不再写死在代码里。
     categories: {
-      label: 'Categories',
+      label: '分类管理',
       schema: {
         items: fields.array(
           fields.object(
             {
-              label: bi('Display name', {
-                description: 'Text shown on the filter bar and article cards, e.g. "Selection Guide".',
+              label: bi('显示名称', {
+                description: '显示在筛选栏与文章卡片上的文字，例如“选型指南”。',
               }),
               value: fields.text({
-                label: 'Value (slug)',
+                label: '值（slug）',
                 description:
-                  'Unique English identifier written to article frontmatter, e.g. selection-guide. Do not change once articles use it.',
+                  '写入文章数据的唯一英文标识，例如 selection-guide。文章引用后请勿修改。',
               }),
             },
-            { label: 'Category' }
+            { label: '分类' }
           ),
           {
-            label: 'Category items',
+            label: '分类项',
             itemLabel: (props) =>
               (props.fields.label.value?.zh as string) ||
               (props.fields.label.value?.en as string) ||
@@ -357,21 +400,21 @@ export default config({
     },
     // 标签管理：与分类同构，但支持一篇多选（tags 是 multiselect）。
     tags: {
-      label: 'Tags',
+      label: '标签',
       schema: {
         items: fields.array(
           fields.object(
             {
-              label: bi('Display name', { description: 'Text shown on the frontend, e.g. "Silicone Sealant".' }),
+              label: bi('显示名称', { description: '显示在前端的文字，例如“硅酮密封胶”。' }),
               value: fields.text({
-                label: 'Value (slug)',
+                label: '值（slug）',
                 description: 'Unique English identifier written to article frontmatter, e.g. silicone-sealant.',
               }),
             },
-            { label: 'Tag' }
+            { label: '标签' }
           ),
           {
-            label: 'Tag items',
+            label: '标签项',
             itemLabel: (props) =>
               (props.fields.label.value?.zh as string) ||
               (props.fields.label.value?.en as string) ||
@@ -384,127 +427,128 @@ export default config({
     //    字段均为「覆盖式」：后台不填则前端用默认值（见 src/lib/site-data.ts 的 DEFAULT_*）。
 
     home: {
-      label: 'Homepage Content',
+      label: '首页内容',
       schema: {
         content: fields.object(
           {
-            heroEyebrow: bi('Hero eyebrow', { description: 'Small label above the hero title' }),
-            heroCta1: bi('Hero button 1', { description: 'e.g. "Explore solutions"' }),
-            heroCta2: bi('Hero button 2', { description: 'e.g. "Contact us for quotation"' }),
-            scenariosTitle: bi('Scenarios section title'),
-            scenariosSub: bi('Scenarios section subtitle', { multiline: true }),
-            knowledgeTitle: bi('Knowledge section title'),
-            knowledgeSub: bi('Knowledge section subtitle', { multiline: true }),
-            bandTitle: bi('CTA band title'),
-            bandSub: bi('CTA band subtitle', { multiline: true }),
-            bandCta1: bi('CTA band button 1'),
-            bandCta2: bi('CTA band button 2'),
+            heroEyebrow: bi('首屏眉标', { description: '主标题上方的小标签' }),
+            heroCta1: bi('首屏按钮 1', { description: '例如：“浏览解决方案”' }),
+            heroCta2: bi('首屏按钮 2', { description: '例如：“联系我们获取报价”' }),
+            scenariosTitle: bi('场景区标题'),
+            scenariosSub: bi('场景区副标题', { multiline: true }),
+            knowledgeTitle: bi('知识区标题'),
+            knowledgeSub: bi('知识区副标题', { multiline: true }),
+            bandTitle: bi('行动号召区标题'),
+            bandSub: bi('行动号召区副标题', { multiline: true }),
+            bandCta1: bi('行动号召按钮 1'),
+            bandCta2: bi('行动号召按钮 2'),
           },
-          { label: 'Homepage Copy' }
+          { label: '首页文案' }
         ),
       },
     },
 
     ui: {
-      label: 'Global UI Text',
+      label: '全局界面文案',
       schema: {
         navItems: fields.array(
           fields.object({
-            label: bi('Nav label'),
-            href: fields.text({ label: 'Link', description: 'e.g. /solutions' }),
-          }, { label: 'Nav item' }),
-          { label: 'Main navigation' }
+            label: bi('导航标签'),
+            href: fields.text({ label: '链接', description: '例如 /solutions' }),
+          }, { label: '导航项' }),
+          { label: '主导航' }
         ),
         // 页脚署名
         content: fields.object(
           {
-            footerText: bi('Footer text', { description: 'Leave empty to fall back to the site title.' }),
+            footerText: bi('页脚文字', { description: '留空则回退到站点标题。' }),
+            footerAdminLabel: bi('后台入口标签', { description: '页脚指向后台管理系统的链接文字。' }),
           },
-          { label: 'Footer' }
+          { label: '页脚' }
         ),
       },
     },
 
     contact: {
-      label: 'Contact Page',
+      label: '联系页',
       schema: {
         content: fields.object(
           {
-            pageTitle: bi('Page title'),
-            pageSub: bi('Page subtitle', { multiline: true }),
-            contactInfoTitle: bi('Contact info title'),
-            formSectionTitle: bi('Form section title', { description: 'e.g. "Send us a message"' }),
-            formTitle: bi('Form title'),
-            formName: bi('Name field label'),
-            formEmail: bi('Email field label'),
-            formMsg: bi('Message field label'),
-            submit: bi('Submit button'),
-            success: bi('Success message', { multiline: true }),
-            prelaunchTitle: bi('Prelaunch notice title'),
-            prelaunchBody: bi('Prelaunch notice body', { multiline: true }),
-            tipsTitle: bi('Tips title'),
+            pageTitle: bi('页面标题'),
+            pageSub: bi('页面副标题', { multiline: true }),
+            contactInfoTitle: bi('联系信息标题'),
+            formSectionTitle: bi('表单区标题', { description: '例如：“给我们留言”' }),
+            formTitle: bi('表单标题'),
+            formName: bi('姓名字段标签'),
+            formEmail: bi('邮箱字段标签'),
+            formMsg: bi('留言字段标签'),
+            submit: bi('提交按钮'),
+            success: bi('成功提示', { multiline: true }),
+            prelaunchTitle: bi('预上线提示标题'),
+            prelaunchBody: bi('预上线提示正文', { multiline: true }),
+            tipsTitle: bi('提示标题'),
           },
-          { label: 'Contact Page Copy' }
+          { label: '联系页文案' }
         ),
         tipsItems: fields.array(
           fields.object({
-            text: bi('Tip', { multiline: true }),
-          }, { label: 'Tip' }),
-          { label: 'Tips list' }
+            text: bi('提示内容', { multiline: true }),
+          }, { label: '提示' }),
+          { label: '提示列表' }
         ),
       },
     },
 
     pages: {
-      label: 'List Page Titles',
+      label: '列表页标题',
       schema: {
         content: fields.object(
           {
-            knowledgeTitle: bi('Knowledge list title'),
-            knowledgeSub: bi('Knowledge list subtitle', { multiline: true }),
-            scenariosTitle: bi('Scenarios list title'),
-            scenariosSub: bi('Scenarios list subtitle', { multiline: true }),
-            searchPlaceholder: bi('Search placeholder'),
+            knowledgeTitle: bi('知识库列表标题'),
+            knowledgeSub: bi('知识库列表副标题', { multiline: true }),
+            scenariosTitle: bi('场景列表标题'),
+            scenariosSub: bi('场景列表副标题', { multiline: true }),
+            searchPlaceholder: bi('搜索框占位符'),
           },
-          { label: 'List Page Titles' }
+          { label: '列表页标题' }
         ),
       },
     },
 
     detail: {
-      label: 'Detail Page Blocks',
+      label: '详情页区块',
       schema: {
         content: fields.object(
           {
-            articleFaqTitle: bi('Article FAQ title'),
-            articleStepsTitle: bi('Article: steps title'),
-            articlePitfallsTitle: bi('Article: pitfalls (caution) title'),
-            scenarioConclusionTitle: bi('Scenario: bottom-line title'),
-            scenarioSelectionTitle: bi('Scenario: selection logic title'),
-            scenarioProductsTitle: bi('Scenario: recommended products title'),
-            scenarioInquiryTitle: bi('Scenario: inquiry CTA title'),
+            articleFaqTitle: bi('文章常见问题标题'),
+            articleStepsTitle: bi('文章：步骤标题'),
+            articlePitfallsTitle: bi('文章：避坑标题'),
+            scenarioConclusionTitle: bi('场景：结论标题'),
+            scenarioSelectionTitle: bi('场景：选型逻辑标题'),
+            scenarioProductsTitle: bi('场景：推荐产品标题'),
+            scenarioInquiryTitle: bi('场景：询盘 CTA 标题'),
           },
-          { label: 'Detail Page Block Titles' }
+          { label: '详情页区块标题' }
         ),
       },
     },
 
     about: {
-      label: 'About Page',
+      label: '关于页',
       schema: {
         content: fields.object(
           {
-            pageTitle: bi('Page title'),
-            pageSub: bi('Page subtitle', { multiline: true }),
-            storyTitle: bi('Story section title'),
-            storyBody: bi('Story body', { multiline: true }),
-            missionTitle: bi('Mission section title'),
-            missionBody: bi('Mission body', { multiline: true }),
-            factoryCaption: bi('Factory image caption'),
+            pageTitle: bi('页面标题'),
+            pageSub: bi('页面副标题', { multiline: true }),
+            storyTitle: bi('品牌故事标题'),
+            storyBody: bi('品牌故事正文', { multiline: true }),
+            missionTitle: bi('使命标题'),
+            missionBody: bi('使命正文', { multiline: true }),
+            factoryCaption: bi('工厂图片说明'),
           },
-          { label: 'About Page Content' }
+          { label: '关于页内容' }
         ),
-        factoryImage: fields.image({ label: 'Factory image', directory: 'public/uploads', publicPath: '/uploads/' }),
+        factoryImage: fields.image({ label: '工厂图片', directory: 'public/uploads', publicPath: '/uploads/' }),
       },
     },
   },
