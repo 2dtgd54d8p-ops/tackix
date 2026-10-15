@@ -6,6 +6,7 @@ import { loadSiteData, loadContent } from '../../lib/site-data';
 import { renderMarkdown, readingMinutes, coverSrc } from '../../lib/markdown';
 import { inLanguage, howToFromSteps } from '../../lib/schema';
 import { normalizeSections } from '../../lib/custom-sections';
+import CtxSuggest from '../CtxSuggest.astro';
 import { pickB, type Locale } from '../../lib/i18n';
 
 interface Props {
@@ -118,11 +119,11 @@ const keywords = post ? (post.tags ?? []).map((tag: string) => tagLabel(tag)) : 
           {coverSrc(post.cover) && <img class="cover" src={coverSrc(post.cover)} alt="" />}
         </header>
 
-        <div class="article-body" set:html={html} />
+        <div class="article-body" data-section="body" set:html={html} />
 
         {
           procSteps.length > 0 && (
-            <section class="steps">
+            <section class="steps" data-section="steps">
               <h2>{detail.articleStepsTitle}</h2>
               <ol class="step-list">
                 {procSteps.map((s: any) => (
@@ -138,7 +139,7 @@ const keywords = post ? (post.tags ?? []).map((tag: string) => tagLabel(tag)) : 
 
         {
           pitfallSteps.length > 0 && (
-            <section class="pitfalls">
+            <section class="pitfalls" data-section="pitfalls">
               <h2>{detail.articlePitfallsTitle}</h2>
               <ul class="pitfall-list">
                 {pitfallSteps.map((s: any) => (
@@ -154,7 +155,7 @@ const keywords = post ? (post.tags ?? []).map((tag: string) => tagLabel(tag)) : 
 
         {
           faqItems.length > 0 && (
-            <section class="faq">
+            <section class="faq" data-section="faq">
               <h2>{detail.articleFaqTitle}</h2>
               {faqItems.map((f: any) => (
                 <details class="faq-item">
@@ -208,6 +209,7 @@ const keywords = post ? (post.tags ?? []).map((tag: string) => tagLabel(tag)) : 
         <a class="btn" href={`${lp}/knowledge`}>← {t('知识库', 'Knowledge Base')}</a>
         <a class="btn btn-primary" href={`${lp}/contact`}>{t('咨询工程师', 'Ask an engineer')}</a>
       </div>
+      <CtxSuggest locale={locale} />
     </Base>
   )
 }

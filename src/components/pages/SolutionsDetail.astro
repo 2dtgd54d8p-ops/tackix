@@ -6,6 +6,7 @@ import { loadSiteData, loadContent } from '../../lib/site-data';
 import { renderMarkdown, coverSrc } from '../../lib/markdown';
 import { howToSchema, inLanguage } from '../../lib/schema';
 import { normalizeSections } from '../../lib/custom-sections';
+import CtxSuggest from '../CtxSuggest.astro';
 import { pickB, type Locale } from '../../lib/i18n';
 
 interface Props {
@@ -100,7 +101,7 @@ const howTo = post
         <!-- 首句结论：回答「这个场景该用什么」 -->
         {
           post.conclusion && (
-            <section class="conclusion">
+            <section class="conclusion" data-section="conclusion">
               <h2>{detail.scenarioConclusionTitle}</h2>
               <p class="bottomline">{pickB(locale, post.conclusion)}</p>
             </section>
@@ -110,7 +111,7 @@ const howTo = post
         <!-- 选型逻辑要点 -->
         {
           (post.selectionLogic ?? []).length > 0 && (
-            <section>
+            <section data-section="logic">
               <h2>{detail.scenarioSelectionTitle}</h2>
               <ul class="logic">
                 {post.selectionLogic.map((p: any) => (
@@ -133,7 +134,7 @@ const howTo = post
         <!-- 推荐产品占位 -->
         {
           (post.recommendedProducts ?? []).length > 0 && (
-            <section class="products">
+            <section class="products" data-section="products">
               <h2>{detail.scenarioProductsTitle}</h2>
               <div class="product-grid">
                 {post.recommendedProducts.map((pr: any) => (
@@ -150,7 +151,7 @@ const howTo = post
         <!-- FAQ -->
         {
           faqItems.length > 0 && (
-            <section class="faq">
+            <section class="faq" data-section="faq">
               <h2>{detail.articleFaqTitle}</h2>
               {faqItems.map((f: any) => (
                 <details class="faq-item">
@@ -199,7 +200,7 @@ const howTo = post
         }
 
         <!-- 询盘 CTA -->
-        <section class="inquiry">
+        <section class="inquiry" data-section="inquiry">
           <h2>{detail.scenarioInquiryTitle}</h2>
           <a class="btn btn-primary" href={`${lp}/contact`}>
             {pickB(locale, post.inquiryCta) || t('获取量身定制的建议', 'Get a tailored recommendation')}
@@ -211,6 +212,7 @@ const howTo = post
         <a class="btn" href={`${lp}/solutions`}>← {t('全部方案', 'All Solutions')}</a>
         <a class="btn btn-primary" href={`${lp}/contact`}>{t('联系我们', 'Contact us')}</a>
       </div>
+      <CtxSuggest locale={locale} />
     </Base>
   )
 }

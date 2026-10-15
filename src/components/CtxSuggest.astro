@@ -1,0 +1,171 @@
+---
+/**
+ * 滚动感知上下文建议条（CtxSuggest）
+ * --------------------------------------------------------------
+ * 仅用于「解决方案 / 知识库」详情页。随用户阅读位置（当前所在区块）
+ * 切换建议文案与行动入口，实现「基于内容定位的交互建议」。
+ * 纯前端、无接口、不影响预上线 noindex；双语走 data-locale。
+ *
+ * 依赖：详情页各主区块带 data-section 属性（conclusion / logic /
+ * products / faq / inquiry / steps / pitfalls / body）。
+ */
+interface Props {
+  locale?: 'zh-CN' | 'en';
+}
+const { locale = 'zh-CN' } = Astro.props;
+---
+
+<aside class="ctx-suggest" id="ctx-suggest" data-locale={locale} hidden aria-live="polite">
+  <span class="cs-icon" aria-hidden="true">💡</span>
+  <p class="cs-text" id="cs-text"></p>
+  <a class="cs-action" id="cs-action" href="#"></a>
+  <a class="cs-secondary" id="cs-secondary" href="#"></a>
+  <button class="cs-close" id="cs-close" type="button" aria-label="关闭建议">×</button>
+</aside>
+
+<script is:inline>
+  (() => {
+    const bar = document.getElementById('ctx-suggest');
+    if (!bar) return;
+    const locale = bar.getAttribute('data-locale') === 'en' ? 'en' : 'zh';
+    const textEl = document.getElementById('cs-text');
+    const actionEl = document.getElementById('cs-action');
+    const secEl = document.getElementById('cs-secondary');
+    const closeEl = document.getElementById('cs-close');
+    if (!textEl || !actionEl || !secEl || !closeEl) return;
+
+    const LP = locale === 'en' ? '/en' : '';
+    // 各区块的建议内容（双语）；未列出的区块（如 body）不触发建议条
+    const SUGGESTIONS = {
+      conclusion: {
+        zh: { text: '这就是本场景的推荐方向。需要量身定制的选型与报价？', action: '获取量身报价', href: LP + '/contact', secondary: '浏览全部方案', shref: LP + '/solutions' },
+        en: { text: 'This is the recommended direction for the job. Want a tailored selection & quote?', action: 'Get a tailored quote', href: LP + '/contact', secondary: 'Browse all solutions', shref: LP + '/solutions' },
+      },
+      logic: {
+        zh: { text: '按这几点还拿不准？让工程师帮你定。', action: '咨询工程师', href: LP + '/contact', secondary: '看全部方案', shref: LP + '/solutions' },
+        en: { text: 'Still unsure after these points? Let an engineer decide.', action: 'Ask an engineer', href: LP + '/contact', secondary: 'All solutions', shref: LP + '/solutions' },
+      },
+      products: {
+        zh: { text: '需要这些产品的报价或 TDS/SDS 资料？', action: '联系我们询价', href: LP + '/contact', secondary: '返回方案列表', shref: LP + '/solutions' },
+        en: { text: 'Need a quote or TDS/SDS for these products?', action: 'Contact us for pricing', href: LP + '/contact', secondary: 'Back to solutions', shref: LP + '/solutions' },
+      },
+      faq: {
+        zh: { text: '没找到你的问题？直接问工程师。', action: '问我的问题', href: LP + '/contact', secondary: '看全部方案', shref: LP + '/solutions' },
+        en: { text: "Haven't found your question? Ask an engineer directly.", action: 'Ask my question', href: LP + '/contact', secondary: 'All solutions', shref: LP + '/solutions' },
+      },
+      steps: {
+        zh: { text: '按步骤操作遇到问题？去知识库找同主题排查。', action: '逛知识库', href: LP + '/knowledge', secondary: '', shref: '' },
+        en: { text: 'Hit a snag following the steps? Find same-topic fixes in the Knowledge Base.', action: 'Browse Knowledge', href: LP + '/knowledge', secondary: '', shref: '' },
+      },
+      pitfalls: {
+        zh: { text: '踩过类似的坑？看看同标签的排查文章。', action: '去知识库找答案', href: LP + '/knowledge', secondary: '', shref: '' },
+        en: { text: 'Hit a similar pitfall? Check same-tag troubleshooting articles.', action: 'Find answers', href: LP + '/knowledge', secondary: '', shref: '' },
+      },
+      inquiry: {
+        zh: { text: '准备好就发询盘，附上基材与工况我们更快回复。', action: '填写询盘', href: LP + '/contact', secondary: '', shref: '' },
+        en: { text: 'Ready to inquire? Attach substrates & conditions for a faster reply.', action: 'Send inquiry', href: LP + '/contact', secondary: '', shref: '' },
+      },
+    };
+
+    let dismissed = false;
+    closeEl.addEventListener('click', () => { dismissed = true; bar.hidden = true; });
+
+    function show(section) {
+      if (dismissed) return;
+      const map = SUGGESTIONS[section];
+      if (!map) { bar.hidden = true; return; }
+      const c = map[locale] || map.zh;
+      textEl.textContent = c.text;
+      actionEl.textContent = c.action;
+      actionEl.href = c.href || '#';
+      if (c.secondary && c.sref) {
+        secEl.textContent = c.secondary;
+        secEl.href = c.sref;
+        secEl.hidden = false;
+      } else {
+        secEl.hidden = true;
+      }
+      bar.hidden = false;
+    }
+
+    const sections = Array.from(document.querySelectorAll('[data-section]'));
+    if (!sections.length) return;
+
+    // 触发带设在视口 40%~45% 处：同一时刻通常只有一个区块处于激活带
+    const observer = new IntersectionObserver((entries) => {
+      const active = entries.find((e) => e.isIntersecting);
+      if (active) show(active.target.getAttribute('data-section'));
+    }, { rootMargin: '-40% 0px -55% 0px', threshold: 0 });
+
+    sections.forEach((s) => observer.observe(s));
+  })();
+</script>
+
+<style>
+  .ctx-suggest[hidden] { display: none; }
+  .ctx-suggest {
+    position: fixed;
+    left: 50%;
+    bottom: 22px;
+    transform: translateX(-50%) translateY(20px);
+    max-width: min(680px, calc(100vw - 32px));
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 12px 14px;
+    background: var(--surface, #fff);
+    border: 1px solid var(--border, #e3e3e8);
+    border-radius: 14px;
+    box-shadow: 0 10px 30px rgba(20, 20, 40, 0.14);
+    z-index: 60;
+    opacity: 0;
+    transition: opacity 0.25s ease, transform 0.25s ease;
+  }
+  .ctx-suggest:not([hidden]) {
+    opacity: 1;
+    transform: translateX(-50%) translateY(0);
+  }
+  .cs-icon { font-size: 18px; line-height: 1; flex: none; }
+  .cs-text {
+    margin: 0;
+    flex: 1;
+    font-size: 14px;
+    color: var(--fg, #1a1a2e);
+    line-height: 1.5;
+  }
+  .cs-action {
+    flex: none;
+    white-space: nowrap;
+    text-decoration: none;
+    background: var(--accent, #7c4df0);
+    color: #fff;
+    font-weight: 600;
+    padding: 8px 14px;
+    border-radius: 10px;
+    font-size: 13px;
+  }
+  .cs-action:hover { filter: brightness(1.05); }
+  .cs-secondary {
+    flex: none;
+    white-space: nowrap;
+    text-decoration: none;
+    color: var(--accent, #7c4df0);
+    font-weight: 600;
+    font-size: 13px;
+    padding: 8px 6px;
+  }
+  .cs-close {
+    flex: none;
+    border: 0;
+    background: transparent;
+    color: var(--faint, #9aa);
+    font-size: 20px;
+    line-height: 1;
+    cursor: pointer;
+    padding: 0 2px;
+  }
+  @media (max-width: 560px) {
+    .cs-secondary { display: none; }
+    .cs-text { font-size: 13px; }
+  }
+</style>
