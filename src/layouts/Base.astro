@@ -56,6 +56,19 @@ const navItems = uiContent.ui.navItems.map((n) => ({
 }));
 // 场景方案下拉内容（已发布场景，按当前语种取词）；空数组时下拉不渲染
 const scenarioMenu = uiContent.ui.scenariosMenu || [];
+// 导航图标：按 href 语义映射（后台改标签不影响图标）；新增导航项回退通用图标。
+// SVG 用 currentColor，随文字颜色在 hover/active 时一起变色。
+const NAV_ICONS: Record<string, string> = {
+  '/': '<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 10.5 12 3l9 7.5"/><path d="M5 9.5V21h14V9.5"/><path d="M9.5 21v-6h5v6"/></svg>',
+  '/solutions': '<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/></svg>',
+  '/knowledge': '<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 3h9l4 4v14H6z"/><path d="M14 3v5h5"/><path d="M9 12h7M9 16h7"/></svg>',
+  '/about': '<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 11v5"/><path d="M12 8h.01"/></svg>',
+  '/contact': '<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="m3 7 9 6 9-6"/></svg>',
+};
+const DEFAULT_NAV_ICON = '<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="3"/></svg>';
+function navIcon(href: string): string {
+  return NAV_ICONS[href] ?? DEFAULT_NAV_ICON;
+}
 const footerText = uiContent.ui.footerText;
 const footerAdminLabel = uiContent.ui.footerAdminLabel;
 // 全局搜索框占位符（后台「列表页标题」singleton 可编辑）
@@ -152,6 +165,7 @@ const showFloatContact =
                     aria-haspopup="true"
                     aria-expanded="false"
                   >
+                    <span class="nav-ico" set:html={navIcon(item.href)} />
                     {item.label}
                     <span class="caret" aria-hidden="true">▾</span>
                   </a>
@@ -160,6 +174,7 @@ const showFloatContact =
                       scenarioMenu.map((sc) => (
                         <li role="none">
                           <a role="menuitem" href={navHref('/solutions/' + sc.slug)}>
+                            <span class="nav-ico nav-ico-sm" set:html={navIcon('/solutions')} />
                             {sc.name}
                           </a>
                         </li>
@@ -173,6 +188,7 @@ const showFloatContact =
                   class={isActive(item.href) ? 'is-active' : ''}
                   aria-current={isActive(item.href) ? 'page' : undefined}
                 >
+                  <span class="nav-ico" set:html={navIcon(item.href)} />
                   {item.label}
                 </a>
               )
@@ -852,22 +868,27 @@ const showFloatContact =
       }
       .brand img { width: 26px; height: 26px; border-radius: 8px; }
       .brand:hover { text-decoration: none; color: var(--fg); }
-      nav { display: flex; align-items: center; gap: 4px; }
+      nav { display: flex; align-items: center; gap: 2px; }
       nav a {
         position: relative;
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
         color: var(--fg-soft);
         font-size: 15px;
         font-weight: 500;
-        padding: 8px 14px;
+        padding: 8px 12px;
         border-radius: var(--r-pill);
         transition: color var(--dur) var(--ease), background var(--dur) var(--ease);
       }
+      .nav-ico { display: inline-flex; flex: none; line-height: 0; }
+      .nav-ico svg { display: block; }
       nav a:hover { color: var(--accent); background: var(--accent-soft); text-decoration: none; }
       nav a.is-active { color: var(--accent); }
 
       /* ---------- 导航悬停下拉（场景方案） ---------- */
       .nav-item.has-menu { position: relative; display: inline-flex; }
-      .nav-item.has-menu > a { display: inline-flex; align-items: center; gap: 4px; cursor: pointer; }
+      .nav-item.has-menu > a { display: inline-flex; align-items: center; gap: 6px; cursor: pointer; }
       .nav-item.has-menu .caret {
         font-size: 11px;
         line-height: 1;
@@ -902,7 +923,9 @@ const showFloatContact =
       }
       .nav-menu li { margin: 0; }
       .nav-menu a {
-        display: block;
+        display: flex;
+        align-items: center;
+        gap: 8px;
         padding: 9px 12px;
         border-radius: 8px;
         color: var(--fg);
@@ -911,6 +934,7 @@ const showFloatContact =
         text-decoration: none;
         transition: background var(--dur) var(--ease), color var(--dur) var(--ease);
       }
+      .nav-ico-sm svg { width: 16px; height: 16px; }
       .nav-menu a:hover { background: var(--accent-soft); color: var(--accent); text-decoration: none; }
 
       /* ---------- 内容容器 ---------- */
