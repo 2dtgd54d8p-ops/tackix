@@ -229,9 +229,9 @@ const HOME_DEFAULT: Record<string, Bilingual> = {
   bandCta2: { zh: '浏览知识库', en: 'Browse the Knowledge Base' },
 };
 
-const UI_NAV_DEFAULT: { label: Bilingual; href: string }[] = [
+const UI_NAV_DEFAULT: { label: Bilingual; href: string; scenariosMenu?: boolean }[] = [
   { label: { zh: '首页', en: 'Home' }, href: '/' },
-  { label: { zh: '解决方案', en: 'Solutions' }, href: '/solutions' },
+  { label: { zh: '场景方案', en: 'Solutions' }, href: '/solutions', scenariosMenu: true },
   { label: { zh: '知识库', en: 'Knowledge' }, href: '/knowledge' },
   { label: { zh: '关于', en: 'About' }, href: '/about' },
   { label: { zh: '联系', en: 'Contact' }, href: '/contact' },
@@ -341,7 +341,34 @@ export async function loadContent(locale: Locale = DEFAULT_LOCALE) {
   const navOut = (ui?.navItems?.length ? ui.navItems : UI_NAV_DEFAULT).map((n: any, i: number) => ({
     label: pickB(locale, n.label as Bilingual) || UI_NAV_DEFAULT[i]?.label?.[locale] || (UI_NAV_DEFAULT[i]?.href ?? ''),
     href: n.href || '/',
+    // 标记该导航项是否悬停展开「场景方案」下拉（后台 ui.navItems 的复选框控制）
+    scenariosMenu: !!n.scenariosMenu,
   }));
+
+  // 场景方案下拉数据源：读取 scenarios 集合（已发布项），供「场景方案」导航项悬停展开。
+  // 前台增删场景即在构建期同步，无需改代码。name/excerpt 已按当前语种落定为纯字符串。
+  let scenarioMenuItems: { slug: string; name: string; excerpt: string }[] = [];
+  try {
+    const sSlugs = await reader.collections.scenarios.list();
+    const sItems = await Promise.all(
+      sSlugs.map(async (slug: string) => {
+        try {
+          const s: any = await reader.collections.scenarios.read(slug);
+          if (!s || s.published === false) return null;
+          return {
+            slug,
+            name: pickB(locale, (s.name as Bilingual) ?? ({ zh: slug, en: slug } as Bilingual)),
+            excerpt: pickB(locale, (s.excerpt as Bilingual) ?? ({ zh: '', en: '' } as Bilingual)),
+          };
+        } catch {
+          return null;
+        }
+      })
+    );
+    scenarioMenuItems = sItems.filter(Boolean) as any;
+  } catch {
+    /* scenarios 集合读取失败时下拉置空，不影响其余导航 */
+  }
 
   // footerText 兼容两种形态：后台双语对象 {zh,en} / 纯字符串
   const fbRaw: unknown = ui?.content?.footerText;
@@ -387,6 +414,7 @@ export async function loadContent(locale: Locale = DEFAULT_LOCALE) {
     home: homeOut,
     ui: {
       navItems: navOut,
+      scenariosMenu: scenarioMenuItems,
       footerText,
       footerAdminLabel: footerAdminLabel || (locale === 'en' ? 'Admin' : '后台管理'),
     },

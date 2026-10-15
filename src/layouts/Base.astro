@@ -51,7 +51,11 @@ const uiContent = await loadContent(locale);
 const navItems = uiContent.ui.navItems.map((n) => ({
   href: n.href,
   label: n.label,
+  // 该导航项是否悬停展开「场景方案」下拉
+  scenariosMenu: !!(n as any).scenariosMenu,
 }));
+// 场景方案下拉内容（已发布场景，按当前语种取词）；空数组时下拉不渲染
+const scenarioMenu = uiContent.ui.scenariosMenu || [];
 const footerText = uiContent.ui.footerText;
 const footerAdminLabel = uiContent.ui.footerAdminLabel;
 // 全局搜索框占位符（后台「列表页标题」singleton 可编辑）
@@ -140,13 +144,38 @@ const showFloatContact =
         <nav aria-label="主导航">
           {
             navItems.map((item) => (
-              <a
-                href={navHref(item.href)}
-                class={isActive(item.href) ? 'is-active' : ''}
-                aria-current={isActive(item.href) ? 'page' : undefined}
-              >
-                {item.label}
-              </a>
+              item.scenariosMenu && scenarioMenu.length > 0 ? (
+                <div class="nav-item has-menu">
+                  <a
+                    href={navHref(item.href)}
+                    class={isActive(item.href) ? 'is-active' : ''}
+                    aria-haspopup="true"
+                    aria-expanded="false"
+                  >
+                    {item.label}
+                    <span class="caret" aria-hidden="true">▾</span>
+                  </a>
+                  <ul class="nav-menu" role="menu">
+                    {
+                      scenarioMenu.map((sc) => (
+                        <li role="none">
+                          <a role="menuitem" href={navHref('/solutions/' + sc.slug)}>
+                            {sc.name}
+                          </a>
+                        </li>
+                      ))
+                    }
+                  </ul>
+                </div>
+              ) : (
+                <a
+                  href={navHref(item.href)}
+                  class={isActive(item.href) ? 'is-active' : ''}
+                  aria-current={isActive(item.href) ? 'page' : undefined}
+                >
+                  {item.label}
+                </a>
+              )
             ))
           }
         </nav>
@@ -836,6 +865,54 @@ const showFloatContact =
       nav a:hover { color: var(--accent); background: var(--accent-soft); text-decoration: none; }
       nav a.is-active { color: var(--accent); }
 
+      /* ---------- 导航悬停下拉（场景方案） ---------- */
+      .nav-item.has-menu { position: relative; display: inline-flex; }
+      .nav-item.has-menu > a { display: inline-flex; align-items: center; gap: 4px; cursor: pointer; }
+      .nav-item.has-menu .caret {
+        font-size: 11px;
+        line-height: 1;
+        opacity: 0.7;
+        transition: transform var(--dur) var(--ease);
+      }
+      .nav-item.has-menu:hover .caret,
+      .nav-item.has-menu:focus-within .caret { transform: rotate(180deg); }
+      .nav-menu {
+        position: absolute;
+        top: calc(100% + 6px);
+        left: 0;
+        min-width: 208px;
+        margin: 0;
+        padding: 6px;
+        list-style: none;
+        background: var(--surface);
+        border: 1px solid var(--border);
+        border-radius: 12px;
+        box-shadow: 0 12px 32px rgba(0, 0, 0, 0.14);
+        opacity: 0;
+        visibility: hidden;
+        transform: translateY(-6px);
+        transition: opacity var(--dur) var(--ease), transform var(--dur) var(--ease), visibility var(--dur);
+        z-index: 50;
+      }
+      .nav-item.has-menu:hover .nav-menu,
+      .nav-item.has-menu:focus-within .nav-menu {
+        opacity: 1;
+        visibility: visible;
+        transform: translateY(0);
+      }
+      .nav-menu li { margin: 0; }
+      .nav-menu a {
+        display: block;
+        padding: 9px 12px;
+        border-radius: 8px;
+        color: var(--fg);
+        font-size: 14px;
+        font-weight: 500;
+        text-decoration: none;
+        transition: background var(--dur) var(--ease), color var(--dur) var(--ease);
+      }
+      .nav-menu a:hover { background: var(--accent-soft); color: var(--accent); text-decoration: none; }
+
       /* ---------- 内容容器 ---------- */
       .container { max-width: var(--maxw); margin: 0 auto; padding: 44px 24px 80px; }
       .site-footer {
@@ -1222,6 +1299,24 @@ const showFloatContact =
         .header-search .hs-input { width: 100%; }
         nav { flex-wrap: wrap; gap: 2px; }
         nav a { padding: 7px 12px; }
+        /* 窄屏：场景下拉常驻展开（触屏无 hover），缩进为子列表 */
+        .nav-item.has-menu { flex: 1 1 100%; }
+        .nav-item.has-menu > a { width: 100%; }
+        .nav-item.has-menu .caret { display: none; }
+        .nav-menu {
+          position: static;
+          opacity: 1;
+          visibility: visible;
+          transform: none;
+          box-shadow: none;
+          border: none;
+          border-left: 2px solid var(--accent-soft);
+          margin: 2px 0 2px 8px;
+          padding: 2px 0 2px 8px;
+          background: transparent;
+          min-width: 0;
+        }
+        .nav-menu a { padding: 6px 10px; font-size: 13px; }
         .container { padding: 28px 16px 60px; }
         .section-head h2, .page-head h1 { font-size: 23px; }
         .appearance-pop {

@@ -1,0 +1,54 @@
+title: kitchen-bath-mould
+name:
+  zh: 厨卫防霉防漏
+  en: Kitchen & Bath Mould Resistance
+excerpt:
+  zh: 厨房、卫生间长期潮湿且接触水，接缝易发黑、滋生霉菌、渗漏。选对耐水防霉密封胶是关键。
+  en: Kitchens and bathrooms stay wet and water-exposed; joints blacken, grow mould and leak. The right water-resistant, mould-proof sealant is key.
+published: true
+featured: true
+conclusion:
+  zh: 厨卫防霉防漏请选用耐持续浸水、含防霉剂的柔性硅酮密封胶。
+  en: For mould-resistant, leak-free kitchens and baths, use a flexible silicone sealant rated for continuous water immersion with an anti-mould additive.
+selectionLogic:
+  - title:
+      zh: 耐水性
+      en: Water resistance
+    point:
+      zh: 接缝长期接触水，必须选用可长期浸水的密封胶，避免乳化失效。
+      en: Joints stay wet; pick a sealant rated for continuous immersion so it won't emulsify and fail.
+  - title:
+      zh: 防霉剂
+      en: Anti-mould additive
+    point:
+      zh: 选择明确标注防霉等级（如防霉 0 级 / A 级）并含防霉剂的产品。
+      en: Choose a product explicitly rated mould-resistant (e.g. Class 0 / Grade A) with an anti-mould additive.
+  - title:
+      zh: 柔性位移
+      en: Flexible movement
+    point:
+      zh: 厨卫温湿度变化与轻微沉降需要 ≥20% 位移能力的柔性胶。
+      en: Temperature/humidity swings and minor settling demand a flexible sealant with ≥20% movement capability.
+recommendedProducts:
+  - name:
+      zh: 厨卫防霉硅酮密封胶（中性）
+      en: Neutral mould-resistant silicone sealant
+    params:
+      zh: '[位移能力] ≥20% · [防霉等级] 0 级'
+      en: '[movement] ≥20% · [mould grade] Class 0'
+  - name:
+      zh: 厨卫防水防霉填缝剂（环氧）
+      en: Epoxy tile grout (waterproof, anti-mould)
+    params:
+      zh: '[适用] 瓷砖缝 · [耐水] 优'
+      en: '[use] tile joints · [water] excellent'
+faq:
+  - question:
+      zh: 普通玻璃胶能用在厨卫吗？
+      en: Can I use ordinary glass sealant in kitchen/bath?
+    answer:
+      zh: 不建议。普通酸性玻璃胶耐水性差、易发霉，厨卫应选中性防霉硅酮密封胶。
+      en: Not recommended. Ordinary acidic glass sealant resists water poorly and moulds easily; use neutral mould-resistant silicone in wet areas.
+inquiryCta:
+  zh: 获取量身定制的防霉方案
+  en: Get a tailored mould-proof plan

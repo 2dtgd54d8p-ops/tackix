@@ -4,9 +4,10 @@ navItems:
       en: Home
     href: /
   - label:
-      zh: 解决方案
+      zh: 场景方案
       en: Solutions
     href: /solutions
+    scenariosMenu: true
   - label:
       zh: 知识库
       en: Knowledge

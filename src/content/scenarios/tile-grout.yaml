@@ -1,0 +1,54 @@
+title: tile-grout
+name:
+  zh: 瓷砖填缝与美缝
+  en: Tile Grouting & Joints
+excerpt:
+  zh: 地面墙面瓷砖铺贴后，砖缝需要处理——防污、防水、美观，避免发黑脱落。
+  en: After tiling, joints need sealing against stains, water and cracking while looking clean.
+published: true
+featured: false
+conclusion:
+  zh: 瓷砖填缝按区域选材料：湿区用环氧美缝，干区可用水泥基或柔性填缝剂。
+  en: Pick by zone — epoxy for wet areas, cement-based or flexible grout for dry zones.
+selectionLogic:
+  - title:
+      zh: 区域分选
+      en: Zone first
+    point:
+      zh: 厨卫湿区首选环氧美缝（防水防霉），客厅等干区用水泥基即可。
+      en: Wet zones → epoxy (water/mould proof); dry zones → cement-based is fine.
+  - title:
+      zh: 缝宽匹配
+      en: Joint width
+    point:
+      zh: 宽缝需柔性填缝剂防裂，窄缝可用普通填缝。
+      en: Wide joints need flexible grout to avoid cracks; narrow joints can use standard.
+  - title:
+      zh: 颜色与质感
+      en: Colour & finish
+    point:
+      zh: 美缝颜色应与砖面协调，哑光/亮光按需选择。
+      en: Colour should match tiles; choose matte or glossy as needed.
+recommendedProducts:
+  - name:
+      zh: 环氧美缝剂
+      en: Epoxy grout
+    params:
+      zh: '[适用] 湿区瓷砖缝 · [防霉] 优'
+      en: '[use] wet-area tile joints · [mould] excellent'
+  - name:
+      zh: 柔性水泥基填缝剂
+      en: Flexible cement-based grout
+    params:
+      zh: '[缝宽] ≤8mm · [柔性] 中'
+      en: '[joint] ≤8mm · [flex] medium'
+faq:
+  - question:
+      zh: 环氧美缝和水泥填缝怎么选？
+      en: Epoxy vs cement grout?
+    answer:
+      zh: 湿区、对防霉防水要求高选环氧；干区、预算敏感选水泥基。
+      en: Epoxy for wet, high-demand zones; cement-based for dry, budget zones.
+inquiryCta:
+  zh: 获取填缝选料建议
+  en: Get grout advice

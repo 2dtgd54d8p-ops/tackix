@@ -1,0 +1,54 @@
+title: roof-waterproof
+name:
+  zh: 屋顶与露台防水
+  en: Roof & Terrace Waterproofing
+excerpt:
+  zh: 屋顶、阳台、露台长期受雨水与温差考验，节点与裂缝处最易渗漏。
+  en: Roofs, balconies and terraces face rain and thermal stress; nodes and cracks leak first.
+published: true
+featured: false
+conclusion:
+  zh: 屋顶防水采用柔性防水涂料 + 节点密封胶组合，重点处理伸缩缝与管根。
+  en: Use flexible waterproof coating plus joint sealant; focus on expansion joints and pipe penetrations.
+selectionLogic:
+  - title:
+      zh: 基面类型
+      en: Substrate type
+    point:
+      zh: 混凝土屋面优先柔性防水涂料，金属屋面用专用粘结密封胶。
+      en: Concrete → flexible coating; metal → dedicated bonding sealant.
+  - title:
+      zh: 位移节点
+      en: Movement joints
+    point:
+      zh: 伸缩缝、管根、阴阳角用高弹性密封胶填充。
+      en: Expansion joints, pipe roots, corners → high-elastic sealant.
+  - title:
+      zh: 耐候耐温
+      en: Weather & temperature
+    point:
+      zh: 户外需耐 UV 与高低温循环，避免老化开裂。
+      en: Outdoors demand UV and thermal-cycle resistance.
+recommendedProducts:
+  - name:
+      zh: 屋顶柔性防水涂料（聚氨酯/丙烯酸）
+      en: Flexible roof coating (PU/acrylic)
+    params:
+      zh: '[类型] 涂膜 · [耐候] 优'
+      en: '[type] membrane · [weather] excellent'
+  - name:
+      zh: 屋面节点高弹密封胶
+      en: High-elastic joint sealant for roofs
+    params:
+      zh: '[位移能力] ≥25% · [基材] 混凝土/金属'
+      en: '[movement] ≥25% · [substrate] concrete/metal'
+faq:
+  - question:
+      zh: 屋顶防水只打胶够吗？
+      en: Is sealant enough for roof waterproofing?
+    answer:
+      zh: 不够。大面积用防水涂料成膜，打胶只处理节点裂缝，两者配合才可靠。
+      en: No. Use coating for the area, sealant only for joints/cracks — combine both.
+inquiryCta:
+  zh: 获取屋顶防水方案
+  en: Get a roof waterproofing plan

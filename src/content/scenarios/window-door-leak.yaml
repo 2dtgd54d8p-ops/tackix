@@ -1,0 +1,54 @@
+title: window-door-leak
+name:
+  zh: 门窗渗水密封
+  en: Window & Door Leak Sealing
+excerpt:
+  zh: 门窗框与墙体、玻璃之间的缝隙在风雨天渗水，常因密封胶老化、位移开裂。
+  en: Gaps between frames, walls and glass leak in rain; usually from aged sealant or movement cracks.
+published: true
+featured: true
+conclusion:
+  zh: 门窗渗水优先选用高弹性、耐候的外墙硅酮耐候胶，并处理好基面与背衬。
+  en: For window/door leaks, use high-elastic, weather-resistant exterior silicone with proper substrate prep and backer rod.
+selectionLogic:
+  - title:
+      zh: 耐候性
+      en: Weather resistance
+    point:
+      zh: 户外日晒雨淋，必须耐 UV 与高低温循环不龟裂。
+      en: Outdoors — must resist UV and thermal cycling without cracking.
+  - title:
+      zh: 弹性位移
+      en: Elastic movement
+    point:
+      zh: 框体热胀冷缩大，选 ≥25% 位移能力的耐候密封胶。
+      en: Frames move with temperature; pick weatherproof sealant with ≥25% movement.
+  - title:
+      zh: 粘结性
+      en: Adhesion
+    point:
+      zh: 对铝合金、PVC、混凝土多种基材都要粘结牢固。
+      en: Must bond well to aluminium, PVC and concrete alike.
+recommendedProducts:
+  - name:
+      zh: 外墙耐候硅酮密封胶
+      en: Exterior weatherproof silicone
+    params:
+      zh: '[位移能力] ≥25% · [耐候] 优'
+      en: '[movement] ≥25% · [weather] excellent'
+  - name:
+      zh: 门窗专用聚氨酯密封胶
+      en: Polyurethane sealant for windows/doors
+    params:
+      zh: '[弹性] 高 · [粘结] 多基材'
+      en: '[elasticity] high · [bond] multi-substrate'
+faq:
+  - question:
+      zh: 打胶前基面怎么处理？
+      en: How to prep the substrate before sealing?
+    answer:
+      zh: 清除旧胶、油污与灰尘，基面干燥、无松动，必要时用底涂提升粘结。
+      en: Remove old sealant, oil and dust; keep substrate dry and sound; apply primer if needed.
+inquiryCta:
+  zh: 获取门窗防渗方案
+  en: Get a window/door leak plan

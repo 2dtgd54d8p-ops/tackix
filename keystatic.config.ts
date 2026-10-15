@@ -469,6 +469,11 @@ export default config({
           fields.object({
             label: bi('导航标签'),
             href: fields.text({ label: '链接', description: '例如 /solutions' }),
+            scenariosMenu: fields.checkbox({
+              label: '下拉展示场景方案',
+              description: '开启后该导航项悬停/点击展开全部场景方案（自动读取 scenarios 集合，后台增删场景即同步）。',
+              defaultValue: false,
+            }),
           }, { label: '导航项' }),
           { label: '主导航' }
         ),
