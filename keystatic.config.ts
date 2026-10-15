@@ -458,7 +458,7 @@ export default config({
         content: fields.object(
           {
             heroEyebrow: bi('首屏眉标', { description: '主标题上方的小标签' }),
-            heroCta1: bi('首屏按钮 1', { description: '例如：“浏览解决方案”' }),
+            heroCta1: bi('首屏按钮 1', { description: '例如：“浏览场景方案”' }),
             heroCta2: bi('首屏按钮 2', { description: '例如：“联系我们获取报价”' }),
             scenariosTitle: bi('场景区标题'),
             scenariosSub: bi('场景区副标题', { multiline: true }),

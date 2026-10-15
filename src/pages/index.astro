@@ -66,19 +66,52 @@ const withMeta = knowledge.map((p) => ({ ...p, readMin: readingMinutes(pickB(loc
 // 按发布日期倒序
 withMeta.sort((a, b) => String(b.publishedAt ?? '').localeCompare(String(a.publishedAt ?? '')));
 
-// 首页场景卡：优先展示后台「首页显示」勾选的，不足 4 个则用前几条补齐
-const featuredScenarios = scenarios.filter((s) => s.featured);
-const homeScenarios = (featuredScenarios.length ? featuredScenarios : scenarios).slice(0, 4);
+// 首页场景卡：展示「全部」场景（featured 仅置于最前，不做裁剪）——确保所有分类都呈现
+const homeScenarios = scenarios
+  .slice()
+  .sort((a, b) => (b.featured ? 1 : 0) - (a.featured ? 1 : 0));
 // 首页知识卡：最新 6 篇
 const latestKnowledge = withMeta.slice(0, 6);
+
+// 每个场景下的文章数（展示在卡片上）
+const countByScenario = new Map<string, number>();
+for (const p of knowledge) {
+  const sc = (p.scenario as string) || 'none';
+  if (sc !== 'none') countByScenario.set(sc, (countByScenario.get(sc) ?? 0) + 1);
+}
 
 // 站点信息 & 全站文案
 const { site: siteInfo, categories, categoryLabel, tagLabel, tags } = await loadSiteData(locale);
 const L = await loadContent(locale);
 const home = L.home;
 
-// 参考站签名四色，依索引轮换（纯色，供 color-mix 使用）
+// 场景主题色：按 slug 稳定映射，未命中回退调色板轮换（纯色，供 color-mix 使用）
 const SOL_COLORS = ['#7c4df0', '#18a06a', '#f0883e', '#3a7bff', '#e0457b', '#12a0c9'];
+const SCENARIO_COLORS: Record<string, string> = {
+  'kitchen-bath-mould': '#7c4df0',
+  'window-door-leak': '#3a7bff',
+  'tile-grout': '#18a06a',
+  'roof-waterproof': '#f0883e',
+};
+function sColor(slug: string, i: number): string {
+  return SCENARIO_COLORS[slug] ?? SOL_COLORS[i % SOL_COLORS.length];
+}
+// 场景图标：与导航下拉一致的语义图标，未命中回退四宫格
+const SCENARIO_ICONS: Record<string, string> = {
+  'kitchen-bath-mould':
+    '<path d="M12 22a7 7 0 0 0 7-7c0-2-1-3.9-3-5.5s-3.5-4-4-6.5c-.5 2.5-2 4.9-4 6.5C6 11.1 5 13 5 15a7 7 0 0 0 7 7z"/>',
+  'window-door-leak': '<rect x="4" y="4" width="16" height="16" rx="2"/><path d="M12 4v16M4 12h16"/>',
+  'tile-grout':
+    '<rect x="3" y="4" width="18" height="7" rx="1.5"/><rect x="3" y="13" width="18" height="7" rx="1.5"/><path d="M9 4v7M15 13v7"/>',
+  'roof-waterproof':
+    '<path d="M12 3a9 9 0 0 1 9 9H3a9 9 0 0 1 9-9z"/><path d="M12 12v6a2 2 0 0 0 4 0"/>',
+};
+function sIcon(slug: string): string {
+  const inner =
+    SCENARIO_ICONS[slug] ??
+    '<rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/>';
+  return `<svg viewBox="0 0 24 24" width="26" height="26" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${inner}</svg>`;
+}
 
 // Keystatic 图片字段可能返回文件名或带前缀的路径，统一归一成可访问的 URL
 function coverSrc(cover: unknown): string {
@@ -143,13 +176,26 @@ const orgLd = {
       ) : (
         <div class="sol-cards">
           {homeScenarios.map((s, i) => (
-            <a class="sol-card" href={`${lp}/solutions/${s.slug}`}>
-              <span class="sol-icon" style={`--sol:${SOL_COLORS[i % SOL_COLORS.length]}`} aria-hidden="true">
-                <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9" /><circle cx="12" cy="12" r="5" /><circle cx="12" cy="12" r="1.6" fill="currentColor" /></svg>
-              </span>
-              <h3>{pickB(locale, s.name)}</h3>
-              {s.excerpt && <p>{pickB(locale, s.excerpt)}</p>}
-              <span class="sol-cta">{t('查看方案', 'Read the solution')} →</span>
+            <a class="sol-card" href={`${lp}/solutions/${s.slug}`} style={`--sol:${sColor(s.slug, i)}`}>
+              <span class="sol-top" aria-hidden="true" />
+              <span class="sol-glow" aria-hidden="true" />
+              <div class="sol-content">
+                <div class="sol-head">
+                  <span class="sol-icon" aria-hidden="true" set:html={sIcon(s.slug)} />
+                  {(countByScenario.get(s.slug) ?? 0) > 0 && (
+                    <span class="sol-count">
+                      {countByScenario.get(s.slug)}
+                      {t(' 篇', ' articles')}
+                    </span>
+                  )}
+                </div>
+                <h3>{pickB(locale, s.name)}</h3>
+                {s.excerpt && <p>{pickB(locale, s.excerpt)}</p>}
+                <span class="sol-cta">
+                  {t('查看方案', 'Read the solution')}
+                  <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14" /><path d="m13 6 6 6-6 6" /></svg>
+                </span>
+              </div>
             </a>
           ))}
         </div>
@@ -344,14 +390,14 @@ const orgLd = {
   /* 场景方案卡片 */
   .sol-cards {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+    grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
     gap: 22px;
   }
   .sol-card {
-    display: flex;
-    flex-direction: column;
-    gap: 10px;
-    padding: 30px;
+    position: relative;
+    overflow: hidden;
+    display: block;
+    padding: 0;
     border: 1px solid var(--border);
     border-radius: var(--r-lg);
     background: var(--surface);
@@ -361,38 +407,94 @@ const orgLd = {
     transition: transform var(--dur) var(--ease), box-shadow var(--dur) var(--ease),
       border-color var(--dur) var(--ease);
   }
+  /* 顶部高光条：以场景主题色渐隐 */
+  .sol-top {
+    position: absolute;
+    inset: 0 0 auto 0;
+    height: 3px;
+    z-index: 2;
+    background: linear-gradient(
+      90deg,
+      var(--sol, var(--accent)),
+      color-mix(in srgb, var(--sol, var(--accent)) 15%, transparent)
+    );
+  }
+  /* 角落光晕：hover 时增强，增加质感 */
+  .sol-glow {
+    position: absolute;
+    z-index: 0;
+    top: -80px;
+    right: -80px;
+    width: 220px;
+    height: 220px;
+    border-radius: 50%;
+    background: radial-gradient(circle, color-mix(in srgb, var(--sol, var(--accent)) 24%, transparent), transparent 70%);
+    opacity: 0;
+    transition: opacity var(--dur) var(--ease);
+    pointer-events: none;
+  }
   .sol-card:hover {
-    transform: translateY(-4px);
-    box-shadow: var(--shadow-md);
-    border-color: var(--border-strong);
+    transform: translateY(-6px);
+    box-shadow: 0 20px 44px -22px color-mix(in srgb, var(--sol, var(--accent)) 60%, transparent), var(--shadow-md);
+    border-color: color-mix(in srgb, var(--sol, var(--accent)) 45%, var(--border));
     text-decoration: none;
   }
+  .sol-card:hover .sol-glow { opacity: 1; }
+  .sol-content {
+    position: relative;
+    z-index: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    height: 100%;
+    padding: 32px 30px 28px;
+  }
+  .sol-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    margin-bottom: 6px;
+  }
   .sol-icon {
-    width: 52px;
-    height: 52px;
-    border-radius: 14px;
+    width: 56px;
+    height: 56px;
+    border-radius: 16px;
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    background: color-mix(in srgb, var(--sol, var(--accent)) 16%, transparent);
+    background: linear-gradient(
+      135deg,
+      color-mix(in srgb, var(--sol, var(--accent)) 24%, transparent),
+      color-mix(in srgb, var(--sol, var(--accent)) 8%, transparent)
+    );
     color: var(--sol, var(--accent));
-    margin-bottom: 4px;
+    box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--sol, var(--accent)) 22%, transparent);
+  }
+  .sol-count {
+    font-size: 12.5px;
+    font-weight: 600;
+    padding: 5px 12px;
+    border-radius: var(--r-pill);
+    color: var(--sol, var(--accent));
+    background: color-mix(in srgb, var(--sol, var(--accent)) 12%, transparent);
+    white-space: nowrap;
   }
   .sol-card h3 { margin: 0; font-size: 20px; font-weight: 700; color: var(--fg); }
   .sol-card p { margin: 0; font-size: 14.5px; color: var(--muted); line-height: 1.7; }
   .sol-cta {
     margin-top: auto;
-    padding-top: 6px;
+    padding-top: 10px;
     font-size: 14px;
     font-weight: 600;
-    color: var(--accent);
+    color: var(--sol, var(--accent));
     display: inline-flex;
     align-items: center;
     gap: 6px;
     white-space: nowrap;
-    transition: gap var(--dur) var(--ease);
   }
-  .sol-card:hover .sol-cta { gap: 10px; }
+  .sol-cta svg { transition: transform var(--dur) var(--ease); }
+  .sol-card:hover .sol-cta svg { transform: translateX(4px); }
 
   .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 22px; }
 

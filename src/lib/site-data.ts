@@ -208,9 +208,9 @@ export function buildFilterOptions(
 // 首页
 const HOME_DEFAULT: Record<string, Bilingual> = {
   heroEyebrow: { zh: '场景化材料选型，化繁为简', en: 'Scenario-based material selection, made simple' },
-  heroCta1: { zh: '浏览解决方案', en: 'Explore solutions' },
+  heroCta1: { zh: '浏览场景方案', en: 'Explore scenario solutions' },
   heroCta2: { zh: '联系我们报价', en: 'Contact us for quotation' },
-  scenariosTitle: { zh: '场景解决方案', en: 'Scenario Solutions' },
+  scenariosTitle: { zh: '场景方案', en: 'Scenario Solutions' },
   scenariosSub: {
     zh: '四大高频场景，每个都给出明确推荐、推荐理由与可询盘的产品。',
     en: 'Four high-frequency jobs, each with a clear recommendation, the reasoning behind it, and products to ask about.',
@@ -278,7 +278,7 @@ const PAGES_DEFAULT: Record<string, Bilingual> = {
     zh: '共 {n} 篇 · 选型指南、应用避坑与故障排查',
     en: '{n} articles · selection guides, application pitfalls and troubleshooting',
   },
-  scenariosTitle: { zh: '场景解决方案', en: 'Scenario Solutions' },
+  scenariosTitle: { zh: '场景方案', en: 'Scenario Solutions' },
   scenariosSub: {
     zh: '选择您的工况，获取明确推荐与可询盘的产品。',
     en: 'Pick your job, get a clear recommendation and the products to ask about.',
