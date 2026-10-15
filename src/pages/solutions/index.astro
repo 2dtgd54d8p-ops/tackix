@@ -3,8 +3,8 @@ import { createReader } from '@keystatic/core/reader';
 import keystaticConfig from '../../../keystatic.config';
 import Base from '../../layouts/Base.astro';
 import { loadSiteData, loadContent } from '../../lib/site-data';
-import { coverSrc } from '../../lib/markdown';
-import { getLocale, pickB, type Locale } from '../../lib/i18n';
+import { readingMinutes, coverSrc } from '../../lib/markdown';
+import { getLocale, pickB, type Locale, type Bilingual } from '../../lib/i18n';
 
 const { locale: localeProp } = Astro.props;
 const locale: Locale = localeProp ?? getLocale(Astro);
@@ -14,17 +14,18 @@ const t = (zh: string, en: string) => (locale === 'en' ? en : zh);
 const reader = createReader(process.cwd(), keystaticConfig);
 const L = await loadContent(locale);
 const pages = L.pages;
+const { categoryLabel, tagLabel } = await loadSiteData(locale);
 
-let slugs: string[] = [];
+// 场景分类（保持后台顺序 / 优先 featured）
+let sSlugs: string[] = [];
 try {
-  slugs = await reader.collections.scenarios.list();
+  sSlugs = await reader.collections.scenarios.list();
 } catch (e) {
   console.warn('[build] scenarios list failed:', e);
 }
-
 const scenarios = (
   await Promise.all(
-    slugs.map(async (slug) => {
+    sSlugs.map(async (slug) => {
       try {
         const s = await reader.collections.scenarios.read(slug);
         return s ? { slug, ...s } : null;
@@ -34,12 +35,48 @@ const scenarios = (
     })
   )
 ).filter((s) => s && s.published !== false);
+// 父页聚合「所有」场景的文章；featured 仅用于置顶排序，不用于过滤
+const ordered = scenarios
+  .slice()
+  .sort((a, b) => (b.featured ? 1 : 0) - (a.featured ? 1 : 0));
 
-// 优先「首页显示」，其次保持顺序
-const featured = scenarios.filter((s) => s.featured);
-const ordered = (featured.length ? featured : scenarios).slice();
+// 知识库文章，按 scenario 分组；用于「场景方案」页聚合展示所有场景的文章
+let kSlugs: string[] = [];
+try {
+  kSlugs = await reader.collections.knowledge.list();
+} catch (e) {
+  console.warn('[build] knowledge list failed:', e);
+}
+const allPosts = (
+  await Promise.all(
+    kSlugs.map(async (slug) => {
+      try {
+        const p = await reader.collections.knowledge.read(slug);
+        return p ? { slug, ...p } : null;
+      } catch {
+        return null;
+      }
+    })
+  )
+).filter((p) => p && p.published !== false);
 
-const { site } = await loadSiteData(locale);
+const byScenario = new Map<string, any[]>();
+const uncategorized: any[] = [];
+for (const p of allPosts) {
+  const sc = (p.scenario as string) || 'none';
+  if (sc === 'none') uncategorized.push(p);
+  else {
+    if (!byScenario.has(sc)) byScenario.set(sc, []);
+    byScenario.get(sc)!.push(p);
+  }
+}
+// 每个场景下按发布时间排序
+for (const arr of byScenario.values()) {
+  arr.sort((a: any, b: any) => String(b.publishedAt ?? '').localeCompare(String(a.publishedAt ?? '')));
+}
+uncategorized.sort((a: any, b: any) =>
+  String(b.publishedAt ?? '').localeCompare(String(a.publishedAt ?? ''))
+);
 ---
 
 <Base title={pages.scenariosTitle} description={pages.scenariosSub}>
@@ -49,86 +86,133 @@ const { site } = await loadSiteData(locale);
       <p>{pages.scenariosSub}</p>
     </div>
 
+    <!-- 场景快速跳转：点分类名直达该场景分组 / 子分类页 -->
+    {
+      ordered.length > 0 && (
+        <nav class="jump" aria-label={t('按场景跳转', 'Jump to scenario')}>
+          {ordered.map((s) => (
+            <a class="chip" href={`#${s.slug}`}>{pickB(locale, s.name as Bilingual)}</a>
+          ))}
+        </nav>
+      )
+    }
+
     {
       ordered.length === 0 ? (
         <p class="empty">{t('暂无场景方案，请在后台创建第一篇。', 'No scenario solutions yet — create the first one in the CMS.')}</p>
       ) : (
-        <div class="grid">
-          {ordered.map((s, i) => (
-            <a class="sol-tile" href={`${lp}/solutions/${s.slug}`}>
-              <span class="sol-index" aria-hidden="true">{String(i + 1).padStart(2, '0')}</span>
-              <h3>{pickB(locale, s.name)}</h3>
-              {s.excerpt && <p>{pickB(locale, s.excerpt)}</p>}
-              {s.conclusion && <p class="sol-bottom">{pickB(locale, s.conclusion)}</p>}
-              <span class="sol-cta">{t('查看方案', 'Read the solution')} →</span>
-              {coverSrc(s.cover) && <img class="sol-cover" src={coverSrc(s.cover)} alt="" loading="lazy" />}
-            </a>
-          ))}
-        </div>
+        ordered.map((s) => (
+          <section class="sol-group" id={s.slug} data-section="group">
+            <header class="group-head">
+              <h2>
+                <a href={`${lp}/solutions/${s.slug}`}>{pickB(locale, s.name as Bilingual)}</a>
+              </h2>
+              {s.excerpt && <p>{pickB(locale, s.excerpt as Bilingual)}</p>}
+              <a class="group-more" href={`${lp}/solutions/${s.slug}`}>{t('查看本分类文章', 'View this category')} →</a>
+            </header>
+            <div class="grid">
+              {(byScenario.get(s.slug) ?? []).map((post: any) => (
+                <article class="card" data-scenario={s.slug}>
+                  {coverSrc(post.cover) && (
+                    <div class="card-media card-media-sm">
+                      <img src={coverSrc(post.cover)} alt="" loading="lazy" />
+                    </div>
+                  )}
+                  <div class="card-body">
+                    <h3 class="card-title">
+                      <a href={`${lp}/knowledge/${post.slug}`}>{pickB(locale, post.name as Bilingual)}</a>
+                    </h3>
+                    {post.excerpt && <p class="card-excerpt">{pickB(locale, post.excerpt as Bilingual)}</p>}
+                    <div class="card-meta">
+                      <span class="tag tag-scenario">{pickB(locale, s.name as Bilingual)}</span>
+                      <span class="tag">{categoryLabel(post.category)}</span>
+                      {(post.tags ?? []).slice(0, 2).map((tg: string) => (
+                        <span class="tag tag-plain">{tagLabel(tg)}</span>
+                      ))}
+                      {post.publishedAt && <span>{post.publishedAt}</span>}
+                      <span class="read-time">· {readingMinutes(pickB(locale, post.body as Bilingual))}{t(' 分钟阅读', ' min read')}</span>
+                    </div>
+                  </div>
+                </article>
+              ))}
+            </div>
+          </section>
+        ))
+      )
+    }
+
+    {
+      uncategorized.length > 0 && (
+        <section class="sol-group" id="other" data-section="group">
+          <header class="group-head">
+            <h2>{t('其他方案', 'Other')}</h2>
+          </header>
+          <div class="grid">
+            {uncategorized.map((post: any) => (
+              <article class="card">
+                <div class="card-body">
+                  <h3 class="card-title">
+                    <a href={`${lp}/knowledge/${post.slug}`}>{pickB(locale, post.name as Bilingual)}</a>
+                  </h3>
+                  {post.excerpt && <p class="card-excerpt">{pickB(locale, post.excerpt as Bilingual)}</p>}
+                  <div class="card-meta">
+                    <span class="tag">{categoryLabel(post.category)}</span>
+                    {(post.tags ?? []).slice(0, 2).map((tg: string) => (
+                      <span class="tag tag-plain">{tagLabel(tg)}</span>
+                    ))}
+                    <span class="read-time">· {readingMinutes(pickB(locale, post.body as Bilingual))}{t(' 分钟阅读', ' min read')}</span>
+                  </div>
+                </div>
+              </article>
+            ))}
+          </div>
+        </section>
       )
     }
   </section>
 </Base>
 
 <style>
-  .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 22px; }
-  .sol-tile {
-    position: relative;
+  .jump {
     display: flex;
-    flex-direction: column;
+    flex-wrap: wrap;
     gap: 10px;
-    padding: 28px 26px;
-    border: 1px solid var(--border);
-    border-radius: var(--r-lg);
+    justify-content: center;
+    margin: -8px 0 40px;
+  }
+  .chip {
+    display: inline-flex;
+    align-items: center;
+    padding: 7px 16px;
+    border: 1px solid var(--border-strong);
+    border-radius: var(--r-pill);
     background: var(--surface);
-    box-shadow: var(--shadow-sm);
-    text-decoration: none;
     color: var(--fg-soft);
-    overflow: hidden;
-    transition: transform var(--dur) var(--ease), box-shadow var(--dur) var(--ease),
-      border-color var(--dur) var(--ease);
-  }
-  .sol-tile:hover {
-    transform: translateY(-4px);
-    box-shadow: var(--shadow-md);
-    border-color: var(--border-strong);
+    font-size: 13px;
+    font-weight: 500;
     text-decoration: none;
+    transition: border-color var(--dur) var(--ease), color var(--dur) var(--ease),
+      background var(--dur) var(--ease);
   }
-  .sol-index {
-    font-family: var(--font-display);
-    font-size: 26px;
-    font-weight: 800;
-    color: var(--accent-soft);
-    line-height: 1;
+  .chip:hover { border-color: var(--accent); color: var(--accent); text-decoration: none; }
+  .sol-group { margin: 0 0 48px; }
+  .group-head {
+    margin-bottom: 20px;
+    padding-bottom: 14px;
+    border-bottom: 1px solid var(--border);
   }
-  .sol-tile h3 { margin: 0; font-size: 20px; font-weight: 700; color: var(--fg); }
-  .sol-tile p { margin: 0; font-size: 14px; color: var(--muted); line-height: 1.7; }
-  .sol-bottom {
-    font-size: 14px !important;
-    color: var(--fg-soft) !important;
-    padding: 10px 12px;
-    background: var(--surface-2);
-    border-left: 3px solid var(--accent);
-    border-radius: 0 var(--r-sm) var(--r-sm) 0;
+  .group-head h2 { margin: 0 0 6px; font-size: 23px; font-weight: 700; color: var(--fg); }
+  .group-head h2 a { color: inherit; text-decoration: none; }
+  .group-head h2 a:hover { color: var(--accent); }
+  .group-head p { margin: 0 0 8px; font-size: 15px; color: var(--muted); line-height: 1.7; }
+  .group-more { font-size: 13px; font-weight: 600; color: var(--accent); text-decoration: none; }
+  .group-more:hover { text-decoration: underline; text-underline-offset: 3px; }
+  .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 22px; }
+  .tag-scenario {
+    background: var(--accent-soft);
+    color: var(--accent-strong);
+    border-color: color-mix(in srgb, var(--accent) 28%, transparent);
   }
-  .sol-cta {
-    margin-top: auto;
-    font-size: 14px;
-    font-weight: 600;
-    color: var(--accent);
-    transition: gap var(--dur) var(--ease);
-  }
-  .sol-tile:hover .sol-cta { text-decoration: underline; text-underline-offset: 3px; }
-  .sol-cover {
-    position: absolute;
-    right: 0;
-    bottom: 0;
-    width: 96px;
-    height: 72px;
-    object-fit: cover;
-    opacity: 0.5;
-    border-top-left-radius: var(--r-md);
-    pointer-events: none;
-  }
-  @media (max-width: 700px) { .grid { grid-template-columns: minmax(0, 1fr); gap: 16px; } }
+  .empty { text-align: center; color: var(--muted); padding: 44px 0; }
+  @media (max-width: 700px) { .grid { grid-template-columns: minmax(0, 1fr); gap: 18px; } }
 </style>
