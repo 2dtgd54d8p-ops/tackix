@@ -7,7 +7,7 @@
     "gen:options": "node scripts/gen-content-options.mjs",
     "predev": "node scripts/gen-content-options.mjs",
     "dev": "node scripts/dev-with-watch.mjs",
-    "prebuild": "node scripts/gen-content-options.mjs && node scripts/quality-score.mjs && node scripts/build-checks.mjs",
+    "prebuild": "node scripts/gen-content-options.mjs && node scripts/gen-knowledge-index.mjs && node scripts/quality-score.mjs && node scripts/build-checks.mjs",
     "quality": "node scripts/quality-score.mjs",
     "check": "node scripts/build-checks.mjs",
     "changelog": "node scripts/gen-changelog.mjs",

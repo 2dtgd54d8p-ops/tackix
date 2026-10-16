@@ -1,0 +1,283 @@
+---
+// 运营报表（L7 冷热报告）：内容表现视图，仅运营/编辑访问。
+// 纯静态页面：token 输入 → 客户端 fetch /api/report?token= → 渲染冷/热/缺口。
+// 后端（KV / ADMIN_TOKEN）缺失时优雅降级，显示对应提示而非报错。
+import Base from '../../layouts/Base.astro';
+import { getLocale, type Locale } from '../../lib/i18n';
+
+const { locale: localeProp } = Astro.props;
+const locale: Locale = localeProp ?? getLocale(Astro);
+const t = (zh: string, en: string) => (locale === 'en' ? en : zh);
+---
+
+<Base title={t('内容表现报表', 'Content Performance Report')}>
+  <section>
+    <div class="page-head">
+      <h1>{t('内容表现报表', 'Content Performance Report')}</h1>
+      <p>{t('基于访客反馈与搜索无结果需求的冷热分析与内容缺口。需运营令牌。', 'Hot/cold analysis and content gaps from visitor feedback & zero-result searches. Requires an operator token.')}</p>
+    </div>
+
+    <div class="token-bar">
+      <input
+        id="rk-token"
+        type="password"
+        autocomplete="off"
+        placeholder={t('输入运营令牌 (ADMIN_TOKEN)', 'Enter operator token (ADMIN_TOKEN)')}
+      />
+      <button type="button" class="btn btn-primary" id="rk-load">{t('加载报表', 'Load report')}</button>
+    </div>
+    <p class="status" id="rk-status" aria-live="polite"></p>
+
+    <div id="rk-report" hidden>
+      <div class="rk-cards" id="rk-totals"></div>
+
+      <div class="rk-section">
+        <h2>🔥 {t('热门内容（有帮助最多）', 'Top content (most helpful)')}</h2>
+        <div id="rk-hot"></div>
+      </div>
+
+      <div class="rk-section">
+        <h2>❄️ {t('待优化（差评/零好评）', 'Needs work (low / no helpful)')}</h2>
+        <div id="rk-cold"></div>
+      </div>
+
+      <div class="rk-section">
+        <h2>🔎 {t('搜索需求缺口（零结果）', 'Search gaps (zero results)')}</h2>
+        <div id="rk-gaps"></div>
+      </div>
+    </div>
+  </section>
+</Base>
+
+<script is:inline>
+  function t(zh, en) { return document.documentElement.lang === 'en' ? en : zh; }
+  function esc(s) {
+    return String(s == null ? '' : s).replace(/[&<>"]/g, function (c) {
+      return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c];
+    });
+  }
+
+  var TOKEN_KEY = 'tackix_report_token';
+  var tokenInput = document.getElementById('rk-token');
+  var loadBtn = document.getElementById('rk-load');
+  var statusEl = document.getElementById('rk-status');
+  var reportEl = document.getElementById('rk-report');
+
+  // 回填上次使用的令牌
+  try { var saved = localStorage.getItem(TOKEN_KEY); if (saved) tokenInput.value = saved; } catch (e) {}
+
+  // 标题索引：slug → {zh,en}，构建期生成于 public/knowledge-index.json
+  var titleMap = {};
+  fetch('/knowledge-index.json').then(function (r) { return r.ok ? r.json() : {}; }).then(function (m) {
+    titleMap = m || {};
+  }).catch(function () { titleMap = {}; });
+
+  function titleOf(slug) {
+    var rec = titleMap[slug];
+    if (rec) return document.documentElement.lang === 'en' ? (rec.en || rec.zh || slug) : (rec.zh || rec.en || slug);
+    return slug;
+  }
+  function articleUrl(slug) {
+    var p = document.documentElement.lang === 'en' ? '/en/knowledge/' : '/knowledge/';
+    return p + slug;
+  }
+
+  function setStatus(msg, kind) {
+    statusEl.textContent = msg || '';
+    statusEl.className = 'status' + (kind ? ' ' + kind : '');
+  }
+
+  function card(label, value) {
+    return '<div class="rk-card"><span class="rk-card-v">' + esc(value) + '</span><span class="rk-card-l">' + esc(label) + '</span></div>';
+  }
+
+  function rowHtml(item, kind) {
+    var title = titleOf(item.slug);
+    var link = '<a href="' + esc(articleUrl(item.slug)) + '" target="_blank" rel="noopener">' + esc(title) + '</a>';
+    var rate = Math.round(item.rate * 100);
+    var bar = '<span class="rk-bar"><span class="rk-bar-fill ' + kind + '" style="width:' + (kind === 'cold' ? (100 - rate) : rate) + '%"></span></span>';
+    return '<tr><td class="rk-title">' + link + '</td>' +
+      '<td>' + item.yes + '</td><td>' + item.no + '</td>' +
+      '<td>' + rate + '%' + bar + '</td></tr>';
+  }
+
+  function table(headers, bodyHtml, emptyMsg) {
+    if (!bodyHtml) return '<p class="rk-empty">' + esc(emptyMsg) + '</p>';
+    return '<table class="rk-table"><thead><tr>' + headers.map(function (h) { return '<th>' + esc(h) + '</th>'; }).join('') +
+      '</tr></thead><tbody>' + bodyHtml + '</tbody></table>';
+  }
+
+  function renderGaps(gaps) {
+    if (!gaps || !gaps.length) return '<p class="rk-empty">' + esc(t('暂无搜索缺口记录', 'No zero-result searches recorded yet.')) + '</p>';
+    var rows = gaps.map(function (g) {
+      var notes = (g.notes || []).map(function (n) { return '<li>' + esc(n) + '</li>'; }).join('');
+      return '<div class="gap-item"><div class="gap-term">“' + esc(g.term) + '” <span class="gap-count">×' + g.count + '</span></div>' +
+        (notes ? '<ul class="gap-notes">' + notes + '</ul>' : '') + '</div>';
+    }).join('');
+    return rows;
+  }
+
+  function render(data) {
+    reportEl.hidden = false;
+    var totals = data.totals || {};
+    document.getElementById('rk-totals').innerHTML =
+      card(t('已评分文章', 'Articles rated'), totals.articlesRated || 0) +
+      card(t('反馈事件', 'Feedback events'), totals.feedbackEvents || 0) +
+      card(t('搜索缺口', 'Search gaps'), totals.gaps || 0);
+
+    document.getElementById('rk-hot').innerHTML = table(
+      [t('文章', 'Article'), t('有帮助', 'Helpful'), t('没帮助', 'Not'), t('好评率', 'Rate')],
+      (data.hot || []).map(function (it) { return rowHtml(it, 'hot'); }).join(''),
+      t('还没有「有帮助」反馈', 'No "helpful" feedback recorded yet.')
+    );
+
+    document.getElementById('rk-cold').innerHTML = table(
+      [t('文章', 'Article'), t('有帮助', 'Helpful'), t('没帮助', 'Not'), t('差评率', 'Low rate')],
+      (data.cold || []).map(function (it) { return rowHtml(it, 'cold'); }).join(''),
+      t('没有差评或零好评内容', 'No poorly-rated content.')
+    );
+
+    document.getElementById('rk-gaps').innerHTML = renderGaps(data.gaps);
+  }
+
+  function load() {
+    var token = (tokenInput.value || '').trim();
+    if (!token) { setStatus(t('请先输入运营令牌', 'Enter the operator token first.'), 'err'); return; }
+    try { localStorage.setItem(TOKEN_KEY, token); } catch (e) {}
+    loadBtn.disabled = true;
+    setStatus(t('加载中…', 'Loading…'));
+    fetch('/api/report?token=' + encodeURIComponent(token))
+      .then(function (r) { return r.json().then(function (j) { return { status: r.status, body: j }; }); })
+      .then(function (res) {
+        var b = res.body || {};
+        if (res.status === 401 || b.reason === 'unauthorized') {
+          setStatus(t('令牌无效', 'Invalid token.'), 'err');
+          reportEl.hidden = true;
+          return;
+        }
+        if (b.reason === 'not configured') {
+          setStatus(t('报表未启用：请在 Cloudflare 配置 ADMIN_TOKEN 与 FEEDBACK_KV。', 'Report disabled: set ADMIN_TOKEN and FEEDBACK_KV on Cloudflare.'), 'err');
+          reportEl.hidden = true;
+          return;
+        }
+        if (b.reason === 'no KV binding') {
+          setStatus(t('后端存储未配置（FEEDBACK_KV 缺失），报表暂不可用。', 'Backend storage not configured (FEEDBACK_KV missing).'), 'err');
+          reportEl.hidden = true;
+          return;
+        }
+        if (!b.ok) {
+          setStatus(t('加载失败：' + (b.reason || 'unknown'), 'Failed: ' + (b.reason || 'unknown')), 'err');
+          reportEl.hidden = true;
+          return;
+        }
+        setStatus(t('已生成报表（' + new Date(b.generatedAt).toLocaleString() + '）', 'Report generated (' + new Date(b.generatedAt).toLocaleString() + ')'), 'ok');
+        render(b);
+      })
+      .catch(function () {
+        setStatus(t('网络错误：无法连接报表接口。', 'Network error: cannot reach the report API.'), 'err');
+        reportEl.hidden = true;
+      })
+      .finally(function () { loadBtn.disabled = false; });
+  }
+
+  loadBtn.addEventListener('click', load);
+  tokenInput.addEventListener('keydown', function (e) { if (e.key === 'Enter') load(); });
+</script>
+
+<style>
+  .token-bar {
+    display: flex;
+    gap: 10px;
+    max-width: 520px;
+    margin: 0 auto 14px;
+  }
+  #rk-token {
+    flex: 1;
+    padding: 11px 14px;
+    border: 1px solid var(--border-strong);
+    border-radius: var(--r-pill);
+    background: var(--surface);
+    color: var(--fg);
+    font: inherit;
+    font-size: 14px;
+  }
+  #rk-token:focus {
+    outline: none;
+    border-color: var(--accent);
+    box-shadow: 0 0 0 3px var(--accent-soft);
+  }
+  .status { text-align: center; min-height: 20px; margin: 4px 0 24px; }
+  .status.ok { color: var(--success); }
+  .status.err { color: var(--danger); }
+
+  #rk-report { max-width: 920px; margin: 0 auto; }
+  .rk-cards {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+    gap: 14px;
+    margin-bottom: 36px;
+  }
+  .rk-card {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 4px;
+    padding: 22px 16px;
+    border: 1px solid var(--border);
+    border-radius: var(--r-md);
+    background: var(--surface);
+    box-shadow: var(--shadow-sm);
+  }
+  .rk-card-v { font-family: var(--font-display); font-size: 30px; font-weight: 800; color: var(--accent-strong); }
+  .rk-card-l { font-size: 13px; color: var(--muted); }
+
+  .rk-section { margin-bottom: 36px; }
+  .rk-section h2 { font-size: 19px; margin: 0 0 14px; color: var(--fg); }
+
+  .rk-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 14px;
+  }
+  .rk-table th, .rk-table td {
+    text-align: left;
+    padding: 11px 12px;
+    border-bottom: 1px solid var(--border);
+    vertical-align: middle;
+  }
+  .rk-table th { color: var(--muted); font-weight: 600; font-size: 13px; }
+  .rk-title { font-weight: 600; }
+  .rk-title a { color: var(--accent); }
+
+  .rk-bar {
+    display: inline-block;
+    width: 70px;
+    height: 7px;
+    margin-left: 8px;
+    border-radius: var(--r-pill);
+    background: var(--surface-2);
+    vertical-align: middle;
+    overflow: hidden;
+  }
+  .rk-bar-fill { display: block; height: 100%; border-radius: var(--r-pill); }
+  .rk-bar-fill.hot { background: var(--success); }
+  .rk-bar-fill.cold { background: var(--danger); }
+
+  .rk-empty { color: var(--muted); padding: 10px 0 4px; font-size: 14px; }
+
+  .gap-item {
+    padding: 14px 16px;
+    border: 1px solid var(--border);
+    border-radius: var(--r-md);
+    background: var(--surface);
+    margin-bottom: 10px;
+  }
+  .gap-term { font-weight: 600; color: var(--fg); }
+  .gap-count { color: var(--muted); font-weight: 500; font-size: 13px; margin-left: 6px; }
+  .gap-notes { margin: 8px 0 0; padding-left: 18px; color: var(--muted); font-size: 13px; line-height: 1.7; }
+
+  @media (max-width: 640px) {
+    .token-bar { flex-direction: column; }
+    .token-bar .btn { width: 100%; }
+  }
+</style>

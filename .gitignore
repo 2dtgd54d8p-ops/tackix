@@ -3,6 +3,9 @@ dist/
 .astro/
 .wrangler/
 
+# build-generated asset (slug → title map for admin report)
+public/knowledge-index.json
+
 # deps
 node_modules/
 
