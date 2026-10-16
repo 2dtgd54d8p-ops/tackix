@@ -1,19 +1,23 @@
 ---
 /**
- * 联系页
+ * 联系 + 关于 合并页
  * ---------------------------------------------------------------
  * 设计要点：
- * 1. **联系方式优先于表单**。B2B 买家看完参数表后的下一步是「找谁问」。
- *    预上线期表单被闸门关闭，此时联系方式是唯一转化入口，必须放最上面。
- * 2. **全部字段可留空**，留空则对应入口不渲染 —— 不会出现空链接或占位符
- *    （比显示「待补充」更专业，也避免误导买家）。
- * 3. 预上线期在表单区明确说明状态，避免买家反复提交却收不到回复。
- * 4. 全站 EN-only，文案来自后台「联系页文案」singleton（可编辑、前后端贯通）。
+ * 1. **关于与联系合二为一**：原「关于」页（品牌故事 / 使命 / 工厂图 / 认证徽章）
+ *    与「联系」页（联系信息 + 询盘表单 + 提示）合并到 /contact，导航只保留一项。
+ *    /about 经 public/_redirects 301 跳转到本页，旧链接与书签不失效。
+ * 2. **联系优先于关于**：B2B 买家下一步是「找谁问」，故联系区置顶（带 #contact 锚点），
+ *    公司介绍作为下方补充区块。所有站内 CTA（首页 / 详情页 / 选型工具等）原本指向
+ *    /contact，本次无需改动即继续可用。
+ * 3. **联系方式优先于表单**：预上线期表单被闸门关闭，联系方式是唯一转化入口，放最上面。
+ * 4. 全部字段可留空，留空则不渲染，避免空链接 / 占位符。
+ * 5. 文案来自后台「联系页文案」「关于页」两个 singleton（可编辑、前后端贯通）。
  */
 import Base from '../layouts/Base.astro';
 import { loadSiteData, loadContent } from '../lib/site-data';
 import { organizationSchema } from '../lib/schema';
 import { isPreLaunch } from '../lib/prelaunch';
+import { coverSrc } from '../lib/markdown';
 import { getLocale, type Locale } from '../lib/i18n';
 
 const { locale: localeProp } = Astro.props;
@@ -23,10 +27,12 @@ const t = (zh: string, en: string) => (locale === 'en' ? en : zh);
 
 const { site } = await loadSiteData(locale);
 const prelaunch = isPreLaunch();
-// 联系页文案来自后台「联系页文案」singleton（可编辑、前后端贯通）
+// 联系页文案 + 关于页文案（两个 singleton 合并读取）
 const L = await loadContent(locale);
 const contact = L.contact;
+const about = L.about;
 const successMsg = contact.success;
+const certBadges = site.certBadges ?? [];
 
 const email = (site.email ?? '').trim();
 const company = (site.company ?? '').trim();
@@ -52,6 +58,7 @@ const ICON = {
   clock: '<circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/>',
   building: '<path d="M3 21h18M5 21V7l7-4 7 4v14M9 10h2m-2 4h2m2-4h2m-2 4h2"/>',
 };
+const factoryImage = coverSrc(about.factoryImage);
 
 // 组织实体（含 ContactPoint），强化 E-E-A-T 与「公司实体」识别
 const orgLd = {
@@ -59,8 +66,7 @@ const orgLd = {
   ...organizationSchema(locale, site, Astro.site ?? Astro.url),
 };
 ---
-
-<Base title={contact.pageTitle}>
+<Base title={contact.pageTitle} description={contact.pageSub}>
   <script type="application/ld+json" set:html={JSON.stringify(orgLd)} />
   <section>
     <div class="page-head">
@@ -68,7 +74,8 @@ const orgLd = {
       <p>{contact.pageSub}</p>
     </div>
 
-    <div class:list={['contact-grid', !hasContact && 'contact-grid--single']}>
+    <!-- 联系区（置顶，转化优先；#contact 锚点供站内 CTA 直达） -->
+    <div id="contact" class:list={['contact-grid', !hasContact && 'contact-grid--single']}>
       {
         hasContact && (
           <div class="contact-info">
@@ -184,10 +191,47 @@ const orgLd = {
         </div>
       </div>
     </div>
+
+    <!-- 关于区（公司介绍，作为下方补充区块） -->
+    <div class="about-divider"><span>{about.pageTitle}</span></div>
+
+    <article class="prose about">
+      <h2>{about.storyTitle}</h2>
+      <p>{about.storyBody}</p>
+
+      <h2>{about.missionTitle}</h2>
+      <p>{about.missionBody}</p>
+
+      {
+        factoryImage && (
+          <figure class="factory">
+            <img src={factoryImage} alt="" loading="lazy" />
+            {about.factoryCaption && <figcaption>{about.factoryCaption}</figcaption>}
+          </figure>
+        )
+      }
+    </article>
+
+    {
+      certBadges.length > 0 && (
+        <section class="certs">
+          <h2>{t('认证与信任', 'Certifications & Trust')}</h2>
+          <div class="badges">
+            {certBadges.map((b) => (
+              <div class="badge">
+                <span class="badge-label">{b.label}</span>
+                {b.note && <span class="badge-note">{b.note}</span>}
+              </div>
+            ))}
+          </div>
+        </section>
+      )
+    }
   </section>
 </Base>
 
 <style>
+  /* ── 联系区 ── */
   .contact-grid {
     display: grid; gap: 40px; align-items: start;
     grid-template-columns: minmax(0, 320px) minmax(0, 1fr);
@@ -241,6 +285,58 @@ const orgLd = {
   }
   .tips-box h3 { margin: 0 0 10px; font-size: 15px; color: var(--fg); }
   .tips-list { margin: 0; padding-left: 18px; color: var(--muted); font-size: 14px; line-height: 1.9; }
+
+  /* ── 关于区 ── */
+  .about-divider {
+    max-width: var(--readw); margin: 56px auto 8px;
+    display: flex; align-items: center; gap: 14px;
+    color: var(--faint); font-size: 13px; letter-spacing: 0.08em;
+  }
+  .about-divider::before, .about-divider::after {
+    content: ''; flex: 1; height: 1px; background: var(--border);
+  }
+  article.about { max-width: var(--readw); margin: 0 auto; }
+  article.about h2 { margin-top: 34px; }
+  .factory {
+    margin: 28px 0 0;
+    text-align: center;
+  }
+  .factory img {
+    width: 100%;
+    border-radius: var(--r-lg);
+    box-shadow: var(--shadow-md);
+    display: block;
+  }
+  .factory figcaption {
+    margin-top: 10px;
+    font-size: 13px;
+    color: var(--faint);
+  }
+  .certs {
+    max-width: var(--readw);
+    margin: 48px auto 0;
+    text-align: center;
+  }
+  .certs h2 { font-size: 22px; margin: 0 0 20px; }
+  .badges {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 16px;
+    justify-content: center;
+  }
+  .badge {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    padding: 16px 22px;
+    min-width: 140px;
+    border: 1px solid var(--border);
+    border-radius: var(--r-md);
+    background: var(--surface);
+    box-shadow: var(--shadow-sm);
+  }
+  .badge-label { font-size: 15px; font-weight: 700; color: var(--fg); }
+  .badge-note { font-size: 12.5px; color: var(--faint); line-height: 1.5; }
 </style>
 
 <script is:inline>

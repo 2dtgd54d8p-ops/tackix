@@ -73,10 +73,8 @@ export const GET: APIRoute = async (Astro) => {
   lines.push(`- Scenario Solutions (English): ${new URL('/en/solutions/', base).href}`);
   lines.push(`- Knowledge Base (中文): ${new URL('/knowledge/', base).href}`);
   lines.push(`- Knowledge Base (English): ${new URL('/en/knowledge/', base).href}`);
-  lines.push(`- About (中文): ${new URL('/about/', base).href}`);
-  lines.push(`- About (English): ${new URL('/en/about/', base).href}`);
-  lines.push(`- Contact & Enquiry (中文): ${new URL('/contact/', base).href}`);
-  lines.push(`- Contact & Enquiry (English): ${new URL('/en/contact/', base).href}`);
+  lines.push(`- About & Contact (中文): ${new URL('/contact/', base).href}`);
+  lines.push(`- About & Contact (English): ${new URL('/en/contact/', base).href}`);
   lines.push(`- Search: ${new URL('/search/', base).href}`);
   lines.push('');
   lines.push('## Scenario solutions');

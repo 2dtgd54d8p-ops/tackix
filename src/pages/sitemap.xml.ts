@@ -8,7 +8,7 @@ import type { APIRoute } from 'astro';
 export const prerender = true;
 
 // 中文版静态路由（无前缀）；英文版为 /en + 同路径
-const STATIC_ROUTES = ['/', '/solutions/', '/knowledge/', '/about/', '/contact/', '/search/'];
+const STATIC_ROUTES = ['/', '/solutions/', '/knowledge/', '/contact/', '/search/'];
 
 /** 读取某集合中所有 published 的 slug（未发布的不进 sitemap） */
 async function publishedSlugs(reader: any, name: string): Promise<string[]> {
