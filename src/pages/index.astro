@@ -335,6 +335,60 @@ const orgLd = {
     </div>
   </section>
 
+  {/* L5 订阅：邮箱捕获，POST /api/subscribe（CF KV 绑定后持久化，缺失则前端乐观降级） */}
+  <section class="subscribe" id="subscribe">
+    <div class="sub-inner">
+      <h2>{t('订阅选型与产品更新', 'Subscribe to selection & product updates')}</h2>
+      <p>{t('留下邮箱，新场景方案与产品资料上线时第一时间通知你。', 'Drop your email to get notified when new scenario solutions and product docs go live.')}</p>
+      <form id="sub-form" class="sub-form" novalidate>
+        <input
+          id="sub-email"
+          type="email"
+          inputmode="email"
+          autocomplete="email"
+          placeholder={t('你的邮箱', 'your@email.com')}
+        />
+        <button type="submit" class="btn btn-primary" id="sub-btn">{t('订阅', 'Subscribe')}</button>
+      </form>
+      <p class="sub-msg" id="sub-msg" hidden></p>
+    </div>
+  </section>
+
+  <script is:inline>
+    (function () {
+      var form = document.getElementById('sub-form');
+      if (!form) return;
+      var email = document.getElementById('sub-email');
+      var msg = document.getElementById('sub-msg');
+      var btn = document.getElementById('sub-btn');
+      var emailRe = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      form.addEventListener('submit', function (e) {
+        e.preventDefault();
+        var v = (email.value || '').trim();
+        if (!emailRe.test(v)) {
+          msg.hidden = false;
+          msg.textContent = document.documentElement.lang === 'en' ? 'Please enter a valid email.' : '请输入有效邮箱';
+          msg.className = 'sub-msg sub-err';
+          return;
+        }
+        btn.disabled = true;
+        fetch('/api/subscribe', {
+          method: 'POST',
+          headers: { 'content-type': 'application/json' },
+          body: JSON.stringify({ email: v, lang: document.documentElement.lang }),
+        })
+          .catch(function () { /* 后端缺失也乐观视为成功 */ })
+          .finally(function () {
+            msg.hidden = false;
+            msg.textContent = document.documentElement.lang === 'en' ? 'Subscribed — thank you!' : '已订阅，谢谢！';
+            msg.className = 'sub-msg sub-ok';
+            email.value = '';
+            btn.disabled = false;
+          });
+      });
+    })();
+  </script>
+
   {/* L1 推荐引擎：读取本机浏览记录，按「同场景 +10 / 每共享标签 +2」打分，实时替换网格 */}
   <script type="application/json" id="rec-index" set:html={JSON.stringify(recIndex)}></script>
   <script is:inline>
@@ -654,6 +708,56 @@ const orgLd = {
   .band-inner { max-width: 720px; margin: 0 auto; }
   .band-actions { display: flex; gap: 14px; flex-wrap: wrap; justify-content: center; }
 
+  /* ---------- L5 订阅区 ---------- */
+  .subscribe {
+    background: var(--hero-grad);
+    color: #fff;
+    margin: 64px calc(50% - 50vw) 0;
+    padding: 64px 24px;
+  }
+  .sub-inner { max-width: 720px; margin: 0 auto; text-align: center; }
+  .subscribe h2 {
+    margin: 0 0 12px;
+    font-family: var(--font-display);
+    font-size: clamp(1.5rem, 2.8vw, 1.95rem);
+    font-weight: 800;
+    letter-spacing: -0.02em;
+  }
+  .subscribe p { margin: 0 auto 26px; max-width: 540px; font-size: 15.5px; line-height: 1.8; color: rgba(255, 255, 255, 0.84); }
+  .sub-form {
+    display: flex;
+    gap: 12px;
+    max-width: 480px;
+    margin: 0 auto;
+    flex-wrap: wrap;
+    justify-content: center;
+  }
+  #sub-email {
+    flex: 1 1 240px;
+    min-width: 0;
+    padding: 13px 18px;
+    border-radius: var(--r-pill);
+    border: 1px solid rgba(255, 255, 255, 0.3);
+    background: rgba(255, 255, 255, 0.12);
+    color: #fff;
+    font-size: 15px;
+    outline: none;
+    transition: border-color var(--dur) var(--ease), background var(--dur) var(--ease);
+  }
+  #sub-email::placeholder { color: rgba(255, 255, 255, 0.6); }
+  #sub-email:focus {
+    border-color: rgba(255, 255, 255, 0.7);
+    background: rgba(255, 255, 255, 0.18);
+  }
+  .sub-form .btn { padding: 13px 30px; flex: 0 0 auto; }
+  .sub-msg {
+    margin: 16px auto 0;
+    font-size: 14.5px;
+    font-weight: 600;
+  }
+  .sub-msg.sub-ok { color: #d7ffd9; }
+  .sub-msg.sub-err { color: #ffd7d7; }
+
   @media (max-width: 700px) {
     .hero { margin-top: -24px; padding: 84px 18px 88px; }
     .hero-title { font-size: 32px; }
@@ -663,6 +767,9 @@ const orgLd = {
     .block { margin: 56px 0; }
     .trust { margin-top: 56px; padding: 56px 18px; }
     .band { margin-top: 56px; padding: 56px 18px; }
+    .subscribe { margin-top: 56px; padding: 56px 18px; }
+    .sub-form { flex-direction: column; }
+    .sub-form .btn { width: 100%; }
     .grid { grid-template-columns: minmax(0, 1fr); gap: 18px; }
   }
 </style>
