@@ -1,0 +1,13 @@
+---
+import Base from '../layouts/Base.astro';
+import SelectorTool from '../components/SelectorTool.astro';
+import { getLocale, type Locale } from '../lib/i18n';
+
+const { locale: localeProp } = Astro.props;
+const locale: Locale = localeProp ?? getLocale(Astro);
+const t = (zh: string, en: string) => (locale === 'en' ? en : zh);
+---
+
+<Base title={t('胶粘剂选型工具', 'Adhesive Selector')} description={t('三步选出合适的胶型：基材 + 环境 + 位移，立即得到推荐与关键要求。', 'Pick substrate, environment and joint movement to get a recommended adhesive type and key requirements.')}>
+  <SelectorTool locale={locale} />
+</Base>

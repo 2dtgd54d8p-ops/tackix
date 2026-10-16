@@ -149,6 +149,7 @@ const catOptions = buildFilterOptions(withMeta, categories);
               class="card"
               data-category={post.category ?? 'uncategorized'}
               data-scenario={post.scenario ?? 'none'}
+              data-tags={(post.tags ?? []).join(',')}
             >
               {coverSrc(post.cover) && (
                 <div class="card-media card-media-sm">
@@ -197,7 +198,7 @@ const catOptions = buildFilterOptions(withMeta, categories);
         return 'all';
       }
     }
-    var state = { cat: getParam('cat'), scenario: getParam('scenario') };
+    var state = { cat: getParam('cat'), scenario: getParam('scenario'), tag: getParam('tag') };
 
     function apply() {
       var cards = grid.querySelectorAll('.card');
@@ -206,7 +207,10 @@ const catOptions = buildFilterOptions(withMeta, categories);
         var okCat = state.cat === 'all' || card.getAttribute('data-category') === state.cat;
         var okSc =
           state.scenario === 'all' || card.getAttribute('data-scenario') === state.scenario;
-        var show = okCat && okSc;
+        var okTag =
+          state.tag === 'all' ||
+          (card.getAttribute('data-tags') || '').split(',').indexOf(state.tag) >= 0;
+        var show = okCat && okSc && okTag;
         card.style.display = show ? '' : 'none';
         if (show) visible++;
       });

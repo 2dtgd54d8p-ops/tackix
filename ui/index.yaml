@@ -13,6 +13,10 @@ navItems:
       en: Knowledge
     href: /knowledge
   - label:
+      zh: 选型工具
+      en: Selector
+    href: /selector
+  - label:
       zh: 关于
       en: About
     href: /about

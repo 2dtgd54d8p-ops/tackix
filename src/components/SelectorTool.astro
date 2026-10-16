@@ -1,0 +1,294 @@
+---
+// 选型工具（模块 3）：基材 + 环境 + 位移 → 推荐胶型。
+// 纯静态、无后端依赖；规则数据来自 src/lib/selector-data.ts，构建期内联为 JSON 供前端复用。
+import {
+  SUBSTRATES,
+  ENVIRONMENTS,
+  MOVEMENTS,
+  ADHESIVES,
+  SUBSTRATE_AFFINITY,
+  ENV_AFFINITY,
+  MOVEMENT_AFFINITY,
+} from '../lib/selector-data';
+import type { Locale } from '../lib/i18n';
+
+interface Props {
+  locale: Locale;
+}
+const { locale } = Astro.props;
+const t = (zh: string, en: string) => (locale === 'en' ? en : zh);
+
+const payload = JSON.stringify({
+  substrates: SUBSTRATES,
+  environments: ENVIRONMENTS,
+  movements: MOVEMENTS,
+  adhesives: ADHESIVES,
+  subA: SUBSTRATE_AFFINITY,
+  envA: ENV_AFFINITY,
+  movA: MOVEMENT_AFFINITY,
+});
+
+const DIMENSIONS = [
+  { key: 'substrate', label: t('基材', 'Substrate'), opts: SUBSTRATES },
+  { key: 'environment', label: t('使用环境', 'Environment'), opts: ENVIRONMENTS },
+  { key: 'movement', label: t('接缝位移', 'Joint movement'), opts: MOVEMENTS },
+];
+const lang = locale === 'en' ? 'en' : 'zh';
+---
+
+<section class="sel">
+  <div class="sel-head">
+    <h1>{t('胶粘剂选型工具', 'Adhesive Selector')}</h1>
+    <p>{t('三步选出合适的胶型：选基材、选环境、选位移，立即得到推荐与关键要求。', 'Pick substrate, environment and joint movement in 3 steps to get a recommendation and key requirements.')}</p>
+  </div>
+
+  <div class="sel-grid">
+    {
+      DIMENSIONS.map((d) => (
+        <fieldset class="sel-dim" data-dim={d.key}>
+          <legend>{d.label}</legend>
+          <div class="sel-opts">
+            {d.opts.map((o) => (
+              <button type="button" class="sel-opt" data-value={o.value}>
+                {o.label[lang]}
+              </button>
+            ))}
+          </div>
+        </fieldset>
+      ))
+    }
+  </div>
+
+  <div class="sel-actions">
+    <button type="button" class="btn btn-primary" id="sel-go">{t('查看推荐', 'Show recommendation')}</button>
+    <span class="sel-hint" id="sel-hint" hidden>{t('请先完成三项选择', 'Please complete all three choices')}</span>
+  </div>
+
+  <div class="sel-result" id="sel-result" hidden></div>
+</section>
+
+<script type="application/json" id="sel-data" set:html={payload}></script>
+<script is:inline>
+  (function () {
+    var dataEl = document.getElementById('sel-data');
+    var resultEl = document.getElementById('sel-result');
+    var goBtn = document.getElementById('sel-go');
+    var hintEl = document.getElementById('sel-hint');
+    if (!dataEl || !resultEl || !goBtn) return;
+    var D;
+    try { D = JSON.parse(dataEl.textContent || '{}'); } catch (e) { return; }
+    var isEn = document.documentElement.lang === 'en';
+    function L(b) { return b ? (isEn ? b.en : b.zh) : ''; }
+    function esc(s) {
+      return String(s == null ? '' : s).replace(/[&<>"]/g, function (c) {
+        return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c];
+      });
+    }
+
+    var state = { substrate: '', environment: '', movement: '' };
+
+    document.querySelectorAll('.sel-dim').forEach(function (fs) {
+      var dim = fs.getAttribute('data-dim');
+      fs.querySelectorAll('.sel-opt').forEach(function (btn) {
+        btn.addEventListener('click', function () {
+          fs.querySelectorAll('.sel-opt').forEach(function (b) { b.classList.remove('is-selected'); });
+          btn.classList.add('is-selected');
+          state[dim] = btn.getAttribute('data-value');
+          hintEl.hidden = true;
+        });
+      });
+    });
+
+    function score() {
+      var scores = {};
+      function add(aff, key) {
+        var m = aff[key];
+        if (!m) return;
+        for (var k in m) scores[k] = (scores[k] || 0) + m[k];
+      }
+      add(D.subA, state.substrate);
+      add(D.envA, state.environment);
+      add(D.movA, state.movement);
+      return D.adhesives
+        .map(function (a) { return { a: a, s: scores[a.value] || 0 }; })
+        .filter(function (x) { return x.s > 0; })
+        .sort(function (x, y) { return y.s - x.s; });
+    }
+
+    function optLabel(dim, value) {
+      var arr = dim === 'substrate' ? D.substrates : dim === 'environment' ? D.environments : D.movements;
+      for (var i = 0; i < arr.length; i++) if (arr[i].value === value) return arr[i];
+      return null;
+    }
+    function hintsFor() {
+      var out = [];
+      ['substrate', 'environment', 'movement'].forEach(function (dim) {
+        var o = optLabel(dim, state[dim]);
+        if (o && o.hint) out.push(L(o.hint));
+      });
+      return out;
+    }
+
+    goBtn.addEventListener('click', function () {
+      if (!state.substrate || !state.environment || !state.movement) {
+        hintEl.hidden = false;
+        return;
+      }
+      var ranked = score();
+      if (!ranked.length) {
+        resultEl.hidden = false;
+        resultEl.innerHTML = '<p class="sel-empty">' + esc(isEn ? 'No match — please adjust your choices.' : '暂无匹配，请调整选择。') + '</p>';
+        return;
+      }
+      var top = ranked[0].a;
+      var sub = L(optLabel('substrate', state.substrate).label);
+      var env = L(optLabel('environment', state.environment).label);
+      var mov = L(optLabel('movement', state.movement).label);
+      var hints = hintsFor();
+      var lp = isEn ? '/en' : '';
+
+      var html = '';
+      // 结论
+      html += '<div class="sel-summary">';
+      html += '<p class="sel-summary-lead">' + esc(isEn ? 'Based on ' : '根据 ') +
+        '<b>' + esc(sub) + '</b> + <b>' + esc(env) + '</b> + <b>' + esc(mov) + '</b>' +
+        esc(isEn ? ', we recommend: ' : '，建议优先选用：') + '<b>' + esc(L(top.name)) + '</b></p>';
+      if (hints.length) {
+        html += '<p class="sel-summary-hints">' + esc(isEn ? 'Key requirements: ' : '关键要求：') +
+          hints.map(function (h) { return '<span class="sel-chip">' + esc(h) + '</span>'; }).join('') + '</p>';
+      }
+      html += '</div>';
+
+      // 推荐卡片
+      html += '<div class="sel-cards">';
+      ranked.forEach(function (r, i) {
+        var a = r.a;
+        var cls = i === 0 ? 'sel-card is-top' : 'sel-card';
+        var badge = i === 0 ? '<span class="sel-badge">' + esc(isEn ? 'Top pick' : '首推') + '</span>' : '';
+        html += '<div class="' + cls + '">';
+        html += '<div class="sel-card-head"><h3>' + esc(L(a.name)) + '</h3>' + badge + '</div>';
+        html += '<p class="sel-props">' + a.props[isEn ? 'en' : 'zh'].split('·').map(function (s) { return '<span class="sel-prop">' + esc(s.trim()) + '</span>'; }).join('') + '</p>';
+        html += '<p class="sel-blurb">' + esc(L(a.blurb)) + '</p>';
+        html += '<p class="sel-uses"><span>' + esc(isEn ? 'Typical uses: ' : '典型用途：') + '</span>' + esc(L(a.uses)) + '</p>';
+        html += '<a class="btn btn-outline btn-sm" href="' + lp + '/knowledge?tag=' + a.value + '">' + esc(isEn ? 'Related articles' : '相关文章') + ' →</a>';
+        html += '</div>';
+      });
+      html += '</div>';
+
+      // CTA
+      html += '<div class="sel-cta"><a class="btn btn-primary" href="' + lp + '/contact">' +
+        esc(isEn ? "Not sure? Ask an engineer" : '不确定？咨询工程师') + '</a></div>';
+
+      resultEl.hidden = false;
+      resultEl.innerHTML = html;
+      resultEl.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    });
+  })();
+</script>
+
+<style>
+  .sel { max-width: 920px; margin: 0 auto; }
+  .sel-head { text-align: center; margin-bottom: 36px; }
+  .sel-head h1 { font-size: clamp(1.8rem, 3.4vw, 2.4rem); margin: 0 0 12px; }
+  .sel-head p { color: var(--muted); font-size: 16px; line-height: 1.8; max-width: 640px; margin: 0 auto; }
+
+  .sel-grid {
+    display: grid;
+    gap: 20px;
+    grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  }
+  .sel-dim {
+    border: 1px solid var(--border);
+    border-radius: var(--r-lg);
+    background: var(--surface);
+    padding: 18px 18px 20px;
+    margin: 0;
+  }
+  .sel-dim legend {
+    font-weight: 700;
+    color: var(--fg);
+    font-size: 15px;
+    padding: 0 4px;
+    margin-bottom: 12px;
+  }
+  .sel-opts { display: flex; flex-wrap: wrap; gap: 8px; }
+  .sel-opt {
+    border: 1px solid var(--border-strong);
+    background: var(--surface-2);
+    color: var(--fg-soft);
+    border-radius: var(--r-pill);
+    padding: 9px 15px;
+    font-size: 13.5px;
+    font-family: inherit;
+    cursor: pointer;
+    transition: border-color var(--dur) var(--ease), background var(--dur) var(--ease), color var(--dur) var(--ease);
+  }
+  .sel-opt:hover { border-color: var(--accent); color: var(--accent); }
+  .sel-opt.is-selected {
+    border-color: var(--accent);
+    background: color-mix(in srgb, var(--accent) 14%, var(--surface));
+    color: var(--accent-strong);
+    font-weight: 600;
+  }
+
+  .sel-actions { text-align: center; margin: 28px 0 8px; }
+  .sel-actions .btn { padding: 13px 36px; font-size: 15px; }
+  .sel-hint { display: inline-block; margin-left: 12px; color: var(--danger); font-size: 13px; }
+
+  .sel-result { margin-top: 30px; }
+  .sel-summary {
+    border: 1px solid color-mix(in srgb, var(--accent) 28%, transparent);
+    background: color-mix(in srgb, var(--accent) 7%, var(--surface));
+    border-radius: var(--r-lg);
+    padding: 20px 22px;
+    margin-bottom: 22px;
+  }
+  .sel-summary-lead { margin: 0 0 12px; font-size: 15.5px; line-height: 1.7; color: var(--fg); }
+  .sel-summary-lead b { color: var(--accent-strong); }
+  .sel-summary-hints { margin: 0; display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+  .sel-chip {
+    font-size: 12.5px;
+    padding: 4px 11px;
+    border-radius: var(--r-pill);
+    background: var(--surface);
+    border: 1px solid var(--border);
+    color: var(--muted);
+  }
+
+  .sel-cards { display: grid; gap: 16px; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); }
+  .sel-card {
+    border: 1px solid var(--border);
+    border-radius: var(--r-lg);
+    background: var(--surface);
+    padding: 20px;
+    box-shadow: var(--shadow-sm);
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+  }
+  .sel-card.is-top { border-color: color-mix(in srgb, var(--accent) 50%, var(--border)); box-shadow: 0 14px 36px -22px color-mix(in srgb, var(--accent) 60%, transparent); }
+  .sel-card-head { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+  .sel-card-head h3 { margin: 0; font-size: 18px; color: var(--fg); }
+  .sel-badge {
+    font-size: 11px;
+    font-weight: 700;
+    color: #fff;
+    background: var(--accent);
+    padding: 3px 10px;
+    border-radius: var(--r-pill);
+    white-space: nowrap;
+  }
+  .sel-props { display: flex; flex-wrap: wrap; gap: 6px; margin: 0; }
+  .sel-prop { font-size: 11.5px; padding: 3px 9px; border-radius: var(--r-pill); background: var(--surface-2); color: var(--muted); border: 1px solid var(--border); }
+  .sel-blurb { margin: 0; font-size: 13.5px; line-height: 1.7; color: var(--fg-soft); }
+  .sel-uses { margin: 0; font-size: 13px; color: var(--muted); line-height: 1.6; }
+  .sel-uses span { color: var(--faint); }
+  .sel-card .btn { margin-top: auto; align-self: flex-start; }
+
+  .sel-cta { text-align: center; margin-top: 24px; }
+  .sel-empty { color: var(--muted); text-align: center; padding: 20px; }
+
+  @media (max-width: 640px) {
+    .sel-grid { grid-template-columns: 1fr; }
+  }
+</style>
