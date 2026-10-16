@@ -1,0 +1,231 @@
+---
+// 案例库（模块 5）：派生视图——自动聚合「带 scenario 的实战文章」为案例。
+// 不新增任何内容：作者每写一篇问题→方案文并打 scenario 标签，便自动归入对应场景案例区。
+// 纯静态、无后端、无编造；中英文由 locale 切换。
+import { createReader } from '@keystatic/core/reader';
+import keystaticConfig from '../../keystatic.config';
+import Base from '../layouts/Base.astro';
+import { loadSiteData, loadContent } from '../lib/site-data';
+import { getLocale, pickB, type Locale } from '../lib/i18n';
+import { sColor, sIcon } from '../lib/scenario-visual';
+
+interface Props {
+  locale: Locale;
+}
+const { locale } = Astro.props;
+const lp = locale === 'en' ? '/en' : '';
+const t = (zh: string, en: string) => (locale === 'en' ? en : zh);
+
+const reader = createReader(process.cwd(), keystaticConfig);
+
+let scenarioSlugs: string[] = [];
+let knowledgeSlugs: string[] = [];
+try {
+  scenarioSlugs = await reader.collections.scenarios.list();
+} catch (e) {
+  console.warn('[build] scenarios list failed：', e);
+}
+try {
+  knowledgeSlugs = await reader.collections.knowledge.list();
+} catch (e) {
+  console.warn('[build] knowledge list failed：', e);
+}
+
+const scenarios = (
+  await Promise.all(
+    scenarioSlugs.map(async (slug) => {
+      try {
+        const s = await reader.collections.scenarios.read(slug);
+        return s ? { slug, ...s } : null;
+      } catch {
+        return null;
+      }
+    })
+  )
+).filter((s) => s && s.published !== false);
+
+const withMeta = (
+  await Promise.all(
+    knowledgeSlugs.map(async (slug) => {
+      try {
+        const p = await reader.collections.knowledge.read(slug);
+        return p ? { slug, ...p } : null;
+      } catch {
+        return null;
+      }
+    })
+  )
+)
+  .filter((p) => p && p.published !== false)
+  .map((p) => ({ ...p, readMin: readingMinutes(pickB(locale, p.body)) }))
+  .sort((a, b) => String(b.publishedAt ?? '').localeCompare(String(a.publishedAt ?? '')));
+
+const { categoryLabel, tagLabel } = await loadSiteData(locale);
+const { site } = await loadSiteData(locale);
+
+// 按场景分组（仅保留有文章的场景），形成「案例库」
+const groups = scenarios
+  .map((sc, i) => ({
+    slug: sc.slug,
+    name: pickB(locale, sc.name),
+    color: sColor(sc.slug, i),
+    icon: sIcon(sc.slug),
+    articles: withMeta.filter((p) => (p.scenario || 'none') === sc.slug),
+  }))
+  .filter((g) => g.articles.length > 0);
+
+const totalCases = groups.reduce((n, g) => n + g.articles.length, 0);
+
+function coverSrc(cover: unknown): string {
+  if (!cover || typeof cover !== 'string') return '';
+  return cover.startsWith('/') ? cover : `/uploads/${cover}`;
+}
+function readingMinutes(body: unknown): number {
+  if (!body || typeof body !== 'string') return 1;
+  const words = (body.match(/[a-zA-Z0-9]+/g) || []).length;
+  return Math.max(1, Math.ceil(words / 200));
+}
+---
+
+<Base
+  title={t('案例库', 'Case Studies')}
+  description={t('真实工况下的胶粘剂选型与施工案例，按场景归类，附完整方案与要点。', 'Real-world adhesive selection & application cases, grouped by scenario, with full solutions and key takeaways.')}
+>
+  <section class="cases">
+    <div class="cases-hero">
+      <h1>{t('案例库', 'Case Studies')}</h1>
+      <p>{t(`从真实工况出发的 ${totalCases} 个实战案例，按场景归类——每个都是「问题 → 方案 → 要点」的完整拆解。`, ` ${totalCases} real-world cases grouped by scenario — each a full "problem → solution → takeaways" breakdown.`)}</p>
+    </div>
+
+    {
+      groups.length === 0 ? (
+        <p class="empty">{t('暂无案例。在后台撰写带「场景」标签的实战文章，会自动归入此处。', 'No cases yet. Write a scenario-tagged article in the CMS and it appears here automatically.')}</p>
+      ) : (
+        groups.map((g) => (
+          <section class="case-sec" style={`--sc:${g.color}`}>
+            <div class="case-sec-head">
+              <span class="case-sec-ico" set:html={g.icon} />
+              <div>
+                <h2>{g.name}</h2>
+                <span class="case-sec-count">{g.articles.length}{t(' 个案例', ' cases')}</span>
+              </div>
+            </div>
+            <div class="case-grid">
+              {g.articles.map((p) => (
+                <article class="case-card">
+                  {coverSrc(p.cover) && (
+                    <div class="case-media">
+                      <img src={coverSrc(p.cover)} alt="" loading="lazy" />
+                    </div>
+                  )}
+                  <div class="case-body">
+                    <span class="case-badge">{t('实战案例', 'Case')}</span>
+                    <h3 class="case-title">
+                      <a href={`${lp}/knowledge/${p.slug}`}>{pickB(locale, p.name)}</a>
+                    </h3>
+                    {pickB(locale, p.excerpt) && <p class="case-excerpt">{pickB(locale, p.excerpt)}</p>}
+                    <div class="case-meta">
+                      <span class="tag">{categoryLabel(p.category)}</span>
+                      {(p.tags ?? []).slice(0, 2).map((tg: string) => (
+                        <span class="tag tag-plain">{tagLabel(tg)}</span>
+                      ))}
+                      <span class="read-time">· {p.readMin}{t(' 分钟', ' min')}</span>
+                    </div>
+                    <a class="case-cta" href={`${lp}/knowledge/${p.slug}`}>{t('查看完整案例', 'Read the case')} →</a>
+                  </div>
+                </article>
+              ))}
+            </div>
+          </section>
+        ))
+      )
+    }
+  </section>
+</Base>
+
+<style>
+  .cases { max-width: 1040px; margin: 0 auto; }
+  .cases-hero { text-align: center; margin-bottom: 48px; }
+  .cases-hero h1 { font-size: clamp(1.9rem, 3.6vw, 2.6rem); margin: 0 0 12px; }
+  .cases-hero p { color: var(--muted); font-size: 16px; line-height: 1.8; max-width: 680px; margin: 0 auto; }
+
+  .case-sec { margin: 44px 0; }
+  .case-sec-head {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    margin-bottom: 22px;
+    padding-bottom: 14px;
+    border-bottom: 2px solid var(--sc);
+  }
+  .case-sec-ico {
+    width: 46px;
+    height: 46px;
+    flex: none;
+    border-radius: 14px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--sc);
+    background: color-mix(in srgb, var(--sc) 16%, transparent);
+    box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--sc) 22%, transparent);
+  }
+  .case-sec-ico :global(svg) { width: 26px; height: 26px; }
+  .case-sec-head h2 { margin: 0; font-size: 20px; color: var(--fg); }
+  .case-sec-count { font-size: 13px; color: var(--faint); }
+
+  .case-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    gap: 20px;
+  }
+  .case-card {
+    display: flex;
+    flex-direction: column;
+    border: 1px solid var(--border);
+    border-radius: var(--r-lg);
+    background: var(--surface);
+    overflow: hidden;
+    box-shadow: var(--shadow-sm);
+    transition: transform var(--dur) var(--ease), box-shadow var(--dur) var(--ease), border-color var(--dur) var(--ease);
+  }
+  .case-card:hover {
+    transform: translateY(-4px);
+    box-shadow: var(--shadow-md);
+    border-color: color-mix(in srgb, var(--sc) 45%, var(--border));
+  }
+  .case-media { aspect-ratio: 16 / 9; background: var(--surface-2); }
+  .case-media img { width: 100%; height: 100%; object-fit: cover; display: block; }
+  .case-body { display: flex; flex-direction: column; gap: 10px; padding: 18px 18px 20px; flex: 1; }
+  .case-badge {
+    align-self: flex-start;
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    color: var(--sc);
+    background: color-mix(in srgb, var(--sc) 14%, transparent);
+    padding: 3px 10px;
+    border-radius: var(--r-pill);
+  }
+  .case-title { margin: 0; font-size: 17px; line-height: 1.4; }
+  .case-title a { color: var(--fg); text-decoration: none; }
+  .case-title a:hover { color: var(--sc); }
+  .case-excerpt {
+    margin: 0;
+    font-size: 14px;
+    line-height: 1.7;
+    color: var(--muted);
+    display: -webkit-box;
+    -webkit-line-clamp: 3;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+  }
+  .case-meta { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; font-size: 12px; color: var(--faint); }
+  .case-cta { margin-top: auto; padding-top: 6px; font-size: 13.5px; font-weight: 600; color: var(--sc); text-decoration: none; }
+
+  .empty { text-align: center; color: var(--muted); padding: 40px 0; }
+
+  @media (max-width: 640px) {
+    .case-grid { grid-template-columns: minmax(0, 1fr); }
+  }
+</style>

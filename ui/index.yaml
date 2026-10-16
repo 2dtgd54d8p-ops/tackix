@@ -17,6 +17,10 @@ navItems:
       en: Selector
     href: /selector
   - label:
+      zh: 案例库
+      en: Cases
+    href: /cases
+  - label:
       zh: 关于
       en: About
     href: /about

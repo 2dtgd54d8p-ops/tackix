@@ -1,0 +1,9 @@
+---
+import CasesView from '../components/CasesView.astro';
+import { getLocale, type Locale } from '../lib/i18n';
+
+const { locale: localeProp } = Astro.props;
+const locale: Locale = localeProp ?? getLocale(Astro);
+---
+
+<CasesView locale={locale} />
