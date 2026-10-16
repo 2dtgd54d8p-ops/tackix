@@ -178,58 +178,64 @@ export default config({
       slugField: 'title', // 由标题自动生成 URL 友好的 slug（单一英文标题，作为 URL slug 来源）
       path: 'src/content/knowledge/*',
       schema: {
-        // 标题：单一字段，同时作为 URL slug 来源（建议用英文，保证 URL 稳定）
-        title: fields.slug({ name: fields.text({ label: '标题（同时作为 URL slug，建议英文）' }) }),
-        // 展示标题：中英双语，卡片/详情页按当前语种取用
-        name: bi('展示标题'),
-        excerpt: bi('摘要', { multiline: true }),
-        publishedAt: fields.date({ label: '发布日期' }),
-        // 草稿开关：false 的文章不会被构建进站点
-        published: fields.checkbox({ label: '已发布', defaultValue: true }),
-        featured: fields.checkbox({ label: '在首页展示', defaultValue: false }),
-        // 分类下拉选项来自 `src/generated/content-options.ts` 的 CATEGORY_OPTIONS，
-        // 该文件由 `scripts/gen-content-options.mjs` 在 predev/prebuild 阶段从
-        // 后台「分类管理」singleton（categories/index.yaml）构建期生成。
-        category: fields.select({
-          label: '分类',
-          options: [
-            { label: '未分类', value: 'uncategorized' },
-            ...CATEGORY_OPTIONS,
-          ],
-          defaultValue: 'uncategorized',
+        // ───────── 第 1 步：定身份（地址 slug + 人看的中英标题）─────────
+        title: fields.slug({
+          name: fields.text({
+            label: '标题（同时作为 URL slug，建议英文）',
+            description:
+              '英文、URL 友好，作为页面地址（例：kitchen-bath-mould-sealant）。改标题会改链接，发布后尽量别动。',
+          }),
         }),
-        // 标签多选选项来自 `src/generated/content-options.ts` 的 TAG_OPTIONS
-        tags: fields.multiselect({
-          label: '标签',
-          options: TAG_OPTIONS,
+        name: bi('展示标题', {
+          description:
+            '卡片与详情页显示的中英双语标题。与「标题(slug)」不同：slug 是地址，这里才是人看到的名字，中英文都要填。',
         }),
-        // 所属场景：把文章关联到某个场景方案（下拉来自 SCENARIO_OPTIONS，构建期 codegen 自
-        // src/content/scenarios/*.yaml）。选「无」则不在任何场景分类页展示；选具体场景后会出现在
-        // 该场景分类页的「相关内容」区，打通「场景方案 → 知识库文章」的内链闭环。
+
+        // ───────── 第 2 步：一句话结论（最重要，先写）─────────
+        excerpt: bi('一句话结论 / 摘要', {
+          multiline: true,
+          description:
+            '用一句话回答「这篇文章讲什么、该用啥」。显示于列表卡片、详情页顶部、搜索摘要，并驱动场景页 HowTo。务必先填。',
+        }),
+
+        // ───────── 第 3 步：双维度归类（决定文章出现在哪两个板块）─────────
         scenario: fields.select({
-          label: '所属场景',
-          description: '把该文章归入某个场景方案，会在对应场景分类页的「相关内容」区展示。',
+          label: '所属场景（维度一）',
+          description:
+            '把文章归入一个场景方案 → 自动出现在该场景页的「相关内容」区。选「无」则只进知识库、不进场景页。',
           options: [
             { label: '无', value: 'none' },
             ...SCENARIO_OPTIONS,
           ],
           defaultValue: 'none',
         }),
-        // 常见问题：渲染为 FAQ 区块并生成 FAQPage 结构化数据，利于 AI/搜索直接抽取答案
-        // ⚠️ 两个 Keystatic 0.6.9 的坑（叠加后会让**所有**文章读取失败）：
-        //   ① array() 第一个参数必须「直接是 schema 对象」，写成 array({label, schema:{...}}) 会把整包当 schema 解析；
-        //   ② fields.text 返回的是 SlugFormField，而 array 会用 slugField 机制把元素里的 slug 类字段
-        //      当作「条目唯一标识」劫持，报 "Expected never to be called"。
-        // 用 fields.object 包一层即可得到非 slug 的 ObjectField，YAML 数据结构（question/answer）保持不变。
-        faq: fields.array(
-          fields.object(
-            {
-              question: bi('问题'),
-              answer: bi('答案', { multiline: true }),
-            },
-            { label: '问答' }
-          ),
-          { label: '常见问题' }
+        category: fields.select({
+          label: '分类（维度二）',
+          description:
+            '文章在知识库里的归类（单选）。决定它出现在知识库哪个分类下。不要留「未分类」。',
+          options: [
+            { label: '未分类', value: 'uncategorized' },
+            ...CATEGORY_OPTIONS,
+          ],
+          defaultValue: 'uncategorized',
+        }),
+        tags: fields.multiselect({
+          label: '标签（维度三·多选）',
+          description:
+            '从词表里选 2–4 个标签，用于细粒度检索与「相关内容」推荐。只能选已有词，不能手敲新词（防漂移）。',
+          options: TAG_OPTIONS,
+        }),
+
+        // ───────── 第 4 步：写正文 ─────────
+        body: fields.object(
+          {
+            zh: fields.mdx.inline({ label: '正文（中文）' }),
+            en: fields.mdx.inline({ label: '正文（英文）' }),
+          },
+          {
+            label: '双语正文',
+            description: '中英各一份。多用 H2/H3、列表、表格写，便于 AI 与搜索直接抽取。',
+          }
         ),
         // 结构化步骤：驱动详情页「操作步骤」区块 + HowTo 结构化数据。
         // 勾选 pitfall 的条目以「避坑提示」警示样式渲染，并【不】计入 HowTo 的编号步骤，
@@ -246,25 +252,53 @@ export default config({
             },
             { label: '步骤' }
           ),
-          { label: '结构化步骤（驱动 HowTo）' }
+          {
+            label: '结构化步骤（驱动 HowTo）',
+            description:
+              '施工/操作的可编号步骤 → 生成 HowTo 结构化数据。勾「避坑提示」的条目以警示框展示、不进编号。',
+          }
         ),
-        // 图片会经 GitHub App 提交到仓库 public/uploads/，构建时由静态资源直接产出
+        // 自定义内容区块：后台自由组合结构化区块，满足任意自定义内容的填报与发布
+        customSections: customSectionsField('自定义内容区块（标题/段落/图片/提示框/引用）'),
+
+        // ───────── 第 5 步：常见问题（必填≥3，利于 AI 抽取）─────────
+        faq: fields.array(
+          fields.object(
+            {
+              question: bi('问题'),
+              answer: bi('答案', { multiline: true }),
+            },
+            { label: '问答' }
+          ),
+          {
+            label: '常见问题',
+            description:
+              '每篇至少 3 条 FAQ → 自动生成 FAQPage 结构化数据，搜索/AI 可直接抽答案卡片。建议覆盖选型、施工、售后三类疑问。',
+          }
+        ),
+
+        // ───────── 第 6 步：封面与发布 ─────────
         cover: fields.image({
           label: '封面图',
+          description: '列表卡片与详情页顶部图。可不填，系统有占位。',
           directory: 'public/uploads',
           publicPath: '/uploads/',
         }),
-        // 富文本编辑器（ProseMirror）：编辑体验带工具栏，但序列化后仍是 Markdown 字符串。
-        // 双语正文：中英各一份 mdx.inline。
-        body: fields.object(
-          {
-            zh: fields.mdx.inline({ label: '正文（中文）' }),
-            en: fields.mdx.inline({ label: '正文（英文）' }),
-          },
-          { label: '正文' }
-        ),
-        // 自定义内容区块：后台自由组合结构化区块，满足任意自定义内容的填报与发布
-        customSections: customSectionsField('自定义内容区块'),
+        publishedAt: fields.date({
+          label: '发布日期',
+          description: '用于排序与「新鲜度」展示。修订重要内容时更新此日期。',
+        }),
+        // 草稿开关：false 的文章不会被构建进站点
+        published: fields.checkbox({
+          label: '已发布',
+          defaultValue: true,
+          description: '取消勾选 = 下架（数据保留，可随时恢复）。',
+        }),
+        featured: fields.checkbox({
+          label: '在首页展示',
+          defaultValue: false,
+          description: '由主管控制：勾选后进入首页文章流/场景卡置顶。',
+        }),
       },
     }),
     // 场景方案：4 个高频场景，产品以占位嵌入，不单独建库。中英双语。

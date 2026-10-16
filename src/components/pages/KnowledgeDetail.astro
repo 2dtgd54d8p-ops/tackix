@@ -8,6 +8,7 @@ import { inLanguage, howToFromSteps } from '../../lib/schema';
 import { normalizeSections } from '../../lib/custom-sections';
 import CtxSuggest from '../CtxSuggest.astro';
 import { pickB, type Locale } from '../../lib/i18n';
+import { freshnessInfo } from '../../lib/freshness';
 
 interface Props {
   locale: Locale;
@@ -35,6 +36,7 @@ const detail = L.detail;
 const { categoryLabel, tagLabel } = await loadSiteData(locale);
 
 const post = item ? { slug, ...item } : null;
+const fresh = post ? freshnessInfo(post.publishedAt, locale) : null;
 const html = post ? await renderMarkdown(pickB(locale, post.body)) : '';
 
 const faqItems = post
@@ -76,6 +78,104 @@ const pitfallSteps = (post?.steps ?? []).filter((s: any) => s && s.pitfall);
 // 自定义内容区块：后台自由组合的结构化区块（标题/段落/图片/提示框/引用）
 const customSections = normalizeSections(post?.customSections);
 const keywords = post ? (post.tags ?? []).map((tag: string) => tagLabel(tag)) : [];
+
+// 相关内容：按「同场景优先 + 同标签数」打分，取前 4 篇（排除自身），让用户高效顺着价值链往下读
+const allSlugs: string[] = [];
+try {
+  allSlugs.push(...(await reader.collections.knowledge.list()));
+} catch {
+  /* 读取失败则无相关推荐 */
+}
+const curScenario = post?.scenario;
+const curTags = new Set(post?.tags ?? []);
+const related = post
+  ? (
+      await Promise.all(
+        allSlugs
+          .filter((s) => s !== slug)
+          .map(async (s) => {
+            try {
+              const p: any = await reader.collections.knowledge.read(s);
+              return p ? { slug: s, ...p } : null;
+            } catch {
+              return null;
+            }
+          })
+      )
+    )
+      .filter((p: any) => p && p.published !== false)
+      .map((p: any) => {
+        let score = 0;
+        if (curScenario && p.scenario === curScenario && curScenario !== 'none') score += 10;
+        score += (p.tags ?? []).filter((t: string) => curTags.has(t)).length * 2;
+        return { p, score };
+      })
+      .filter((x: any) => x.score > 0)
+      .sort((a: any, b: any) => b.score - a.score)
+      .slice(0, 4)
+      .map((x: any) => x.p)
+  : [];
+
+// 场景名映射（对比表展示用）
+const scenarioLabelMap = new Map<string, string>();
+try {
+  const scSlugs = await reader.collections.scenarios.list();
+  await Promise.all(
+    scSlugs.map(async (s: string) => {
+      try {
+        const sc: any = await reader.collections.scenarios.read(s);
+        if (sc) scenarioLabelMap.set(s, pickB(locale, (sc.name as any) ?? ({ zh: s, en: s } as any)));
+      } catch {
+        /* 忽略 */
+      }
+    })
+  );
+} catch {
+  /* 无场景集合 */
+}
+const scenarioLabel = (v: string) => scenarioLabelMap.get(v) || v;
+
+// L2 文章级「A vs B 对比」：当前文章 + 最多 3 篇同类，结构化对比数据嵌入前端。
+function cmpItem(p: any, isCurrent = false) {
+  return {
+    slug: p.slug,
+    name: pickB(locale, p.name),
+    excerpt: pickB(locale, p.excerpt),
+    catLabel: categoryLabel(p.category),
+    scenarioLabel: p.scenario && p.scenario !== 'none' ? scenarioLabel(p.scenario) : '',
+    tagLabels: (p.tags ?? []).map((t: string) => tagLabel(t)),
+    steps: (p.steps ?? []).length,
+    faq: (p.faq ?? []).length,
+    publishedAt: p.publishedAt || '',
+    url: `${lp}/knowledge/${p.slug}`,
+    isCurrent,
+  };
+}
+const compareData = post
+  ? [
+      cmpItem({ slug, ...post }, true),
+      ...related.slice(0, 3).map((p: any) => cmpItem(p, false)),
+    ]
+  : [];
+
+// L3 资料下载：把当前文章结构化抽成「速查卡」，前端生成 .md 供下载/打印（纯静态，无需后端）
+const dlData = post
+  ? {
+      name: pickB(locale, post.name),
+      excerpt: pickB(locale, post.excerpt),
+      category: categoryLabel(post.category),
+      scenario: post.scenario && post.scenario !== 'none' ? scenarioLabel(post.scenario) : '',
+      tags: (post.tags ?? []).map((t: string) => tagLabel(t)),
+      steps: (post.steps ?? []).map((s: any) => ({
+        title: pickB(locale, s.title),
+        text: pickB(locale, s.text),
+      })),
+      faq: (post.faq ?? []).map((f: any) => ({
+        q: pickB(locale, f.question),
+        a: pickB(locale, f.answer),
+      })),
+    }
+  : null;
 ---
 
 {
@@ -109,15 +209,24 @@ const keywords = post ? (post.tags ?? []).map((tag: string) => tagLabel(tag)) : 
           <h1>{pickB(locale, post.name)}</h1>
           {pickB(locale, post.excerpt) && <p class="lede">{pickB(locale, post.excerpt)}</p>}
           <div class="meta">
-            <span class="tag">{categoryLabel(post.category)}</span>
+            <a class="tag" href={`${lp}/knowledge?cat=${post.category}`}>{categoryLabel(post.category)}</a>
             {(post.tags ?? []).map((tag: string) => (
               <span class="tag tag-plain">{tagLabel(tag)}</span>
             ))}
-            {post.publishedAt && <span>{post.publishedAt}</span>}
+            {fresh && <span class={`tag tag-fresh level-${fresh.level}`}>{fresh.label}</span>}
             <span>· {readingMinutes(pickB(locale, post.body))}{t(' 分钟阅读', ' min read')}</span>
           </div>
           {coverSrc(post.cover) && <img class="cover" src={coverSrc(post.cover)} alt="" />}
         </header>
+
+        {
+          pickB(locale, post.excerpt) && (
+            <aside class="tldr" aria-label={t('一句话结论', 'TL;DR')}>
+              <span class="tldr-tag">{t('TL;DR', 'TL;DR')}</span>
+              <p>{pickB(locale, post.excerpt)}</p>
+            </aside>
+          )
+        }
 
         <div class="article-body" data-section="body" set:html={html} />
 
@@ -203,6 +312,78 @@ const keywords = post ? (post.tags ?? []).map((tag: string) => tagLabel(tag)) : 
             </section>
           )
         }
+
+        {
+          related.length > 0 && (
+            <section class="related" aria-label={t('相关内容', 'Related articles')}>
+              <h2>{t('相关内容', 'Related articles')}</h2>
+              <div class="rel-grid">
+                {related.map((r: any) => (
+                  <a class="rel-card" href={`${lp}/knowledge/${r.slug}`}>
+                    <span class="rel-title">{pickB(locale, r.name)}</span>
+                    {pickB(locale, r.excerpt) && <span class="rel-excerpt">{pickB(locale, r.excerpt)}</span>}
+                    <span class="rel-tags">
+                      <span class="tag">{categoryLabel(r.category)}</span>
+                      {(r.tags ?? []).slice(0, 2).map((tg: string) => (
+                        <span class="tag tag-plain">{tagLabel(tg)}</span>
+                      ))}
+                    </span>
+                  </a>
+                ))}
+              </div>
+            </section>
+          )
+        }
+
+        {
+          compareData.length > 1 && (
+            <section class="compare" aria-label={t('文章对比', 'Compare articles')}>
+              <h2>{t('与同类文章对比', 'Compare with similar articles')}</h2>
+              <p class="compare-hint">{t('勾选 1–2 篇，并排查看差异，辅助选型。', 'Pick 1–2 to see them side by side and choose the right one.')}</p>
+              <div class="cmp-pick" id="cmp-pick">
+                {compareData.map((c: any, i: number) => (
+                  <label class={`cmp-chip${c.isCurrent ? ' is-current' : ''}`}>
+                    <input
+                      type="checkbox"
+                      class="cmp-check"
+                      value={c.slug}
+                      checked={i === 0}
+                      data-index={i}
+                    />
+                    <span>{c.name}</span>
+                    {c.isCurrent && <em class="cmp-you">{t('当前', 'current')}</em>}
+                  </label>
+                ))}
+              </div>
+              <button type="button" class="btn btn-primary cmp-go" id="cmp-go">
+                {t('开始对比', 'Compare')}
+              </button>
+              <div class="cmp-result" id="cmp-result" hidden></div>
+            </section>
+          )
+        }
+        {
+          dlData && (
+            <div class="dl-bar" id="dl-bar">
+              <span class="dl-label">{t('资料', 'Resources')}</span>
+              <button type="button" class="btn btn-outline btn-sm" id="dl-md">
+                {t('下载速查卡', 'Download cheat-sheet')}
+              </button>
+              <button type="button" class="btn btn-outline btn-sm" id="dl-print">
+                {t('打印 / 存 PDF', 'Print / Save PDF')}
+              </button>
+            </div>
+          )
+        }
+
+        <section class="feedback" data-slug={slug} aria-label={t('内容反馈', 'Was this helpful')}>
+          <span class="fb-q">{t('这篇对你有帮助吗？', 'Was this helpful?')}</span>
+          <div class="fb-btns">
+            <button type="button" class="fb-btn" data-helpful="1">👍 {t('有帮助', 'Yes')}</button>
+            <button type="button" class="fb-btn" data-helpful="0">👎 {t('没帮助', 'No')}</button>
+          </div>
+          <span class="fb-thanks" hidden>{t('谢谢反馈！', 'Thanks for your feedback!')}</span>
+        </section>
       </article>
 
       <div class="post-foot">
@@ -232,6 +413,30 @@ const keywords = post ? (post.tags ?? []).map((tag: string) => tagLabel(tag)) : 
     color: var(--muted);
     margin: 0 0 16px;
   }
+  /* TL;DR 速读卡（L6）：把一句话结论提到正文前，访客 3 秒抓住要点 */
+  .tldr {
+    display: flex;
+    gap: 14px;
+    align-items: flex-start;
+    margin: 4px 0 28px;
+    padding: 16px 18px;
+    border: 1px solid color-mix(in srgb, var(--accent) 26%, transparent);
+    border-left: 3px solid var(--accent);
+    border-radius: var(--r-md);
+    background: color-mix(in srgb, var(--accent) 7%, var(--surface));
+  }
+  .tldr-tag {
+    flex: none;
+    font-size: 12px;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    color: var(--on-accent);
+    background: var(--accent);
+    padding: 4px 10px;
+    border-radius: var(--r-pill);
+    margin-top: 2px;
+  }
+  .tldr p { margin: 0; font-size: 15.5px; line-height: 1.7; color: var(--fg); }
   .article-head .meta {
     display: flex;
     flex-wrap: wrap;
@@ -243,6 +448,11 @@ const keywords = post ? (post.tags ?? []).map((tag: string) => tagLabel(tag)) : 
     color: var(--faint);
     font-size: 13px;
   }
+  /* 新鲜度徽章（L4①） */
+  .article-head .meta .tag-fresh { font-variant-numeric: tabular-nums; }
+  .article-head .meta .tag-fresh.level-fresh { background: var(--success-bg); color: var(--success); border-color: color-mix(in srgb, var(--success) 30%, transparent); }
+  .article-head .meta .tag-fresh.level-stale { background: color-mix(in srgb, #e8a33d 16%, var(--surface)); color: #b9791f; border-color: color-mix(in srgb, #e8a33d 34%, transparent); }
+  .article-head .meta .tag-fresh.level-ok { background: var(--surface-2); color: var(--muted); border-color: var(--border); }
   .article-body { margin-top: 24px; }
   .steps {
     margin-top: 40px;
@@ -381,4 +591,282 @@ const keywords = post ? (post.tags ?? []).map((tag: string) => tagLabel(tag)) : 
     margin: 44px auto 0;
     max-width: var(--readw);
   }
+  /* 相关内容：引导用户顺着价值链继续读，提升单位访问的信息获取量 */
+  .related {
+    margin-top: 44px;
+    padding-top: 28px;
+    border-top: 1px solid var(--border);
+  }
+  .related h2 { font-size: 20px; margin: 0 0 18px; color: var(--fg); }
+  .rel-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+    gap: 14px;
+  }
+  .rel-card {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    padding: 16px 18px;
+    border: 1px solid var(--border);
+    border-radius: var(--r-md);
+    background: var(--surface);
+    text-decoration: none;
+    transition: border-color var(--dur) var(--ease), transform var(--dur) var(--ease),
+      box-shadow var(--dur) var(--ease);
+  }
+  .rel-card:hover {
+    border-color: var(--accent);
+    transform: translateY(-3px);
+    box-shadow: var(--shadow-sm);
+    text-decoration: none;
+  }
+  .rel-title { font-weight: 600; color: var(--fg); line-height: 1.45; }
+  .rel-excerpt {
+    font-size: 13px;
+    color: var(--muted);
+    line-height: 1.6;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+  }
+  .rel-tags { display: flex; flex-wrap: wrap; gap: 6px; margin-top: auto; }
+  .rel-tags .tag { font-size: 11px; padding: 2px 9px; }
+  @media (max-width: 640px) { .rel-grid { grid-template-columns: minmax(0, 1fr); } }
+
+  /* 文章级对比（L2） */
+  .compare { margin-top: 44px; }
+  .compare h2 { font-size: 22px; margin: 0 0 8px; }
+  .compare-hint { color: var(--muted); font-size: 14px; margin: 0 0 18px; }
+  .cmp-pick { display: flex; flex-wrap: wrap; gap: 10px; margin-bottom: 16px; }
+  .cmp-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 9px 14px;
+    border: 1px solid var(--border-strong);
+    border-radius: var(--r-pill);
+    background: var(--surface);
+    color: var(--fg-soft);
+    font-size: 13.5px;
+    cursor: pointer;
+    transition: border-color var(--dur) var(--ease), background var(--dur) var(--ease);
+  }
+  .cmp-chip:hover { border-color: var(--accent); }
+  .cmp-chip.is-current { border-style: dashed; }
+  .cmp-chip input { accent-color: var(--accent); width: 15px; height: 15px; }
+  .cmp-you { font-size: 11px; color: var(--accent-strong); font-style: normal; font-weight: 600; }
+  .cmp-go { margin-bottom: 4px; }
+  .cmp-result { margin-top: 20px; overflow-x: auto; }
+  .cmp-table { width: 100%; border-collapse: collapse; font-size: 13.5px; min-width: 420px; }
+  .cmp-table th, .cmp-table td {
+    text-align: left;
+    padding: 12px 14px;
+    border-bottom: 1px solid var(--border);
+    vertical-align: top;
+  }
+  .cmp-table th { background: var(--surface-2); color: var(--fg-soft); font-weight: 700; white-space: nowrap; }
+  .cmp-table td .cmp-name { font-weight: 700; color: var(--fg); display: block; margin-bottom: 4px; }
+  .cmp-table td .cmp-name a { color: var(--accent); }
+  .cmp-table .rowlabel { color: var(--muted); width: 120px; white-space: nowrap; }
+  .cmp-empty { color: var(--muted); padding: 14px 0; }
+
+  /* 资料下载（L3） */
+  .dl-bar {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 10px;
+    margin-top: 36px;
+    padding: 14px 16px;
+    border: 1px dashed var(--border-strong);
+    border-radius: var(--r-md);
+    background: var(--surface-2);
+  }
+  .dl-label { font-size: 13px; font-weight: 600; color: var(--fg-soft); margin-right: 4px; }
+  .btn-sm { padding: 8px 16px; font-size: 13px; }
+
+  /* 打印：仅保留正文与速查卡，隐藏交互/导航 */
+  @media print {
+    .dl-bar, .feedback, .compare, .related, .post-foot, .float-contact, nav, .header, .footer, .crumbs { display: none !important; }
+    body { background: #fff; color: #000; }
+    .article-body, .steps, .pitfalls { page-break-inside: avoid; }
+  }
+
+  /* 内容反馈（L7）：乐观提交，后端缺失也不影响阅读 */
+  .feedback {
+    margin-top: 36px;
+    padding: 16px 18px;
+    border: 1px solid var(--border);
+    border-radius: var(--r-md);
+    background: var(--surface-2);
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 12px;
+  }
+  .fb-q { color: var(--fg); font-weight: 600; font-size: 14px; }
+  .fb-btns { display: flex; gap: 8px; }
+  .fb-btn {
+    border: 1px solid var(--border-strong);
+    background: var(--surface);
+    color: var(--fg-soft);
+    border-radius: var(--r-pill);
+    padding: 6px 14px;
+    font-size: 13px;
+    cursor: pointer;
+    font-family: inherit;
+  }
+  .fb-btn:hover:not(:disabled) { border-color: var(--accent); color: var(--accent); }
+  .fb-btn:disabled { opacity: 0.6; cursor: default; }
+  .fb-thanks { color: var(--accent-strong); font-size: 13px; font-weight: 600; }
 </style>
+
+<script is:inline>
+  (function () {
+    var box = document.querySelector('.feedback');
+    if (!box) return;
+    var slug = box.getAttribute('data-slug') || '';
+    var thanks = box.querySelector('.fb-thanks');
+    box.querySelectorAll('.fb-btn').forEach(function (btn) {
+      btn.addEventListener('click', function () {
+        var helpful = btn.getAttribute('data-helpful') === '1';
+        box.querySelectorAll('.fb-btn').forEach(function (b) { b.disabled = true; });
+        if (thanks) thanks.hidden = false;
+        try {
+          fetch('/api/feedback', {
+            method: 'POST',
+            headers: { 'content-type': 'application/json' },
+            body: JSON.stringify({ slug: slug, helpful: helpful }),
+          });
+        } catch (e) {}
+      });
+    });
+  })();
+</script>
+
+{/* L2 文章对比：勾选同类文章，并排呈现关键字段差异 */}
+<script type="application/json" id="cmp-data" set:html={JSON.stringify(compareData)}></script>
+<script is:inline>
+  (function () {
+    var box = document.getElementById('cmp-result');
+    var pick = document.getElementById('cmp-pick');
+    var go = document.getElementById('cmp-go');
+    var dataEl = document.getElementById('cmp-data');
+    if (!box || !pick || !go || !dataEl) return;
+    var data;
+    try { data = JSON.parse(dataEl.textContent || '[]'); } catch (e) { return; }
+    if (!data.length) return;
+
+    function esc(s) {
+      return String(s == null ? '' : s).replace(/[&<>"]/g, function (c) {
+        return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c];
+      });
+    }
+    function checked() {
+      return Array.prototype.slice
+        .call(pick.querySelectorAll('.cmp-check'))
+        .filter(function (c) { return c.checked; })
+        .map(function (c) { return parseInt(c.getAttribute('data-index'), 10); });
+    }
+    function render(ids) {
+      if (ids.length < 2) {
+        box.hidden = false;
+        box.innerHTML = '<p class="cmp-empty">' + esc(localeMsg()) + '</p>';
+        return;
+      }
+      var rows = [
+        { label: label('一句话结论', 'Summary'), get: function (a) { return a.excerpt || '—'; } },
+        { label: label('分类', 'Category'), get: function (a) { return a.catLabel || '—'; } },
+        { label: label('场景', 'Scenario'), get: function (a) { return a.scenarioLabel || '—'; } },
+        { label: label('标签', 'Tags'), get: function (a) { return (a.tagLabels || []).join('、') || '—'; } },
+        { label: label('步骤数', 'Steps'), get: function (a) { return String(a.steps); } },
+        { label: label('FAQ 数', 'FAQs'), get: function (a) { return String(a.faq); } },
+        { label: label('更新', 'Updated'), get: function (a) { return a.publishedAt || '—'; } },
+      ];
+      var html = '<table class="cmp-table"><thead><tr><th class="rowlabel"></th>';
+      ids.forEach(function (i) {
+        var a = data[i];
+        html += '<th><span class="cmp-name"><a href="' + esc(a.url) + '">' + esc(a.name) + '</a></span>' + (a.isCurrent ? '<em>' + esc(label('（当前）', '(current)')) + '</em>' : '') + '</th>';
+      });
+      html += '</tr></thead><tbody>';
+      rows.forEach(function (r) {
+        html += '<tr><td class="rowlabel">' + esc(r.label) + '</td>';
+        ids.forEach(function (i) { html += '<td>' + esc(r.get(data[i])) + '</td>'; });
+        html += '</tr>';
+      });
+      html += '</tbody></table>';
+      box.hidden = false;
+      box.innerHTML = html;
+    }
+    function label(zh, en) {
+      return document.documentElement.lang === 'en' ? en : zh;
+    }
+    function localeMsg() {
+      return document.documentElement.lang === 'en'
+        ? 'Select at least 2 articles to compare.'
+        : '请至少勾选 2 篇进行对比。';
+    }
+    go.addEventListener('click', function () {
+      var ids = checked();
+      if (ids.length < 2) { render(ids); return; }
+      render(ids.slice(0, 3)); // 最多并排 3 篇
+    });
+  })();
+</script>
+
+{/* L3 资料下载：前端把当前文章抽成 Markdown 速查卡，浏览器内生成文件下载 / 触发打印 */}
+<script type="application/json" id="dl-data" set:html={JSON.stringify(dlData)}></script>
+<script is:inline>
+  (function () {
+    var mdBtn = document.getElementById('dl-md');
+    var prBtn = document.getElementById('dl-print');
+    var dataEl = document.getElementById('dl-data');
+    if (!mdBtn || !dataEl) return;
+    var d;
+    try { d = JSON.parse(dataEl.textContent || 'null'); } catch (e) { d = null; }
+    if (!d) { mdBtn.style.display = 'none'; if (prBtn) prBtn.style.display = 'none'; return; }
+
+    mdBtn.addEventListener('click', function () {
+      var md = '# ' + (d.name || 'Cheat sheet') + '\n\n';
+      if (d.excerpt) md += '> ' + d.excerpt + '\n\n';
+      if (d.category) md += '**' + (document.documentElement.lang === 'en' ? 'Category' : '分类') + '：** ' + d.category + (d.scenario ? ' · **' + (document.documentElement.lang === 'en' ? 'Scenario' : '场景') + '：** ' + d.scenario : '') + '\n';
+      if (d.tags && d.tags.length) md += '**' + (document.documentElement.lang === 'en' ? 'Tags' : '标签') + '：** ' + d.tags.join('、') + '\n\n';
+      if (d.steps && d.steps.length) {
+        md += '## ' + (document.documentElement.lang === 'en' ? 'Steps' : '操作步骤') + '\n\n';
+        d.steps.forEach(function (s, i) { md += (i + 1) + '. **' + (s.title || '') + '** ' + (s.text || '') + '\n'; });
+        md += '\n';
+      }
+      if (d.faq && d.faq.length) {
+        md += '## ' + (document.documentElement.lang === 'en' ? 'FAQ' : '常见问题') + '\n\n';
+        d.faq.forEach(function (f) { md += '**Q: ' + (f.q || '') + '**\n\n' + (f.a || '') + '\n\n'; });
+      }
+      var blob = new Blob([md], { type: 'text/markdown;charset=utf-8' });
+      var a = document.createElement('a');
+      a.href = URL.createObjectURL(blob);
+      a.download = (d.name || 'cheat-sheet') + '.md';
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      setTimeout(function () { URL.revokeObjectURL(a.href); }, 1000);
+    });
+
+    if (prBtn) prBtn.addEventListener('click', function () { window.print(); });
+  })();
+</script>
+<script is:inline define:vars={{ viewSlug: slug }}>
+  (function () {
+    if (!viewSlug) return;
+    try {
+      var KEY = 'tackix_viewed';
+      var arr = [];
+      try { arr = JSON.parse(localStorage.getItem(KEY) || '[]'); } catch (e) { arr = []; }
+      if (!Array.isArray(arr)) arr = [];
+      arr = arr.filter(function (s) { return s !== viewSlug; });
+      arr.unshift(viewSlug);
+      if (arr.length > 20) arr = arr.slice(0, 20);
+      localStorage.setItem(KEY, JSON.stringify(arr));
+    } catch (e) { /* 无痕/禁用存储：忽略 */ }
+  })();
+</script>

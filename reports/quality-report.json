@@ -1,0 +1,163 @@
+{
+  "generatedAt": "2026-10-16T04:12:28.177Z",
+  "thresholdDays": 180,
+  "avgScore": 78,
+  "belowThreshold": 0,
+  "stale": 0,
+  "total": 12,
+  "articles": [
+    {
+      "slug": "choose-bathroom-sealant",
+      "score": 75,
+      "grade": "B",
+      "fresh": 1,
+      "tags": 3,
+      "faq": 1,
+      "steps": 0,
+      "issues": [
+        "FAQ不足(1<3)",
+        "无结构化步骤"
+      ]
+    },
+    {
+      "slug": "crack-repair-sealant",
+      "score": 75,
+      "grade": "B",
+      "fresh": 1,
+      "tags": 4,
+      "faq": 1,
+      "steps": 0,
+      "issues": [
+        "FAQ不足(1<3)",
+        "无结构化步骤"
+      ]
+    },
+    {
+      "slug": "damp-grouting-mould-resistant",
+      "score": 75,
+      "grade": "B",
+      "fresh": 1,
+      "tags": 4,
+      "faq": 1,
+      "steps": 0,
+      "issues": [
+        "FAQ不足(1<3)",
+        "无结构化步骤"
+      ]
+    },
+    {
+      "slug": "elastic-vs-rigid-waterproofing",
+      "score": 75,
+      "grade": "B",
+      "fresh": 1,
+      "tags": 4,
+      "faq": 1,
+      "steps": 0,
+      "issues": [
+        "FAQ不足(1<3)",
+        "无结构化步骤"
+      ]
+    },
+    {
+      "slug": "high-temp-humidity-application",
+      "score": 75,
+      "grade": "B",
+      "fresh": 1,
+      "tags": 4,
+      "faq": 1,
+      "steps": 0,
+      "issues": [
+        "FAQ不足(1<3)",
+        "无结构化步骤"
+      ]
+    },
+    {
+      "slug": "metal-frame-concrete-wall-sealant",
+      "score": 75,
+      "grade": "B",
+      "fresh": 1,
+      "tags": 4,
+      "faq": 1,
+      "steps": 0,
+      "issues": [
+        "FAQ不足(1<3)",
+        "无结构化步骤"
+      ]
+    },
+    {
+      "slug": "mould-resistant-sealant-pitfalls",
+      "score": 75,
+      "grade": "B",
+      "fresh": 1,
+      "tags": 3,
+      "faq": 1,
+      "steps": 0,
+      "issues": [
+        "FAQ不足(1<3)",
+        "无结构化步骤"
+      ]
+    },
+    {
+      "slug": "tile-grout-material-comparison",
+      "score": 75,
+      "grade": "B",
+      "fresh": 1,
+      "tags": 4,
+      "faq": 1,
+      "steps": 0,
+      "issues": [
+        "FAQ不足(1<3)",
+        "无结构化步骤"
+      ]
+    },
+    {
+      "slug": "weatherproof-sealant-aging",
+      "score": 75,
+      "grade": "B",
+      "fresh": 1,
+      "tags": 3,
+      "faq": 1,
+      "steps": 0,
+      "issues": [
+        "FAQ不足(1<3)",
+        "无结构化步骤"
+      ]
+    },
+    {
+      "slug": "fix-mouldy-countertop-joints",
+      "score": 85,
+      "grade": "B",
+      "fresh": 1,
+      "tags": 3,
+      "faq": 1,
+      "steps": 3,
+      "issues": [
+        "FAQ不足(1<3)"
+      ]
+    },
+    {
+      "slug": "hollow-tile-repair",
+      "score": 85,
+      "grade": "B",
+      "fresh": 1,
+      "tags": 4,
+      "faq": 1,
+      "steps": 3,
+      "issues": [
+        "FAQ不足(1<3)"
+      ]
+    },
+    {
+      "slug": "window-frame-leak-repair",
+      "score": 85,
+      "grade": "B",
+      "fresh": 1,
+      "tags": 3,
+      "faq": 1,
+      "steps": 4,
+      "issues": [
+        "FAQ不足(1<3)"
+      ]
+    }
+  ]
+}

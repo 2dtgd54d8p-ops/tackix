@@ -5,6 +5,7 @@ import Base from '../../layouts/Base.astro';
 import { loadSiteData, loadContent, buildFilterOptions } from '../../lib/site-data';
 import { readingMinutes, coverSrc } from '../../lib/markdown';
 import { getLocale, pickB, type Locale, type Bilingual } from '../../lib/i18n';
+import { freshnessInfo } from '../../lib/freshness';
 
 const { locale: localeProp } = Astro.props;
 const locale: Locale = localeProp ?? getLocale(Astro);
@@ -35,7 +36,11 @@ const posts = (
   )
 ).filter((p) => p && p.published !== false);
 
-const withMeta = posts.map((p) => ({ ...p, readMin: readingMinutes(pickB(locale, p.body)) }));
+const withMeta = posts.map((p) => ({
+  ...p,
+  readMin: readingMinutes(pickB(locale, p.body)),
+  fresh: freshnessInfo(p.publishedAt, locale),
+}));
 withMeta.sort((a, b) => String(b.publishedAt ?? '').localeCompare(String(a.publishedAt ?? '')));
 
 const { categories, categoryLabel, tagLabel } = await loadSiteData(locale);
@@ -84,6 +89,19 @@ const catOptions = buildFilterOptions(withMeta, categories);
         {pages.knowledgeSub.split('{n}')[1]}
       </p>
     </div>
+
+    <!-- L6 AI 问答入口：纯前端，后端（Workers AI + Vectorize）缺失时优雅提示 -->
+    <section class="ask-box" aria-label={t('AI 问答', 'AI Q&A')}>
+      <div class="ask-row">
+        <input
+          id="ask-q"
+          class="ask-input"
+          placeholder={t('用自然语言提问，例如：厨卫接缝该用什么胶？', 'Ask in natural language, e.g. what sealant for kitchen joints?')}
+        />
+        <button id="ask-btn" class="ask-btn" type="button">{t('问 AI', 'Ask AI')}</button>
+      </div>
+      <div id="ask-ans" class="ask-ans" hidden></div>
+    </section>
 
     <!-- 场景筛选条：按 4 大场景定位推荐方案（客户端即时筛选，静态站也可用） -->
     {
@@ -150,7 +168,9 @@ const catOptions = buildFilterOptions(withMeta, categories);
                   {(post.tags ?? []).slice(0, 2).map((tg: string) => (
                     <span class="tag tag-plain">{tagLabel(tg)}</span>
                   ))}
-                  {post.publishedAt && <span>{post.publishedAt}</span>}
+                  {post.fresh && (
+                    <span class={`tag tag-fresh level-${post.fresh.level}`}>{post.fresh.label}</span>
+                  )}
                   <span class="read-time">· {post.readMin}{t(' 分钟阅读', ' min read')}</span>
                 </div>
               </div>
@@ -220,6 +240,52 @@ const catOptions = buildFilterOptions(withMeta, categories);
   })();
 </script>
 
+<script is:inline>
+  (function () {
+    var input = document.getElementById('ask-q');
+    var btn = document.getElementById('ask-btn');
+    var ans = document.getElementById('ask-ans');
+    if (!input || !btn || !ans) return;
+    function ask() {
+      var q = input.value.trim();
+      if (!q) return;
+      ans.hidden = false;
+      ans.textContent = '…';
+      btn.disabled = true;
+      fetch('/api/ask', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ question: q }),
+      })
+        .then(function (r) { return r.json(); })
+        .then(function (d) {
+          ans.innerHTML = '';
+          var p = document.createElement('p');
+          p.textContent = d.answer || '（无回答）';
+          ans.appendChild(p);
+          if (d.sources && d.sources.length) {
+            var cap = document.createElement('p');
+            cap.className = 'ask-src';
+            cap.textContent = t_src() + d.sources.join(', ');
+            ans.appendChild(cap);
+          }
+        })
+        .catch(function () {
+          ans.textContent = t_fallback();
+        })
+        .finally(function () { btn.disabled = false; });
+    }
+    function t_src() { return document.documentElement.lang === 'en' ? 'Sources: ' : '参考：'; }
+    function t_fallback() {
+      return document.documentElement.lang === 'en'
+        ? 'AI Q&A requires backend (Workers AI + Vectorize) enabled.'
+        : 'AI 问答需部署后端（Workers AI + Vectorize）后启用。';
+    }
+    btn.addEventListener('click', ask);
+    input.addEventListener('keydown', function (e) { if (e.key === 'Enter') ask(); });
+  })();
+</script>
+
 <style>
   .filter-bar {
     display: flex;
@@ -256,7 +322,46 @@ const catOptions = buildFilterOptions(withMeta, categories);
     color: var(--accent-strong);
     border-color: color-mix(in srgb, var(--accent) 28%, transparent);
   }
+  /* 新鲜度徽章（L4①）：新鲜=绿，较旧=琥珀，未标注=灰 */
+  .tag-fresh { font-variant-numeric: tabular-nums; }
+  .tag-fresh.level-fresh { background: var(--success-bg); color: var(--success); border-color: color-mix(in srgb, var(--success) 30%, transparent); }
+  .tag-fresh.level-stale { background: color-mix(in srgb, #e8a33d 16%, var(--surface)); color: #b9791f; border-color: color-mix(in srgb, #e8a33d 34%, transparent); }
+  .tag-fresh.level-ok { background: var(--surface-2); color: var(--muted); border-color: var(--border); }
   .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 22px; }
   .empty { text-align: center; color: var(--muted); padding: 44px 0; }
   @media (max-width: 700px) { .grid { grid-template-columns: minmax(0, 1fr); gap: 18px; } }
+
+  /* AI 问答入口（L6） */
+  .ask-box {
+    max-width: 720px;
+    margin: 0 auto 28px;
+    padding: 16px 18px;
+    border: 1px solid var(--border);
+    border-radius: var(--r-lg);
+    background: var(--surface-2);
+  }
+  .ask-row { display: flex; gap: 10px; }
+  .ask-input {
+    flex: 1;
+    padding: 10px 14px;
+    border: 1px solid var(--border-strong);
+    border-radius: var(--r-md);
+    background: var(--surface);
+    color: var(--fg);
+    font-family: inherit;
+    font-size: 14px;
+  }
+  .ask-btn {
+    border: 0;
+    background: var(--accent);
+    color: #fff;
+    border-radius: var(--r-md);
+    padding: 0 20px;
+    font-weight: 600;
+    cursor: pointer;
+    font-family: inherit;
+  }
+  .ask-ans { margin-top: 14px; color: var(--muted); font-size: 14px; line-height: 1.7; }
+  .ask-ans p { margin: 0 0 8px; }
+  .ask-src { font-size: 12px; color: var(--faint); }
 </style>

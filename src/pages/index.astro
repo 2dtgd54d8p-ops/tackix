@@ -85,6 +85,21 @@ const { site: siteInfo, categories, categoryLabel, tagLabel, tags } = await load
 const L = await loadContent(locale);
 const home = L.home;
 
+// 首页「猜你喜欢」推荐索引（L1）：构建期产出轻量 JSON，前端按浏览记录实时算推荐。
+// 含本地化后的分类/标签文字，避免前端再查词典；tags/scenario 用于相似度打分。
+const recIndex = withMeta.map((p) => ({
+  slug: p.slug,
+  url: `${lp}/knowledge/${p.slug}`,
+  name: pickB(locale, p.name),
+  excerpt: pickB(locale, p.excerpt),
+  catLabel: categoryLabel(p.category),
+  tagLabels: (p.tags ?? []).slice(0, 2).map((tg: string) => tagLabel(tg)),
+  scenario: (p.scenario as string) || 'none',
+  tags: (p.tags ?? []).map(String),
+  cover: coverSrc(p.cover),
+  readMin: p.readMin,
+}));
+
 // 场景主题色：按 slug 稳定映射，未命中回退调色板轮换（纯色，供 color-mix 使用）
 const SOL_COLORS = ['#7c4df0', '#18a06a', '#f0883e', '#3a7bff', '#e0457b', '#12a0c9'];
 const SCENARIO_COLORS: Record<string, string> = {
@@ -248,6 +263,42 @@ const orgLd = {
     )
   }
 
+  {/* L1 猜你喜欢：服务端先渲染「最新 4 篇」做无 JS/首屏兜底，前端按浏览记录升级为个性化推荐 */}
+  {
+    knowledge.length === 0 ? null : (
+      <section class="block" id="foryou">
+        <div class="section-head">
+          <h2>{t('猜你喜欢', 'Recommended for you')}</h2>
+          <p>{t('基于你读过的文章智能推荐 · 仅保存在本机', 'Personalized from your reading history · stored only on this device')}</p>
+        </div>
+        <div class="grid" id="foryou-grid">
+          {latestKnowledge.slice(0, 4).map((post) => (
+            <article class="card">
+              {coverSrc(post.cover) && (
+                <div class="card-media card-media-sm">
+                  <img src={coverSrc(post.cover)} alt="" loading="lazy" />
+                </div>
+              )}
+              <div class="card-body">
+                <h3 class="card-title">
+                  <a href={`${lp}/knowledge/${post.slug}`}>{pickB(locale, post.name)}</a>
+                </h3>
+                {post.excerpt && <p class="card-excerpt">{pickB(locale, post.excerpt)}</p>}
+                <div class="card-meta">
+                  <span class="tag">{categoryLabel(post.category)}</span>
+                  {(post.tags ?? []).slice(0, 2).map((tag: string) => (
+                    <span class="tag tag-plain">{tagLabel(tag)}</span>
+                  ))}
+                  <span class="read-time">· {post.readMin}{t(' 分钟阅读', ' min read')}</span>
+                </div>
+              </div>
+            </article>
+          ))}
+        </div>
+      </section>
+    )
+  }
+
   {/* 信任带：认证徽章 + 一句话（来自后台「站点信息」trust / certBadges） */}
   {
     (siteInfo.trustTitle || siteInfo.trustSub || (siteInfo.certBadges?.length ?? 0) > 0) && (
@@ -283,7 +334,70 @@ const orgLd = {
       </div>
     </div>
   </section>
-</Base>
+
+  {/* L1 推荐引擎：读取本机浏览记录，按「同场景 +10 / 每共享标签 +2」打分，实时替换网格 */}
+  <script type="application/json" id="rec-index" set:html={JSON.stringify(recIndex)}></script>
+  <script is:inline>
+    (function () {
+      var grid = document.getElementById('foryou-grid');
+      var dataEl = document.getElementById('rec-index');
+      if (!grid || !dataEl) return;
+      var index;
+      try { index = JSON.parse(dataEl.textContent || '[]'); } catch (e) { return; }
+      if (!index.length) return;
+
+      function getViewed() {
+        try { return JSON.parse(localStorage.getItem('tackix_viewed') || '[]'); }
+        catch (e) { return []; }
+      }
+      function esc(s) {
+        return String(s == null ? '' : s).replace(/[&<>"]/g, function (c) {
+          return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c];
+        });
+      }
+      function cardHTML(a) {
+        var html = '<article class="card">';
+        if (a.cover) html += '<div class="card-media card-media-sm"><img src="' + esc(a.cover) + '" alt="" loading="lazy"></div>';
+        html += '<div class="card-body">';
+        html += '<h3 class="card-title"><a href="' + esc(a.url) + '">' + esc(a.name) + '</a></h3>';
+        if (a.excerpt) html += '<p class="card-excerpt">' + esc(a.excerpt) + '</p>';
+        html += '<div class="card-meta">';
+        if (a.catLabel) html += '<span class="tag">' + esc(a.catLabel) + '</span>';
+        (a.tagLabels || []).forEach(function (tg) { html += '<span class="tag tag-plain">' + esc(tg) + '</span>'; });
+        if (a.readMin) html += '<span class="read-time">· ' + esc(a.readMin) + ' min</span>';
+        html += '</div></div></article>';
+        return html;
+      }
+      function recommend(viewed, n) {
+        var vset = new Set(viewed);
+        if (!vset.size) return index.slice(0, n);
+        var viewedArticles = index.filter(function (a) { return vset.has(a.slug); });
+        var scored = index.filter(function (a) { return !vset.has(a.slug); }).map(function (a) {
+          var score = 0;
+          viewedArticles.forEach(function (v) {
+            if (v.scenario && v.scenario !== 'none' && v.scenario === a.scenario) score += 10;
+            (v.tags || []).forEach(function (t) { if ((a.tags || []).indexOf(t) >= 0) score += 2; });
+          });
+          return { a: a, score: score };
+        });
+        scored.sort(function (x, y) { return y.score - x.score; });
+        var top = scored.filter(function (x) { return x.score > 0; }).map(function (x) { return x.a; });
+        if (top.length < n) {
+          var rest = index.filter(function (a) { return !vset.has(a.slug) && top.indexOf(a) < 0; });
+          top = top.concat(rest).slice(0, n);
+        }
+        return top.slice(0, n);
+      }
+
+      try {
+        var viewed = getViewed();
+        if (viewed.length) {
+          var recs = recommend(viewed, 4);
+          if (recs.length) grid.innerHTML = recs.map(cardHTML).join('');
+        }
+      } catch (e) { /* 无痕模式等：保留服务端兜底 */ }
+    })();
+  </script>
 
 <style>
   /* ---------- Hero：大尺度 + 点阵纹理 + 双光晕，营造大气感 ---------- */
@@ -552,3 +666,4 @@ const orgLd = {
     .grid { grid-template-columns: minmax(0, 1fr); gap: 18px; }
   }
 </style>
+</Base>

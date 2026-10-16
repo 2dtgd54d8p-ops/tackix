@@ -32,6 +32,34 @@ const { categoryLabel, tagLabel } = await loadSiteData(locale);
 
 const scenario = item ? { slug, ...item } : null;
 
+// 对比矩阵：解析 recommendedProducts 的 params（"·" 分隔 "[key] value"）为当前语种对齐的行列
+function parseParams(p: any) {
+  if (!p) return [];
+  return String(p)
+    .split('·')
+    .map((s) => s.trim())
+    .filter(Boolean)
+    .map((seg) => {
+      const m = seg.match(/^\[?([^\]\s:：]+)\]?\s*[:：]?\s*(.*)$/);
+      const key = m ? m[1].replace(/^\[|\]$/g, '') : seg;
+      const val = m ? m[2] : '';
+      return { key, val };
+    });
+}
+const recProducts = scenario?.recommendedProducts ?? [];
+const matrix = (() => {
+  if (recProducts.length < 1) return null;
+  const keyOrder: string[] = [];
+  const perProduct = recProducts.map((p: any) => {
+    const rows = parseParams(pickB(locale, p.params));
+    rows.forEach((r: any) => {
+      if (!keyOrder.includes(r.key)) keyOrder.push(r.key);
+    });
+    return { name: pickB(locale, p.name), rows };
+  });
+  return { products: perProduct, keys: keyOrder };
+})();
+
 // 分类页主内容：该场景下的知识库文章（按 scenario 字段过滤到当前场景 slug）。
 let articles: any[] = [];
 if (scenario) {
@@ -111,6 +139,34 @@ const jsonLd: any = scenario
           }
         </header>
 
+        {/* 选型向导：按用户工况高亮对应选型要点 */}
+        {
+          scenario.selectionLogic && scenario.selectionLogic.length > 0 && (
+            <section class="wizard" data-section="wizard" aria-label={t('选型向导', 'Selection wizard')}>
+              <div class="wiz-head">
+                <h2>{t('选型向导：按你的情况看要点', 'Selection wizard: filter by your case')}</h2>
+                <p class="wiz-sub">{t('勾选你的工况，系统高亮最相关的选型要点。', 'Tick your conditions; we highlight the most relevant criteria.')}</p>
+                <div class="wiz-filters" id="wiz-filters">
+                  <button type="button" class="wiz-chip" data-kw="水|浸水|湿">长期浸水</button>
+                  <button type="button" class="wiz-chip" data-kw="霉">需要防霉</button>
+                  <button type="button" class="wiz-chip" data-kw="位移|柔性|沉降">有位移/微动</button>
+                  <button type="button" class="wiz-chip" data-kw="温|热">温差大</button>
+                  <button type="button" class="wiz-chip is-active" data-kw="">全部</button>
+                </div>
+              </div>
+              <ul class="wiz-list" id="wiz-list">
+                {scenario.selectionLogic.map((pt: any) => (
+                  <li class="wiz-item" data-text={`${(pickB(locale, pt.title) || '')} ${(pickB(locale, pt.point) || '')}`}>
+                    <h3>{pickB(locale, pt.title)}</h3>
+                    <p>{pickB(locale, pt.point)}</p>
+                  </li>
+                ))}
+              </ul>
+              {scenario.conclusion && <p class="wiz-bottom">{pickB(locale, scenario.conclusion)}</p>}
+            </section>
+          )
+        }
+
         {
           articles.length === 0 ? (
             <p class="empty">{t('该分类下暂无文章。', 'No articles in this category yet.')}</p>
@@ -143,6 +199,38 @@ const jsonLd: any = scenario
             </div>
           )
         }
+
+        {/* 方案对比矩阵：把 recommendedProducts 渲染为 产品×参数 对比表 */}
+        {
+          matrix && (
+            <section class="matrix" data-section="matrix" aria-label={t('方案对比', 'Solution comparison')}>
+              <h2>{t('方案对比矩阵', 'Solution comparison matrix')}</h2>
+              <div class="matrix-scroll">
+                <table class="cmp">
+                  <thead>
+                    <tr>
+                      <th>{t('参数', 'Parameter')}</th>
+                      {matrix.products.map((p: any) => <th>{p.name}</th>)}
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {matrix.keys.map((k) => (
+                      <tr>
+                        <th>{k}</th>
+                        {matrix.products.map((p: any) => {
+                          const r = p.rows.find((x: any) => x.key === k);
+                          return <td>{r ? r.val : '—'}</td>;
+                        })}
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+              <p class="matrix-note">{t('参数为占位规格，正式资料以 TDS/SDS 为准。', 'Params are placeholders; refer to TDS/SDS for official specs.')}</p>
+            </section>
+          )
+        }
+
       </section>
 
       <div class="post-foot">
@@ -217,4 +305,97 @@ const jsonLd: any = scenario
     max-width: var(--readw);
   }
   @media (max-width: 700px) { .grid { grid-template-columns: minmax(0, 1fr); gap: 18px; } }
+
+  /* 选型向导 */
+  .wizard {
+    margin: 8px auto 44px;
+    max-width: var(--readw, 760px);
+    padding: 24px;
+    border: 1px solid var(--border);
+    border-radius: var(--r-lg);
+    background: var(--surface-2);
+  }
+  .wiz-head h2 { font-size: 20px; margin: 0 0 6px; color: var(--fg); }
+  .wiz-sub { margin: 0 0 16px; color: var(--muted); font-size: 14px; }
+  .wiz-filters { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 18px; }
+  .wiz-chip {
+    border: 1px solid var(--border-strong);
+    background: var(--surface);
+    color: var(--fg-soft);
+    border-radius: var(--r-pill);
+    padding: 6px 14px;
+    font-size: 13px;
+    cursor: pointer;
+    font-family: inherit;
+  }
+  .wiz-chip:hover { border-color: var(--accent); color: var(--accent); }
+  .wiz-chip.is-active { background: var(--accent); border-color: var(--accent); color: var(--on-accent); }
+  .wiz-list { list-style: none; margin: 0; padding: 0; display: grid; gap: 12px; }
+  .wiz-item {
+    padding: 14px 16px;
+    border: 1px solid var(--border);
+    border-radius: var(--r-md);
+    background: var(--surface);
+    transition: opacity var(--dur) var(--ease), border-color var(--dur) var(--ease),
+      box-shadow var(--dur) var(--ease);
+  }
+  .wiz-item h3 { margin: 0 0 4px; font-size: 15px; color: var(--fg); }
+  .wiz-item p { margin: 0; color: var(--muted); font-size: 14px; line-height: 1.6; }
+  .wiz-item.is-dim { opacity: 0.4; }
+  .wiz-item.is-hit {
+    border-color: var(--accent);
+    box-shadow: 0 0 0 2px color-mix(in srgb, var(--accent) 18%, transparent);
+  }
+  .wiz-bottom {
+    margin: 18px 0 0;
+    padding: 14px 16px;
+    border-radius: var(--r-md);
+    background: var(--accent-soft);
+    border: 1px solid color-mix(in srgb, var(--accent) 22%, transparent);
+    color: var(--fg);
+    font-weight: 600;
+  }
+  /* 方案对比矩阵 */
+  .matrix { margin: 8px auto 44px; max-width: var(--readw, 760px); }
+  .matrix h2 { font-size: 20px; margin: 0 0 16px; color: var(--fg); }
+  .matrix-scroll { overflow-x: auto; }
+  table.cmp { width: 100%; border-collapse: collapse; font-size: 14px; min-width: 480px; }
+  table.cmp th, table.cmp td { border: 1px solid var(--border); padding: 10px 12px; text-align: left; vertical-align: top; }
+  table.cmp thead th { background: var(--surface-2); color: var(--fg); }
+  table.cmp tbody th { background: var(--surface-2); color: var(--fg-soft); font-weight: 600; white-space: nowrap; }
+  table.cmp td { color: var(--muted); }
+  .matrix-note { margin: 10px 0 0; font-size: 12px; color: var(--faint); }
+
+  @media (max-width: 700px) {
+    .wizard { padding: 18px; }
+  }
 </style>
+
+<script is:inline>
+  (function () {
+    var filters = document.getElementById('wiz-filters');
+    if (!filters) return;
+    var list = document.getElementById('wiz-list');
+    if (!list) return;
+    var items = Array.prototype.slice.call(list.querySelectorAll('.wiz-item'));
+    function activate(btn) {
+      Array.prototype.slice.call(filters.querySelectorAll('.wiz-chip')).forEach(function (c) {
+        c.classList.remove('is-active');
+      });
+      btn.classList.add('is-active');
+      var kws = (btn.getAttribute('data-kw') || '')
+        .split('|')
+        .map(function (k) { return k.toLowerCase(); })
+        .filter(Boolean);
+      items.forEach(function (it) {
+        var txt = (it.getAttribute('data-text') || '').toLowerCase();
+        var hit = kws.length === 0 || kws.some(function (k) { return txt.indexOf(k) >= 0; });
+        it.classList.toggle('is-dim', !hit);
+        it.classList.toggle('is-hit', kws.length > 0 && hit);
+      });
+    }
+    Array.prototype.slice.call(filters.querySelectorAll('.wiz-chip')).forEach(function (c) {
+      c.addEventListener('click', function () { activate(c); });
+    });
+  })();
+</script>

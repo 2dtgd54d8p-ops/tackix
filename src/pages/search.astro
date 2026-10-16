@@ -15,11 +15,25 @@ const t = (zh: string, en: string) => (locale === 'en' ? en : zh);
     </div>
     <link rel="stylesheet" href="/pagefind/pagefind-ui.css" />
     <div id="search"></div>
+
+    {/* L7 无结果捕获：搜索零结果时引导访客留下需求，后端（KV）缺失则优雅降级 */}
+    <div class="nrc" id="nrc" hidden>
+      <h2>{t('没找到想要的内容？', "Didn't find what you need?")}</h2>
+      <p>{t('告诉我们你想看的胶型 / 场景 / 问题，我们会优先补充。', 'Tell us the adhesive type / scenario / question you were looking for — we will prioritize it.')}</p>
+      <textarea id="nrc-text" rows="3" placeholder={t('例如：户外水池用的耐候密封胶…', 'e.g. weatherproof sealant for outdoor ponds…')}></textarea>
+      <div class="nrc-actions">
+        <button type="button" class="btn btn-primary" id="nrc-send">{t('提交需求', 'Send request')}</button>
+        <span class="nrc-thanks" id="nrc-thanks" hidden>{t('已收到，谢谢！', 'Received, thank you!')}</span>
+      </div>
+    </div>
   </section>
 </Base>
 
 <script is:inline src="/pagefind/pagefind-ui.js"></script>
 <script is:inline>
+  // 本地定义 t()，避免依赖未注入的全局（修复此前 t 未定义的运行时报错）
+  function t(zh, en) { return document.documentElement.lang === 'en' ? en : zh; }
+
   window.addEventListener('DOMContentLoaded', function () {
     if (!window.PagefindUI) return;
     const ui = new window.PagefindUI({
@@ -41,6 +55,38 @@ const t = (zh: string, en: string) => (locale === 'en' ? en : zh);
         else if (tries++ < 50) setTimeout(sync, 100);
       };
       sync();
+    }
+
+    // L7 无结果捕获：PagefindUI 派发事件，results===0 时显示需求提交卡
+    var searchEl = document.getElementById('search');
+    var nrc = document.getElementById('nrc');
+    if (searchEl && nrc) {
+      searchEl.addEventListener('pagefindUI', function (e) {
+        try {
+          if (e.detail && e.detail.event === 'results' && typeof e.detail.results === 'number') {
+            nrc.hidden = e.detail.results !== 0;
+          }
+        } catch (err) {}
+      });
+    }
+    var send = document.getElementById('nrc-send');
+    if (send) {
+      send.addEventListener('click', function () {
+        var txt = (document.getElementById('nrc-text').value || '').trim();
+        if (!txt) return;
+        send.disabled = true;
+        var term = new URLSearchParams(location.search).get('q') || '';
+        try {
+          fetch('/api/feedback', {
+            method: 'POST',
+            headers: { 'content-type': 'application/json' },
+            body: JSON.stringify({ slug: 'search:' + term, helpful: false, note: txt, kind: 'noresult' }),
+          });
+        } catch (err) {}
+        var thanks = document.getElementById('nrc-thanks');
+        if (thanks) thanks.hidden = false;
+        document.getElementById('nrc-text').disabled = true;
+      });
     }
   });
 </script>
@@ -72,4 +118,30 @@ const t = (zh: string, en: string) => (locale === 'en' ? en : zh);
   #search :global(.pagefind-ui__search-clear:hover) {
     color: var(--accent);
   }
+  /* L7 无结果捕获 */
+  .nrc {
+    max-width: 720px;
+    margin: 36px auto 0;
+    padding: 22px 24px;
+    border: 1px solid var(--border);
+    border-radius: var(--r-lg);
+    background: var(--surface-2);
+    text-align: center;
+  }
+  .nrc h2 { font-size: 19px; margin: 0 0 8px; }
+  .nrc p { color: var(--muted); font-size: 14px; line-height: 1.7; margin: 0 0 16px; }
+  .nrc textarea {
+    width: 100%;
+    padding: 12px 14px;
+    border: 1px solid var(--border-strong);
+    border-radius: var(--r-md);
+    background: var(--surface);
+    color: var(--fg);
+    font-family: inherit;
+    font-size: 14px;
+    resize: vertical;
+    box-sizing: border-box;
+  }
+  .nrc-actions { display: flex; gap: 12px; align-items: center; justify-content: center; margin-top: 14px; }
+  .nrc-thanks { color: var(--accent-strong); font-size: 13px; font-weight: 600; }
 </style>
