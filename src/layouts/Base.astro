@@ -1383,5 +1383,22 @@ const showFloatContact =
         .card:hover, .tile:hover { transform: none; }
       }
     </style>
+
+    {/* 全站匿名访问埋点：跳过后台与 Keystatic，sendBeacon 优先，fetch keepalive 兜底 */}
+    <script is:inline>
+      (function () {
+        try {
+          var p = location.pathname;
+          if (p.indexOf('/admin') === 0 || p.indexOf('/keystatic') === 0) return;
+          var ref = document.referrer || '';
+          var url = '/api/visit?path=' + encodeURIComponent(p) + '&ref=' + encodeURIComponent(ref);
+          if (navigator.sendBeacon) {
+            navigator.sendBeacon(url);
+          } else {
+            fetch(url, { method: 'POST', keepalive: true, credentials: 'same-origin' });
+          }
+        } catch (e) {}
+      })();
+    </script>
   </body>
 </html>

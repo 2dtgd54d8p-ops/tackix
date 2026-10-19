@@ -45,6 +45,12 @@ const t = (zh: string, en: string) => (locale === 'en' ? en : zh);
         <h2>🔎 {t('搜索需求缺口（零结果）', 'Search gaps (zero results)')}</h2>
         <div id="rk-gaps"></div>
       </div>
+
+      <div class="rk-section">
+        <h2>📈 {t('流量概览', 'Traffic Overview')}</h2>
+        <div class="rk-cards" id="rk-traffic-cards"></div>
+        <div id="rk-traffic"></div>
+      </div>
     </div>
   </section>
 </Base>
@@ -117,6 +123,71 @@ const t = (zh: string, en: string) => (locale === 'en' ? en : zh);
     return rows;
   }
 
+  function distRow(label, value, max) {
+    var pct = max > 0 ? Math.round((value / max) * 100) : 0;
+    return '<div class="dist-row"><span class="dist-label">' + esc(label) + '</span>' +
+      '<span class="dist-bar"><span class="dist-fill" style="width:' + pct + '%"></span></span>' +
+      '<span class="dist-val">' + value + '</span></div>';
+  }
+
+  function renderTraffic(tr) {
+    if (!tr) {
+      document.getElementById('rk-traffic-cards').innerHTML =
+        '<p class="rk-empty">' + esc(t('流量数据库未配置（缺少 D1 DB 绑定），暂无法统计访问量。', 'Traffic database not configured (D1 DB binding missing), visit stats unavailable.')) + '</p>';
+      document.getElementById('rk-traffic').innerHTML = '';
+      return;
+    }
+    document.getElementById('rk-traffic-cards').innerHTML =
+      card(t('累计访问量 PV', 'Total PV'), tr.totalPv) +
+      card(t('累计访客 UV', 'Total UV'), tr.totalUv) +
+      card(t('今日 PV', "Today's PV"), tr.todayPv) +
+      card(t('今日 UV', "Today's UV"), tr.todayUv);
+
+    var trend = tr.trend || [];
+    var maxPv = 0;
+    trend.forEach(function (d) { if (d.c > maxPv) maxPv = d.c; });
+    var trendHtml = trend.map(function (d) {
+      var pct = maxPv > 0 ? Math.round((d.c / maxPv) * 100) : 0;
+      return '<div class="trend-col" title="' + esc(d.day) + ' · PV ' + d.c + ' · UV ' + d.u + '">' +
+        '<span class="trend-bar" style="height:' + pct + '%"></span>' +
+        '<span class="trend-day">' + esc(d.day.slice(5)) + '</span></div>';
+    }).join('');
+
+    var devMax = 0; (tr.devDist || []).forEach(function (d) { if (d.c > devMax) devMax = d.c; });
+    var devHtml = (tr.devDist || []).map(function (d) { return distRow(d.dev, d.c, devMax); }).join('') ||
+      '<p class="rk-empty">' + esc(t('暂无数据', 'No data')) + '</p>';
+    var brMax = 0; (tr.brDist || []).forEach(function (d) { if (d.c > brMax) brMax = d.c; });
+    var brHtml = (tr.brDist || []).map(function (d) { return distRow(d.br, d.c, brMax); }).join('') ||
+      '<p class="rk-empty">' + esc(t('暂无数据', 'No data')) + '</p>';
+
+    var topPagesHtml = table(
+      [t('页面', 'Page'), t('PV', 'PV'), t('UV', 'UV')],
+      (tr.topPages || []).map(function (p) {
+        return '<tr><td class="rk-path">' + esc(p.path) + '</td><td>' + p.c + '</td><td>' + p.u + '</td></tr>';
+      }).join(''),
+      t('暂无访问记录', 'No visits recorded yet.')
+    );
+    var topRefHtml = table(
+      [t('来源', 'Referrer'), t('次数', 'Count')],
+      (tr.topRef || []).map(function (r) {
+        return '<tr><td class="rk-path">' + esc(r.ref) + '</td><td>' + r.c + '</td></tr>';
+      }).join(''),
+      t('暂无来源记录', 'No referrers recorded yet.')
+    );
+
+    document.getElementById('rk-traffic').innerHTML =
+      '<div class="rk-sub"><h3>' + esc(t('近 30 天访问趋势（PV）', 'Last 30 days trend (PV)')) + '</h3>' +
+        '<div class="trend-chart">' + trendHtml + '</div></div>' +
+      '<div class="rk-grid2">' +
+        '<div><h3>' + esc(t('热门页面 Top 10', 'Top 10 pages')) + '</h3>' + topPagesHtml + '</div>' +
+        '<div><h3>' + esc(t('主要来源 Top 10', 'Top 10 referrers')) + '</h3>' + topRefHtml + '</div>' +
+      '</div>' +
+      '<div class="rk-grid2">' +
+        '<div><h3>' + esc(t('设备分布', 'Device distribution')) + '</h3>' + devHtml + '</div>' +
+        '<div><h3>' + esc(t('浏览器分布', 'Browser distribution')) + '</h3>' + brHtml + '</div>' +
+      '</div>';
+  }
+
   function render(data) {
     reportEl.hidden = false;
     var totals = data.totals || {};
@@ -138,6 +209,7 @@ const t = (zh: string, en: string) => (locale === 'en' ? en : zh);
     );
 
     document.getElementById('rk-gaps').innerHTML = renderGaps(data.gaps);
+    renderTraffic(data.traffic);
   }
 
   function load() {
@@ -276,8 +348,77 @@ const t = (zh: string, en: string) => (locale === 'en' ? en : zh);
   .gap-count { color: var(--muted); font-weight: 500; font-size: 13px; margin-left: 6px; }
   .gap-notes { margin: 8px 0 0; padding-left: 18px; color: var(--muted); font-size: 13px; line-height: 1.7; }
 
+  /* 流量概览 */
+  .rk-sub { margin-bottom: 16px; }
+  .rk-sub h3, .rk-grid2 h3 { font-size: 15px; margin: 0 0 10px; color: var(--fg); font-weight: 600; }
+  .rk-grid2 {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 26px;
+    margin-bottom: 28px;
+  }
+  .rk-path { word-break: break-all; font-size: 13px; }
+
+  .trend-chart {
+    display: flex;
+    align-items: flex-end;
+    gap: 3px;
+    height: 140px;
+    padding: 10px 4px 0;
+    border-bottom: 1px solid var(--border);
+    overflow-x: auto;
+  }
+  .trend-col {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: flex-end;
+    flex: 1 1 0;
+    min-width: 14px;
+    height: 100%;
+  }
+  .trend-bar {
+    width: 70%;
+    min-height: 2px;
+    background: linear-gradient(180deg, var(--accent), var(--accent-strong));
+    border-radius: 3px 3px 0 0;
+    transition: height 0.3s ease;
+  }
+  .trend-day {
+    font-size: 9px;
+    color: var(--muted);
+    margin-top: 4px;
+    white-space: nowrap;
+    transform: rotate(-45deg);
+    transform-origin: top center;
+  }
+
+  .dist-row {
+    display: grid;
+    grid-template-columns: 88px 1fr 56px;
+    align-items: center;
+    gap: 10px;
+    padding: 5px 0;
+    font-size: 13px;
+  }
+  .dist-label { color: var(--muted); text-transform: capitalize; }
+  .dist-bar {
+    height: 9px;
+    background: var(--surface-2);
+    border-radius: var(--r-pill);
+    overflow: hidden;
+  }
+  .dist-fill {
+    display: block;
+    height: 100%;
+    background: var(--accent);
+    border-radius: var(--r-pill);
+  }
+  .dist-val { text-align: right; color: var(--fg); font-variant-numeric: tabular-nums; }
+
   @media (max-width: 640px) {
     .token-bar { flex-direction: column; }
     .token-bar .btn { width: 100%; }
+    .rk-grid2 { grid-template-columns: 1fr; gap: 22px; }
   }
 </style>

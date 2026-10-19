@@ -11,6 +11,7 @@
 export const prerender = false;
 
 import type { APIRoute } from 'astro';
+import { getTraffic } from '../../lib/traffic';
 
 interface ReportEnv {
   FEEDBACK_KV?: {
@@ -102,6 +103,14 @@ export const GET: APIRoute = async ({ request, locals, url }) => {
     // 需求缺口：按被搜索无结果次数降序
     gaps.sort((a, b) => b.count - a.count);
 
+    // 流量维度（D1 visits 表）；缺少 DB 绑定时优雅降级为 null
+    let traffic: import('../../lib/traffic').TrafficSummary | null = null;
+    try {
+      traffic = await getTraffic(env);
+    } catch {
+      traffic = null;
+    }
+
     return json({
       ok: true,
       generatedAt: new Date().toISOString(),
@@ -113,6 +122,7 @@ export const GET: APIRoute = async ({ request, locals, url }) => {
       hot,
       cold,
       gaps,
+      traffic,
     });
   } catch (e) {
     return json({ ok: false, reason: 'error' });
