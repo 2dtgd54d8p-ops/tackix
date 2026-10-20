@@ -543,7 +543,6 @@ export default config({
             pageSub: bi('页面副标题', { multiline: true }),
             contactInfoTitle: bi('联系信息标题'),
             formSectionTitle: bi('表单区标题', { description: '例如：“给我们留言”' }),
-            formTitle: bi('表单标题'),
             formName: bi('姓名字段标签'),
             formEmail: bi('邮箱字段标签'),
             formMsg: bi('留言字段标签'),
@@ -604,8 +603,6 @@ export default config({
       schema: {
         content: fields.object(
           {
-            pageTitle: bi('页面标题'),
-            pageSub: bi('页面副标题', { multiline: true }),
             storyTitle: bi('品牌故事标题'),
             storyBody: bi('品牌故事正文', { multiline: true }),
             missionTitle: bi('使命标题'),

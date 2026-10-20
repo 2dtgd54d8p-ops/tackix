@@ -2,8 +2,10 @@
 import { createReader } from '@keystatic/core/reader';
 import keystaticConfig from '../../../keystatic.config';
 import Base from '../../layouts/Base.astro';
-import { loadSiteData } from '../../lib/site-data';
-import { readingMinutes, coverSrc } from '../../lib/markdown';
+import { loadSiteData, loadContent } from '../../lib/site-data';
+import { readingMinutes, coverSrc, renderMarkdown } from '../../lib/markdown';
+import { inLanguage } from '../../lib/schema';
+import { normalizeSections } from '../../lib/custom-sections';
 import CtxSuggest from '../CtxSuggest.astro';
 import { pickB, type Locale } from '../../lib/i18n';
 
@@ -14,7 +16,10 @@ interface Props {
 const { locale, slug } = Astro.props;
 const lp = locale === 'en' ? '/en' : '';
 const t = (zh: string, en: string) => (locale === 'en' ? en : zh);
-const detail_bottomline_label = t('一句话结论', 'Bottom line');
+// 详情页区块标题统一收归「详情页区块」单例（后台可编辑，留空回退默认）
+const content = await loadContent(locale);
+const detail = content.detail;
+const detail_bottomline_label = detail.scenarioConclusionTitle;
 
 const reader = createReader(process.cwd(), keystaticConfig);
 let item: any = null;
@@ -86,6 +91,21 @@ articles.sort((a: any, b: any) =>
   String(b.publishedAt ?? '').localeCompare(String(a.publishedAt ?? ''))
 );
 
+// 场景级 FAQ：驱动 FAQPage 结构化数据（利于搜索 / AI 抽取答案卡）
+const faqItems = scenario
+  ? (scenario.faq ?? [])
+      .filter((f: any) => f?.question && f?.answer)
+      .map((f: any) => ({
+        '@type': 'Question',
+        name: pickB(locale, f.question),
+        acceptedAnswer: { '@type': 'Answer', text: pickB(locale, f.answer) },
+      }))
+  : [];
+// 自定义内容区块：后台自由组合（标题 / 段落 / 图片 / 提示框 / 引用）
+const customSections = normalizeSections(scenario?.customSections);
+// 正文（可选）：场景补充说明
+const bodyHtml = scenario ? await renderMarkdown(pickB(locale, scenario.body)) : '';
+
 // 分类页结构化数据：CollectionPage + ItemList（逐篇文章为 Article 条目）
 const jsonLd: any = scenario
   ? {
@@ -95,6 +115,13 @@ const jsonLd: any = scenario
       description: pickB(locale, scenario.excerpt) || '',
       url: (Astro.site ?? Astro.url).href,
       inLanguage: locale === 'en' ? 'en' : 'zh-CN',
+      ...(faqItems.length > 0 && {
+        mainEntity: {
+          '@type': 'FAQPage',
+          mainEntity: faqItems,
+          inLanguage: locale === 'en' ? 'en' : 'zh-CN',
+        },
+      }),
       hasPart: articles.map((a) => ({
         '@type': 'Article',
         '@id': new URL(`${lp}/knowledge/${a.slug}`, Astro.site ?? Astro.url).href,
@@ -139,12 +166,55 @@ const jsonLd: any = scenario
           }
         </header>
 
+        {/* 封面图（可选） + 正文（可选） + 自定义内容区块（可选） */}
+        {
+          coverSrc(scenario.cover) && (
+            <img class="cover" src={coverSrc(scenario.cover)} alt="" />
+          )
+        }
+        {
+          bodyHtml && <div class="scn-body" data-section="body" set:html={bodyHtml} />
+        }
+        {
+          customSections.length > 0 && (
+            <section class="custom-sections" aria-label={t('自定义内容', 'Custom content')}>
+              {customSections.map((s: any) => {
+                if (s.type === 'heading') return <h2 class="csec csec-heading">{s.heading}</h2>;
+                if (s.type === 'paragraph')
+                  return <p class="csec csec-text" style="white-space:pre-line">{s.text}</p>;
+                if (s.type === 'image')
+                  return (
+                    <figure class="csec csec-image">
+                      {s.image && <img src={s.image} alt={s.imageCaption || ''} loading="lazy" />}
+                      {s.imageCaption && <figcaption>{s.imageCaption}</figcaption>}
+                    </figure>
+                  );
+                if (s.type === 'callout')
+                  return (
+                    <div class={`csec csec-callout tone-${s.calloutTone}`}>
+                      {s.heading && <strong class="csec-callout-title">{s.heading}</strong>}
+                      {s.text && <p>{s.text}</p>}
+                    </div>
+                  );
+                if (s.type === 'quote')
+                  return (
+                    <blockquote class="csec csec-quote">
+                      {s.text}
+                      {s.heading && <cite>— {s.heading}</cite>}
+                    </blockquote>
+                  );
+                return null;
+              })}
+            </section>
+          )
+        }
+
         {/* 选型向导：按用户工况高亮对应选型要点 */}
         {
           scenario.selectionLogic && scenario.selectionLogic.length > 0 && (
             <section class="wizard" data-section="wizard" aria-label={t('选型向导', 'Selection wizard')}>
               <div class="wiz-head">
-                <h2>{t('选型向导：按你的情况看要点', 'Selection wizard: filter by your case')}</h2>
+                <h2>{detail.scenarioSelectionTitle}</h2>
                 <p class="wiz-sub">{t('勾选你的工况，系统高亮最相关的选型要点。', 'Tick your conditions; we highlight the most relevant criteria.')}</p>
                 <div class="wiz-filters" id="wiz-filters">
                   <button type="button" class="wiz-chip" data-kw="水|浸水|湿">长期浸水</button>
@@ -167,8 +237,10 @@ const jsonLd: any = scenario
           )
         }
 
-        {
-          articles.length === 0 ? (
+        <section class="scn-articles" data-section="articles" aria-label={detail.scenarioArticlesTitle}>
+          <h2>{detail.scenarioArticlesTitle}</h2>
+          {
+            articles.length === 0 ? (
             <p class="empty">{t('该分类下暂无文章。', 'No articles in this category yet.')}</p>
           ) : (
             <div class="grid">
@@ -198,13 +270,14 @@ const jsonLd: any = scenario
               ))}
             </div>
           )
-        }
+          }
+        </section>
 
         {/* 方案对比矩阵：把 recommendedProducts 渲染为 产品×参数 对比表 */}
         {
           matrix && (
             <section class="matrix" data-section="matrix" aria-label={t('方案对比', 'Solution comparison')}>
-              <h2>{t('方案对比矩阵', 'Solution comparison matrix')}</h2>
+              <h2>{detail.scenarioProductsTitle}</h2>
               <div class="matrix-scroll">
                 <table class="cmp">
                   <thead>
@@ -227,6 +300,31 @@ const jsonLd: any = scenario
                 </table>
               </div>
               <p class="matrix-note">{t('参数为占位规格，正式资料以 TDS/SDS 为准。', 'Params are placeholders; refer to TDS/SDS for official specs.')}</p>
+            </section>
+          )
+        }
+
+        {/* 常见问题：场景级 FAQ（已含 FAQPage 结构化数据） */}
+        {
+          faqItems.length > 0 && (
+            <section class="faq" data-section="faq" aria-label={detail.articleFaqTitle}>
+              <h2>{detail.articleFaqTitle}</h2>
+              {faqItems.map((f: any) => (
+                <details class="faq-item">
+                  <summary>{f.name}</summary>
+                  <p>{f.acceptedAnswer.text}</p>
+                </details>
+              ))}
+            </section>
+          )
+        }
+
+        {/* 询盘 CTA：按钮文案来自场景「询盘按钮文案」字段，后台可编辑 */}
+        {
+          scenario.inquiryCta && pickB(locale, scenario.inquiryCta) && (
+            <section class="inquiry" data-section="inquiry" aria-label={detail.scenarioInquiryTitle}>
+              <h2>{detail.scenarioInquiryTitle}</h2>
+              <a class="btn btn-primary" href={`${lp}/contact`}>{pickB(locale, scenario.inquiryCta)}</a>
             </section>
           )
         }
@@ -365,6 +463,83 @@ const jsonLd: any = scenario
   table.cmp tbody th { background: var(--surface-2); color: var(--fg-soft); font-weight: 600; white-space: nowrap; }
   table.cmp td { color: var(--muted); }
   .matrix-note { margin: 10px 0 0; font-size: 12px; color: var(--faint); }
+
+  /* 场景相关文章 */
+  .scn-articles { margin: 8px auto 44px; max-width: var(--readw, 760px); }
+  .scn-articles h2 { font-size: 20px; margin: 0 0 16px; color: var(--fg); }
+  /* 询盘 CTA */
+  .inquiry {
+    margin: 8px auto 44px;
+    max-width: var(--readw, 760px);
+    padding: 28px 24px;
+    text-align: center;
+    border: 1px solid color-mix(in srgb, var(--accent) 22%, transparent);
+    border-radius: var(--r-lg);
+    background: var(--accent-soft);
+  }
+  .inquiry h2 { font-size: 20px; margin: 0 0 8px; color: var(--fg); }
+  .inquiry .btn { display: inline-block; }
+
+  /* 封面图 */
+  .cover {
+    width: 100%;
+    max-height: 420px;
+    object-fit: cover;
+    border-radius: var(--r-lg);
+    margin: 8px auto 28px;
+    box-shadow: var(--shadow-sm);
+  }
+  /* 正文段落 */
+  .scn-body { margin: 0 auto 8px; max-width: var(--readw, 760px); color: var(--muted); line-height: 1.8; }
+  /* 常见问题 */
+  .faq { margin: 8px auto 44px; max-width: var(--readw, 760px); }
+  .faq-item {
+    border: 1px solid var(--border);
+    border-radius: var(--r-md);
+    padding: 4px 18px;
+    margin-bottom: 10px;
+    background: var(--surface);
+  }
+  .faq-item summary {
+    cursor: pointer;
+    font-weight: 600;
+    color: var(--fg);
+    padding: 12px 0;
+    list-style: none;
+  }
+  .faq-item summary::-webkit-details-marker { display: none; }
+  .faq-item summary::after { content: '+'; float: right; color: var(--accent); font-weight: 700; }
+  .faq-item[open] summary::after { content: '−'; }
+  .faq-item p { margin: 0 0 14px; color: var(--muted); }
+  /* 自定义内容区块（标题 / 段落 / 图片 / 提示框 / 引用） */
+  .custom-sections { margin: 8px auto 44px; max-width: var(--readw, 760px); display: grid; gap: 22px; }
+  .csec-heading { font-size: 22px; line-height: 1.4; margin: 0; color: var(--fg); }
+  .csec-text { margin: 0; color: var(--fg-soft); line-height: 1.8; }
+  .csec-image { margin: 0; }
+  .csec-image img { width: 100%; border-radius: var(--r-md); display: block; box-shadow: var(--shadow-sm); }
+  .csec-image figcaption { margin-top: 8px; font-size: 13px; color: var(--faint); text-align: center; }
+  .csec-callout {
+    border: 1px solid var(--border-strong);
+    border-left-width: 4px;
+    border-radius: var(--r-md);
+    padding: 14px 18px;
+    background: var(--surface-2);
+  }
+  .csec-callout-title { display: block; margin-bottom: 4px; color: var(--fg); }
+  .csec-callout p { margin: 0; color: var(--muted); line-height: 1.7; }
+  .csec-callout.tone-info { border-left-color: var(--accent); }
+  .csec-callout.tone-warn { border-left-color: var(--warn-accent, #e08a2b); }
+  .csec-callout.tone-danger { border-left-color: var(--danger); }
+  .csec-quote {
+    margin: 0;
+    padding: 10px 20px;
+    border-left: 3px solid var(--accent);
+    background: var(--surface-2);
+    border-radius: 0 var(--r-sm) var(--r-sm) 0;
+    color: var(--muted);
+    font-style: italic;
+  }
+  .csec-quote cite { display: block; margin-top: 6px; font-size: 13px; color: var(--faint); font-style: normal; }
 
   @media (max-width: 700px) {
     .wizard { padding: 18px; }

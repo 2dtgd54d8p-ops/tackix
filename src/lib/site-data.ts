@@ -246,7 +246,6 @@ const CONTACT_DEFAULT: Record<string, Bilingual> = {
   },
   contactInfoTitle: { zh: '联系方式', en: 'Contact Information' },
   formSectionTitle: { zh: '在线留言', en: 'Send us a message' },
-  formTitle: { zh: '发送消息', en: 'Send us a message' },
   formName: { zh: '您的姓名', en: 'Your name' },
   formEmail: { zh: '商务邮箱', en: 'Business email' },
   formMsg: { zh: '您的应用场景', en: 'Your application' },
@@ -299,11 +298,6 @@ const DETAIL_DEFAULT: Record<string, Bilingual> = {
 
 // 关于页
 const ABOUT_DEFAULT: Record<string, Bilingual> = {
-  pageTitle: { zh: '关于 Tackix', en: 'About Tackix' },
-  pageSub: {
-    zh: '我们帮助海外承包商、安装商与 DIY 用户为手上的活儿选对胶粘剂或密封剂。',
-    en: 'We help overseas contractors, installers and DIY users pick the right adhesive or sealant for the job.',
-  },
   storyTitle: { zh: '我们的故事', en: 'Our story' },
   storyBody: {
     zh: 'Tackix 始于一个朴素的困扰：选对胶粘剂很难，而大多数技术资料默认你早已知道答案。于是我们搭建了一个以场景为先的知识库，让选对产品只需要问清几个关键问题。',
@@ -316,6 +310,16 @@ const ABOUT_DEFAULT: Record<string, Bilingual> = {
   },
   factoryCaption: { zh: '我们的生产车间', en: 'Our production facility' },
 };
+
+/**
+ * 取双语展示文案：优先后台值；后台为空对象 / 空串时回落默认值。
+ * Keystatic 的 reader 对「后台从未填写的对象字段」返回 {}（而非 undefined），
+ * 而 `??` 只拦截 null/undefined，故需再用 pickB 的结果是否为空做一次回落，
+ * 否则后台留空的字段会在前台渲染成空白。
+ */
+function pickContent(locale: Locale, backend: Bilingual | undefined | null, def: Bilingual): string {
+  return pickB(locale, backend) || pickB(locale, def);
+}
 
 /**
  * 读取全站静态文案单例（home/ui/contact/pages/detail/about），与默认值合并。
@@ -335,7 +339,7 @@ export async function loadContent(locale: Locale = DEFAULT_LOCALE) {
 
   const h = home?.content ?? home ?? {};
   const homeOut = Object.fromEntries(
-    Object.keys(HOME_DEFAULT).map((k) => [k, pickB(locale, (h[k] as Bilingual) ?? HOME_DEFAULT[k])])
+    Object.keys(HOME_DEFAULT).map((k) => [k, pickContent(locale, h[k] as Bilingual, HOME_DEFAULT[k])])
   );
 
   const navOut = (ui?.navItems?.length ? ui.navItems : UI_NAV_DEFAULT).map((n: any, i: number) => ({
@@ -383,7 +387,7 @@ export async function loadContent(locale: Locale = DEFAULT_LOCALE) {
 
   const c = contact?.content ?? contact ?? {};
   const contactOut = Object.fromEntries(
-    Object.keys(CONTACT_DEFAULT).map((k) => [k, pickB(locale, (c[k] as Bilingual) ?? CONTACT_DEFAULT[k])])
+    Object.keys(CONTACT_DEFAULT).map((k) => [k, pickContent(locale, c[k] as Bilingual, CONTACT_DEFAULT[k])])
   ) as Record<string, string>;
   contactOut.tipsItems = (contact?.tipsItems?.length ? contact.tipsItems : CONTACT_TIPS_DEFAULT).map(
     (t: any, i: number) => {
@@ -394,18 +398,18 @@ export async function loadContent(locale: Locale = DEFAULT_LOCALE) {
 
   const pg = pages?.content ?? pages ?? {};
   const pagesOut = Object.fromEntries(
-    Object.keys(PAGES_DEFAULT).map((k) => [k, pickB(locale, (pg[k] as Bilingual) ?? PAGES_DEFAULT[k])])
+    Object.keys(PAGES_DEFAULT).map((k) => [k, pickContent(locale, pg[k] as Bilingual, PAGES_DEFAULT[k])])
   ) as Record<string, string>;
 
   const dt = detail?.content ?? detail ?? {};
   const detailOut = Object.fromEntries(
-    Object.keys(DETAIL_DEFAULT).map((k) => [k, pickB(locale, (dt[k] as Bilingual) ?? DETAIL_DEFAULT[k])])
+    Object.keys(DETAIL_DEFAULT).map((k) => [k, pickContent(locale, dt[k] as Bilingual, DETAIL_DEFAULT[k])])
   ) as Record<string, string>;
 
   const a = about?.content ?? about ?? {};
   const aboutOut = {
     ...Object.fromEntries(
-      Object.keys(ABOUT_DEFAULT).map((k) => [k, pickB(locale, (a[k] as Bilingual) ?? ABOUT_DEFAULT[k])])
+      Object.keys(ABOUT_DEFAULT).map((k) => [k, pickContent(locale, a[k] as Bilingual, ABOUT_DEFAULT[k])])
     ),
     factoryImage: about?.factoryImage ?? '',
   } as Record<string, string> & { factoryImage: string };
