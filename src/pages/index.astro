@@ -429,38 +429,42 @@ const orgLd = {
   </script>
 
 <style>
-  /* ---------- Hero：大尺度 + 点阵纹理 + 双光晕，营造大气感 ---------- */
+  /* ---------- Hero：满屏实景大图 + 左锚定编辑式排版，营造大气感 ---------- */
   .hero {
     position: relative;
     overflow: hidden;
-    background: var(--hero-grad);
+    background-color: #18122e;
+    background-image: url('/uploads/hero-technician.png');
+    background-size: cover;
+    background-position: 70% center;     /* 主体（技师）落在右侧，左侧留白放文字 */
     color: #fff;
-    text-align: center;
-    margin-top: -44px;                 /* 顶到 header 下沿 */
-    margin-left: calc(50% - 50vw);     /* 满屏出血 */
+    text-align: left;
+    margin-top: -44px;                    /* 顶到 header 下沿 */
+    margin-left: calc(50% - 50vw);        /* 满屏出血 */
     margin-right: calc(50% - 50vw);
-    padding: 128px 24px 132px;
+    padding: 140px 24px 144px;
   }
-  /* 点阵纹理：增加背景层次与质感 */
+  /* 左侧深色蒙版：保证文字可读，同时保留右侧实景 */
   .hero::before {
     content: "";
     position: absolute;
     inset: 0;
-    background-image: radial-gradient(rgba(255, 255, 255, 0.1) 1px, transparent 1px);
-    background-size: 26px 26px;
-    -webkit-mask-image: radial-gradient(ellipse 80% 70% at 50% 32%, #000 38%, transparent 100%);
-    mask-image: radial-gradient(ellipse 80% 70% at 50% 32%, #000 38%, transparent 100%);
+    background:
+      linear-gradient(100deg, rgba(16,10,34,0.94) 0%, rgba(16,10,34,0.82) 34%, rgba(16,10,34,0.42) 64%, rgba(16,10,34,0.22) 100%),
+      radial-gradient(130% 120% at 82% 18%, transparent 42%, rgba(8,5,18,0.55) 100%);
     pointer-events: none;
+    z-index: 0;
   }
+  /* 左上品牌光晕，增加纵深 */
   .hero-glow {
     position: absolute;
-    left: 50%;
-    top: -230px;
-    width: 900px;
-    height: 900px;
-    transform: translateX(-50%);
-    background: radial-gradient(circle, rgba(255, 255, 255, 0.2), transparent 62%);
+    left: -120px;
+    top: -260px;
+    width: 760px;
+    height: 760px;
+    background: radial-gradient(circle, rgba(124, 77, 240, 0.42), transparent 62%);
     pointer-events: none;
+    z-index: 0;
   }
   /* 右下角辅助光晕，丰富纵深 */
   .hero::after {
@@ -470,10 +474,11 @@ const orgLd = {
     bottom: -260px;
     width: 620px;
     height: 620px;
-    background: radial-gradient(circle, rgba(255, 255, 255, 0.14), transparent 62%);
+    background: radial-gradient(circle, rgba(255, 255, 255, 0.12), transparent 62%);
     pointer-events: none;
+    z-index: 0;
   }
-  .hero-inner { position: relative; max-width: 900px; margin: 0 auto; }
+  .hero-inner { position: relative; z-index: 1; max-width: 880px; margin: 0; }
   .hero-eyebrow {
     display: inline-block;
     margin-bottom: 22px;
@@ -486,37 +491,38 @@ const orgLd = {
   }
   .hero-title {
     margin: 0 0 22px;
+    max-width: 16ch;
     font-family: var(--font-display);
-    font-size: clamp(2.6rem, 5.5vw, 4.4rem);
+    font-size: clamp(2.8rem, 6vw, 5rem);
     font-weight: 800;
-    line-height: 1.12;
+    line-height: 1.08;
     letter-spacing: -0.03em;
     color: #fff;
-    text-shadow: 0 2px 30px rgba(0, 0, 0, 0.22);
+    text-shadow: 0 2px 30px rgba(0, 0, 0, 0.35);
   }
   .hero-sub {
-    margin: 0 auto 36px;
-    max-width: 640px;
-    font-size: 18px;
+    margin: 0 0 36px;
+    max-width: 600px;
+    font-size: 19px;
     line-height: 1.85;
-    color: rgba(255, 255, 255, 0.86);
+    color: rgba(255, 255, 255, 0.88);
   }
-  .hero-actions { display: flex; gap: 16px; flex-wrap: wrap; justify-content: center; }
-  .hero .btn { padding: 14px 32px; font-size: 15.5px; font-weight: 600; }
+  .hero-actions { display: flex; gap: 16px; flex-wrap: wrap; justify-content: flex-start; }
+  .hero .btn { padding: 15px 34px; font-size: 15.5px; font-weight: 600; }
   /* 数据条：以权威数字增强大气与信任感 */
   .hero-stats {
     display: flex;
-    gap: 36px;
+    gap: 40px;
     flex-wrap: wrap;
-    justify-content: center;
-    margin-top: 56px;
+    justify-content: flex-start;
+    margin-top: 60px;
     padding-top: 34px;
     border-top: 1px solid rgba(255, 255, 255, 0.18);
   }
-  .hero-stats .stat { display: flex; flex-direction: column; align-items: center; gap: 4px; }
+  .hero-stats .stat { display: flex; flex-direction: column; align-items: flex-start; gap: 4px; }
   .hero-stats strong {
     font-family: var(--font-display);
-    font-size: 34px;
+    font-size: 36px;
     font-weight: 800;
     line-height: 1;
     letter-spacing: -0.02em;
@@ -734,8 +740,9 @@ const orgLd = {
   .sub-msg.sub-err { color: #ffd7d7; }
 
   @media (max-width: 700px) {
-    .hero { margin-top: -24px; padding: 84px 18px 88px; }
-    .hero-title { font-size: 32px; }
+    .hero { margin-top: -24px; padding: 104px 18px 108px; background-position: center; }
+    .hero::before { background: linear-gradient(180deg, rgba(16,10,34,0.86) 0%, rgba(16,10,34,0.72) 55%, rgba(16,10,34,0.92) 100%); }
+    .hero-title { font-size: 34px; max-width: none; }
     .hero-sub { font-size: 16px; }
     .hero-stats { gap: 22px; margin-top: 40px; padding-top: 26px; }
     .hero-stats strong { font-size: 26px; }

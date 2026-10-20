@@ -201,23 +201,25 @@ const dlData = post
       {howTo && <script type="application/ld+json" set:html={JSON.stringify(howTo)} />}
       <article class="prose">
         <header class="article-head">
-          <nav class="crumbs" aria-label="Breadcrumb">
-            <a href={`${lp}/knowledge`}>{t('知识库', 'Knowledge')}</a>
-            <span aria-hidden="true">›</span>
-            <span>{categoryLabel(post.category)}</span>
-          </nav>
-          <h1>{pickB(locale, post.name)}</h1>
-          {pickB(locale, post.excerpt) && <p class="lede">{pickB(locale, post.excerpt)}</p>}
-          <div class="meta">
-            <a class="tag" href={`${lp}/knowledge?cat=${post.category}`}>{categoryLabel(post.category)}</a>
-            {(post.tags ?? []).map((tag: string) => (
-              <span class="tag tag-plain">{tagLabel(tag)}</span>
-            ))}
-            {fresh && <span class={`tag tag-fresh level-${fresh.level}`}>{fresh.label}</span>}
-            <span>· {readingMinutes(pickB(locale, post.body))}{t(' 分钟阅读', ' min read')}</span>
+          <div class="head-inner">
+            <nav class="crumbs" aria-label="Breadcrumb">
+              <a href={`${lp}/knowledge`}>{t('知识库', 'Knowledge')}</a>
+              <span aria-hidden="true">›</span>
+              <span>{categoryLabel(post.category)}</span>
+            </nav>
+            <h1>{pickB(locale, post.name)}</h1>
+            {pickB(locale, post.excerpt) && <p class="lede">{pickB(locale, post.excerpt)}</p>}
+            <div class="meta">
+              <a class="tag" href={`${lp}/knowledge?cat=${post.category}`}>{categoryLabel(post.category)}</a>
+              {(post.tags ?? []).map((tag: string) => (
+                <span class="tag tag-plain">{tagLabel(tag)}</span>
+              ))}
+              {fresh && <span class={`tag tag-fresh level-${fresh.level}`}>{fresh.label}</span>}
+              <span>· {readingMinutes(pickB(locale, post.body))}{t(' 分钟阅读', ' min read')}</span>
+            </div>
           </div>
-          {coverSrc(post.cover) && <img class="cover" src={coverSrc(post.cover)} alt="" />}
         </header>
+        {coverSrc(post.cover) && <img class="cover" src={coverSrc(post.cover)} alt="" />}
 
         {
           pickB(locale, post.excerpt) && (
@@ -396,7 +398,32 @@ const dlData = post
 }
 
 <style>
-  .article-head { margin-bottom: 8px; }
+  .article-head {
+    margin: -44px calc(50% - 50vw) 30px;
+    padding: 56px 24px 44px;
+    background:
+      radial-gradient(120% 150% at 10% -20%, color-mix(in srgb, var(--accent) 24%, transparent), transparent 52%),
+      linear-gradient(180deg, color-mix(in srgb, var(--accent) 10%, var(--surface)), var(--surface));
+    border-bottom: 1px solid var(--border);
+  }
+  .head-inner { max-width: var(--readw); margin: 0 auto; }
+  .article-head h1 {
+    margin: 0 0 16px;
+    font-size: clamp(2rem, 4.4vw, 3rem);
+    line-height: 1.18;
+    letter-spacing: -0.02em;
+    color: var(--fg);
+  }
+  .article-head .lede { font-size: 19px; color: var(--muted); margin: 0 0 20px; }
+  .cover {
+    display: block;
+    width: 100%;
+    height: clamp(220px, 34vw, 440px);
+    object-fit: cover;
+    margin: 0 0 30px;
+    border-radius: var(--r-lg);
+    box-shadow: var(--shadow-md);
+  }
   .crumbs {
     display: flex;
     gap: 8px;
