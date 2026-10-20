@@ -14,7 +14,7 @@
 import Base from '../../layouts/Base.astro';
 import { loadContent } from '../../lib/site-data';
 import { isPreLaunch } from '../../lib/prelaunch';
-import { getLocale, type Locale } from '../../lib/i18n';
+import { getLocale, pickB, type Locale } from '../../lib/i18n';
 
 const { locale: localeProp } = Astro.props;
 const locale: Locale = localeProp ?? getLocale(Astro);
@@ -36,7 +36,7 @@ const products: { slug: string; name: { zh: string; en: string } }[] = [
 
 const prelaunch = isPreLaunch();
 const L = await loadContent(locale);
-const contactLabel = L.ui.navItems.find((n: any) => n.href === '/contact')?.label?.[locale] || t('联系我们', 'Contact us');
+const contactLabel = pickB(locale, L.ui.navItems.find((n: any) => n.href === '/contact')?.label) || t('联系我们', 'Contact us');
 
 const title = t('技术资料下载 · TDS / SDS', 'Technical Documentation · TDS / SDS');
 const desc = t(
@@ -65,7 +65,7 @@ const desc = t(
       {
         products.map((p) => (
           <article class="dl-card">
-            <h2 class="dl-name">{p.name[locale]}</h2>
+            <h2 class="dl-name">{pickB(locale, p.name)}</h2>
             <div class="dl-actions">
               <a class="dl-btn" href={`/uploads/tackix-tds-${p.slug}.pdf`} download>
                 <span class="dl-btn-ico" aria-hidden="true">
