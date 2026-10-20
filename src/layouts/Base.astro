@@ -322,9 +322,6 @@ const showFloatContact =
           </div>
         )
       }
-      <nav class="footer-nav" aria-label={locale === 'en' ? 'Resources' : '资源'}>
-        <a href={`${localePrefix}/downloads`}>{locale === 'en' ? 'Downloads' : '资料下载'}</a>
-      </nav>
       <span>{footerText}</span>
       <span class="footer-ai-note">{locale === 'en' ? 'Some imagery is AI-generated for illustration only.' : '部分配图由 AI 生成，仅作示意。'}</span>
       <a class="footer-admin" href="/keystatic">{footerAdminLabel}</a>
@@ -1045,9 +1042,6 @@ const showFloatContact =
         background: var(--surface-3);
       }
       .site-footer span { opacity: 0.95; }
-      .footer-nav { display: flex; gap: 18px; justify-content: center; margin-bottom: 10px; }
-      .footer-nav a { color: var(--muted); font-size: 13px; text-decoration: none; }
-      .footer-nav a:hover { color: var(--accent); text-decoration: none; }
       .footer-ai-note { display: block; margin-top: 6px; font-size: 12px; color: var(--faint); opacity: 0.8; }
       .footer-admin {
         display: inline-block;

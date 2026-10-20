@@ -90,10 +90,11 @@ const catOptions = buildFilterOptions(withMeta, categories);
       </p>
     </div>
 
-    <!-- 内容类型切换：案例库从主导航降级到这里（与「全部文章」并列的 tab） -->
+    <!-- 内容类型切换：案例库、资料下载均从主导航降级到这里（与「全部文章」并列的 tab 组） -->
     <nav class="kb-tabs" aria-label={t('内容类型', 'Content type')}>
       <a class="kb-tab is-active" href={`${lp}/knowledge`}>{t('全部文章', 'All articles')}</a>
       <a class="kb-tab" href={`${lp}/cases`}>{t('案例库', 'Case Studies')}</a>
+      <a class="kb-tab" href={`${lp}/downloads`}>{t('资料下载', 'Downloads')}</a>
     </nav>
 
     <!-- L6 AI 问答入口：纯前端，后端（Workers AI + Vectorize）缺失时优雅提示 -->

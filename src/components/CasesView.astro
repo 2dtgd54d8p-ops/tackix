@@ -92,10 +92,11 @@ function readingMinutes(body: unknown): number {
   description={t('真实工况下的胶粘剂选型与施工案例，按场景归类，附完整方案与要点。', 'Real-world adhesive selection & application cases, grouped by scenario, with full solutions and key takeaways.')}
 >
   <section class="cases">
-    <!-- 内容类型切换：与知识库页保持一致的两个 tab（案例库当前激活） -->
+    <!-- 内容类型切换：与知识库页保持一致的三个 tab（案例库当前激活） -->
     <nav class="kb-tabs" aria-label={t('内容类型', 'Content type')}>
       <a class="kb-tab" href={`${lp}/knowledge`}>{t('全部文章', 'All articles')}</a>
       <a class="kb-tab is-active" href={`${lp}/cases`}>{t('案例库', 'Case Studies')}</a>
+      <a class="kb-tab" href={`${lp}/downloads`}>{t('资料下载', 'Downloads')}</a>
     </nav>
     <div class="cases-hero">
       <h1>{t('案例库', 'Case Studies')}</h1>
