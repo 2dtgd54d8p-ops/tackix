@@ -1,0 +1,171 @@
+---
+/**
+ * 技术资料下载页（TDS / SDS）
+ * ---------------------------------------------------------------
+ * 设计要点：
+ * 1. 把 public/uploads/ 下 20 个占位 TDS/SDS PDF（10 产品 × TDS/SDS）集中到一个
+ *    可达的下载页，满足 GOLIVE #16「技术文档对外可获取」。真实文档只需同名覆盖
+ *    （tackix-tds-<slug>.pdf / tackix-sds-<slug>.pdf）即可生效，无需改代码。
+ * 2. 产品清单以内联数组维护（产品未进入 Keystatic collection，仅 PDF 资产存在）。
+ *    每产品一行：名称 + TDS 下载 + SDS 下载两个按钮。
+ * 3. 文案双语取自当前 locale（t() 助手），与全站一致。
+ * 4. 继承预上线 noindex 闸门（Base/SEO/prelaunch 统一控制），上线前不收录。
+ */
+import Base from '../../layouts/Base.astro';
+import { loadContent } from '../../lib/site-data';
+import { isPreLaunch } from '../../lib/prelaunch';
+import { getLocale, type Locale } from '../../lib/i18n';
+
+const { locale: localeProp } = Astro.props;
+const locale: Locale = localeProp ?? getLocale(Astro);
+const t = (zh: string, en: string) => (locale === 'en' ? en : zh);
+
+// 10 个产品（slug 与 public/uploads/ 下 PDF 文件名对齐；真实文档同名覆盖即可）
+const products: { slug: string; name: { zh: string; en: string } }[] = [
+  { slug: 'aa-instant-510', name: { zh: '快固型改性丙烯酸结构胶', en: 'Fast-cure modified acrylic structural adhesive' } },
+  { slug: 'acrylic-700', name: { zh: '丙烯酸密封与粘接胶', en: 'Acrylic sealant & adhesive' } },
+  { slug: 'anerobic-610', name: { zh: '厌氧螺纹锁固胶', en: 'Anaerobic threadlocker' } },
+  { slug: 'epoxy-structural-8800', name: { zh: '环氧结构胶', en: 'Epoxy structural adhesive' } },
+  { slug: 'epoxy-thermal-550', name: { zh: '耐温环氧胶', en: 'Thermal-resistant epoxy' } },
+  { slug: 'hotmelt-150', name: { zh: '热熔胶', en: 'Hot melt adhesive' } },
+  { slug: 'ms-silicone-903', name: { zh: 'MS 改性硅烷密封胶', en: 'MS polymer sealant' } },
+  { slug: 'pu-structural-2200', name: { zh: '聚氨酯结构胶', en: 'PU structural adhesive' } },
+  { slug: 'uv-bond-3200', name: { zh: 'UV 固化胶', en: 'UV curing adhesive' } },
+  { slug: 'uv-medical-3600', name: { zh: '医用级 UV 胶', en: 'Medical-grade UV adhesive' } },
+];
+
+const prelaunch = isPreLaunch();
+const L = await loadContent(locale);
+const contactLabel = L.ui.navItems.find((n: any) => n.href === '/contact')?.label?.[locale] || t('联系我们', 'Contact us');
+
+const title = t('技术资料下载 · TDS / SDS', 'Technical Documentation · TDS / SDS');
+const desc = t(
+  '下载 Tackix 各系列工业胶粘剂与密封剂的技术数据表（TDS）与安全数据表（SDS）。',
+  'Download TDS and SDS for every Tackix industrial adhesive and sealant series.'
+);
+---
+
+<Base title={title} description={desc}>
+  <section>
+    <div class="page-head">
+      <h1>{title}</h1>
+      <p>{desc}</p>
+    </div>
+
+    {
+      prelaunch && (
+        <div class="notice">
+          <strong>{t('预览版说明', 'Preview notice')}</strong>
+          <p>{t('当前为预上线站点，文档为占位样本；正式上线后将替换为最终版本（同名文件覆盖即可）。', 'This is a pre-launch site. Documents shown are placeholders and will be replaced with final versions at launch (same filenames).')}</p>
+        </div>
+      )
+    }
+
+    <div class="dl-grid">
+      {
+        products.map((p) => (
+          <article class="dl-card">
+            <h2 class="dl-name">{p.name[locale]}</h2>
+            <div class="dl-actions">
+              <a class="dl-btn" href={`/uploads/tackix-tds-${p.slug}.pdf`} download>
+                <span class="dl-btn-ico" aria-hidden="true">
+                  <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12m0 0 4-4m-4 4-4-4"/><path d="M5 21h14"/></svg>
+                </span>
+                TDS
+              </a>
+              <a class="dl-btn dl-btn--alt" href={`/uploads/tackix-sds-${p.slug}.pdf`} download>
+                <span class="dl-btn-ico" aria-hidden="true">
+                  <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12m0 0 4-4m-4 4-4-4"/><path d="M5 21h14"/></svg>
+                </span>
+                SDS
+              </a>
+            </div>
+          </article>
+        ))
+      }
+    </div>
+
+    <p class="dl-foot">
+      {t('未找到所需产品文档？', 'Can’t find the document you need?')}
+      <a href={locale === 'en' ? '/en/contact' : '/contact'}>{contactLabel}</a>
+      {t(' 向我们索取。', ' to request it.')}
+    </p>
+  </section>
+</Base>
+
+<style>
+  .notice {
+    padding: 13px 16px;
+    border-radius: var(--r-md);
+    margin-bottom: 26px;
+    font-size: 14px;
+    line-height: 1.7;
+    background: var(--surface-2);
+    border: 1px solid var(--border);
+    color: var(--fg-soft);
+  }
+  .notice strong { display: block; margin-bottom: 4px; color: var(--fg); }
+  .notice p { margin: 0; }
+
+  .dl-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+    gap: 16px;
+  }
+  .dl-card {
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+    padding: 20px;
+    border: 1px solid var(--border);
+    border-radius: var(--r-lg);
+    background: var(--surface);
+    box-shadow: var(--shadow-sm);
+    transition: border-color var(--dur) var(--ease), box-shadow var(--dur) var(--ease),
+      transform var(--dur) var(--ease);
+  }
+  .dl-card:hover {
+    border-color: var(--border-strong);
+    box-shadow: var(--shadow-md);
+    transform: translateY(-3px);
+  }
+  .dl-name {
+    margin: 0;
+    font-size: 16px;
+    font-weight: 700;
+    line-height: 1.45;
+    color: var(--fg);
+  }
+  .dl-actions { display: flex; gap: 10px; margin-top: auto; }
+  .dl-btn {
+    flex: 1;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 7px;
+    padding: 10px 12px;
+    border-radius: var(--r-pill);
+    background: var(--accent);
+    color: var(--on-accent);
+    font-size: 13.5px;
+    font-weight: 600;
+    box-shadow: var(--shadow-accent);
+    transition: background var(--dur) var(--ease);
+  }
+  .dl-btn:hover { background: var(--accent-strong); color: var(--on-accent); text-decoration: none; }
+  .dl-btn--alt {
+    background: var(--surface-2);
+    color: var(--fg-soft);
+    box-shadow: none;
+    border: 1px solid var(--border-strong);
+  }
+  .dl-btn--alt:hover { background: var(--accent-soft); color: var(--accent-strong); border-color: var(--accent); }
+  .dl-btn-ico { display: inline-flex; }
+  .dl-foot {
+    margin: 32px 0 0;
+    text-align: center;
+    color: var(--muted);
+    font-size: 14.5px;
+  }
+  .dl-foot a { font-weight: 600; }
+</style>
