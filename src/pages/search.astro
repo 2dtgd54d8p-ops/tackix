@@ -1,10 +1,15 @@
 ---
 import Base from '../layouts/Base.astro';
 import { getLocale, type Locale } from '../lib/i18n';
+import { loadContent } from '../lib/site-data';
 
 const { locale: localeProp } = Astro.props;
 const locale: Locale = localeProp ?? getLocale(Astro);
 const t = (zh: string, en: string) => (locale === 'en' ? en : zh);
+
+// 搜索框占位符接后台「列表页标题」singleton（pages.searchPlaceholder），留空回退默认
+const { pages } = await loadContent(locale);
+const searchPlaceholder = pages.searchPlaceholder;
 ---
 
 <Base title={t('搜索', 'Search')}>
@@ -40,7 +45,7 @@ const t = (zh: string, en: string) => (locale === 'en' ? en : zh);
       element: '#search',
       showSubResults: true,
       translations: {
-        placeholder: t('搜索文章与方案…', 'Search articles and solutions…'),
+        placeholder: {JSON.stringify(searchPlaceholder)},
         zero_results: t('未找到与 [SEARCH_TERM] 相关的结果', 'No results for [SEARCH_TERM]'),
       },
     });

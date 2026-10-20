@@ -387,6 +387,16 @@ export async function loadContent(locale: Locale = DEFAULT_LOCALE) {
   const footerAdminLabel =
     typeof faRaw === 'string' ? faRaw.trim() : pickB(locale, faRaw as Bilingual | null | undefined);
 
+  // 页脚报表链接标签 / 浮动按钮标签与无障碍标签（后台 ui 单例可编辑，留空回退默认）
+  const readUiStr = (key: string): string | undefined => {
+    const raw: unknown = ui?.content?.[key];
+    return typeof raw === 'string' ? raw.trim() : pickB(locale, raw as Bilingual | null | undefined);
+  };
+  const footerReportLabel = readUiStr('footerReportLabel');
+  const whatsappLabel = readUiStr('whatsappLabel');
+  const whatsappAria = readUiStr('whatsappAria');
+  const contactAria = readUiStr('contactAria');
+
   const c = contact?.content ?? contact ?? {};
   const contactOut = Object.fromEntries(
     Object.keys(CONTACT_DEFAULT).map((k) => [k, pickContent(locale, c[k] as Bilingual, CONTACT_DEFAULT[k])])
@@ -423,6 +433,10 @@ export async function loadContent(locale: Locale = DEFAULT_LOCALE) {
       scenariosMenu: scenarioMenuItems,
       footerText,
       footerAdminLabel: footerAdminLabel || (locale === 'en' ? 'Admin' : '后台管理'),
+      footerReportLabel: footerReportLabel || (locale === 'en' ? 'Report' : '运营报表'),
+      whatsappLabel: whatsappLabel || 'WhatsApp',
+      whatsappAria: whatsappAria || (locale === 'en' ? 'Contact us on WhatsApp' : '通过 WhatsApp 联系我们'),
+      contactAria: contactAria || (locale === 'en' ? 'Contact us' : '联系我们'),
     },
     contact: contactOut,
     pages: pagesOut,

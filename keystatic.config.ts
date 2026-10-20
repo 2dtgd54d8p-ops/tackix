@@ -403,8 +403,12 @@ export default config({
           {
             footerText: bi('页脚文字', { description: '留空则回退到站点标题。' }),
             footerAdminLabel: bi('后台入口标签', { description: '页脚指向后台管理系统的链接文字。' }),
+            footerReportLabel: bi('页脚报表链接标签', { description: '页脚指向运营报表的链接文字（如“运营报表”）。' }),
+            whatsappLabel: bi('WhatsApp 按钮标签', { description: '右下角浮动 WhatsApp 按钮显示的文字。' }),
+            whatsappAria: bi('WhatsApp 按钮无障碍标签', { description: '屏幕阅读器朗读的 aria-label。' }),
+            contactAria: bi('联系按钮无障碍标签', { description: '右下角浮动“联系我们”按钮的 aria-label。' }),
           },
-          { label: '页脚' }
+          { label: '页脚与浮动按钮' }
         ),
       },
     },
