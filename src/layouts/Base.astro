@@ -207,10 +207,14 @@ const showFloatContact =
                   </button>
                   <ul class="nav-menu" id="nav-menu-scenarios" role="menu">
                     {
-                      scenarioMenu.map((sc) => (
+                      [
+                        /* 下拉首项：总览入口（桌面下拉 / 移动展开列表通用，保证列表页可达） */
+                        { slug: '__all__', name: locale === 'en' ? 'All Scenarios' : '全部场景方案' },
+                        ...scenarioMenu,
+                      ].map((sc) => (
                         <li role="none">
-                          <a role="menuitem" href={navHref('/solutions/' + sc.slug)}>
-                            <span class="nav-ico nav-ico-sm" set:html={scenarioIcon(sc.slug)} />
+                          <a role="menuitem" href={navHref(sc.slug === '__all__' ? item.href : '/solutions/' + sc.slug)}>
+                            <span class="nav-ico nav-ico-sm" set:html={sc.slug === '__all__' ? navIcon(item.href) : scenarioIcon(sc.slug)} />
                             {sc.name}
                           </a>
                         </li>
@@ -487,14 +491,28 @@ const showFloatContact =
         }
         items.forEach(function (item) {
           var btn = item.querySelector('.nav-toggle');
-          if (!btn) return;
-          btn.addEventListener('click', function (e) {
-            e.preventDefault();
-            e.stopPropagation();
-            var willOpen = !item.classList.contains('is-open');
-            closeAll(item);
-            setState(item, willOpen);
-          });
+          if (btn) {
+            btn.addEventListener('click', function (e) {
+              e.preventDefault();
+              e.stopPropagation();
+              var willOpen = !item.classList.contains('is-open');
+              closeAll(item);
+              setState(item, willOpen);
+            });
+          }
+          // 移动端：点「场景方案」文字本身 = 展开/收起子分类（不跳转）；桌面端保持点击跳转。
+          // 触屏无 hover，仅靠小箭头触发热区太小，用户感知为「点不开」，故整项可点。
+          var link = item.querySelector(':scope > a');
+          if (link) {
+            link.addEventListener('click', function (e) {
+              if (!window.matchMedia('(max-width: 700px)').matches) return; // 桌面端维持原跳转
+              e.preventDefault();
+              e.stopPropagation();
+              var willOpen = !item.classList.contains('is-open');
+              closeAll(item);
+              setState(item, willOpen);
+            });
+          }
         });
         document.addEventListener('click', function (e) {
           items.forEach(function (item) {
