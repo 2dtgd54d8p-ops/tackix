@@ -8,6 +8,7 @@ import Base from '../layouts/Base.astro';
 import { loadSiteData, loadContent } from '../lib/site-data';
 import { getLocale, pickB, type Locale } from '../lib/i18n';
 import { sColor, sIcon } from '../lib/scenario-visual';
+import { coverSrc } from '../lib/markdown';
 
 interface Props {
   locale: Locale;
@@ -76,10 +77,6 @@ const groups = scenarios
 
 const totalCases = groups.reduce((n, g) => n + g.articles.length, 0);
 
-function coverSrc(cover: unknown): string {
-  if (!cover || typeof cover !== 'string') return '';
-  return cover.startsWith('/') ? cover : `/uploads/${cover}`;
-}
 function readingMinutes(body: unknown): number {
   if (!body || typeof body !== 'string') return 1;
   const words = (body.match(/[a-zA-Z0-9]+/g) || []).length;

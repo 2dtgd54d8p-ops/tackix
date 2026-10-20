@@ -5,6 +5,8 @@ import Base from '../layouts/Base.astro';
 import { loadSiteData, loadContent } from '../lib/site-data';
 import { organizationSchema } from '../lib/schema';
 import { getLocale, pickB, type Locale } from '../lib/i18n';
+import { UPLOADS_BASE } from '../lib/assets';
+import { coverSrc } from '../lib/markdown';
 
 const { locale: localeProp } = Astro.props;
 const locale: Locale = localeProp ?? getLocale(Astro);
@@ -103,12 +105,6 @@ const recIndex = withMeta.map((p) => ({
 // 场景主题色与语义图标（首页与案例库共用，单一来源见 src/lib/scenario-visual.ts）
 import { sColor, sIcon } from '../lib/scenario-visual';
 
-// Keystatic 图片字段可能返回文件名或带前缀的路径，统一归一成可访问的 URL
-function coverSrc(cover: unknown): string {
-  if (!cover || typeof cover !== 'string') return '';
-  return cover.startsWith('/') ? cover : `/uploads/${cover}`;
-}
-
 // 结构化数据：首页文章列表（ItemList），利于搜索引擎/Ai 理解
 const jsonLd = {
   '@context': 'https://schema.org',
@@ -133,7 +129,7 @@ const orgLd = {
   <script type="application/ld+json" set:html={JSON.stringify(jsonLd)} />
   <script type="application/ld+json" set:html={JSON.stringify(orgLd)} />
 
-  <section class="hero">
+  <section class="hero" style={`background-image:url('${UPLOADS_BASE}/hero-technician.png')`}>
     <div class="hero-glow" aria-hidden="true"></div>
     <div class="hero-inner">
       <span class="hero-eyebrow">{home.heroEyebrow}</span>
@@ -434,7 +430,6 @@ const orgLd = {
     position: relative;
     overflow: hidden;
     background-color: #18122e;
-    background-image: url('/uploads/hero-technician.png');
     background-size: cover;
     background-position: 70% center;     /* 主体（技师）落在右侧，左侧留白放文字 */
     color: #fff;

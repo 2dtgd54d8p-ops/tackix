@@ -15,6 +15,7 @@ import Base from '../../layouts/Base.astro';
 import { loadContent } from '../../lib/site-data';
 import { isPreLaunch } from '../../lib/prelaunch';
 import { getLocale, pickB, type Locale } from '../../lib/i18n';
+import { UPLOADS_BASE } from '../../lib/assets';
 
 const { locale: localeProp } = Astro.props;
 const locale: Locale = localeProp ?? getLocale(Astro);
@@ -84,13 +85,13 @@ const desc = t(
           <article class="dl-card">
             <h2 class="dl-name">{pickB(locale, p.name)}</h2>
             <div class="dl-actions">
-              <a class="dl-btn" href={`/uploads/tackix-tds-${p.slug}.pdf`} download>
+              <a class="dl-btn" href={`${UPLOADS_BASE}/tackix-tds-${p.slug}.pdf`} download>
                 <span class="dl-btn-ico" aria-hidden="true">
                   <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12m0 0 4-4m-4 4-4-4"/><path d="M5 21h14"/></svg>
                 </span>
                 TDS
               </a>
-              <a class="dl-btn dl-btn--alt" href={`/uploads/tackix-sds-${p.slug}.pdf`} download>
+              <a class="dl-btn dl-btn--alt" href={`${UPLOADS_BASE}/tackix-sds-${p.slug}.pdf`} download>
                 <span class="dl-btn-ico" aria-hidden="true">
                   <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12m0 0 4-4m-4 4-4-4"/><path d="M5 21h14"/></svg>
                 </span>

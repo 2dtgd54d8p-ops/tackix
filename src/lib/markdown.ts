@@ -1,4 +1,5 @@
 import { marked } from 'marked';
+import { uploadsUrl } from './assets';
 
 /**
  * 把 Keystatic 的 mdx.inline 字段（序列化后的 Markdown 字符串）渲染成 HTML。
@@ -25,9 +26,10 @@ export function readingMinutes(body: unknown): number {
 
 /**
  * Keystatic 图片字段（fields.image）读取后通常只返回文件名（如 "abc.png"），
- * 完整可访问 URL 需拼接 publicPath（/uploads/）。兼容已带斜杠的完整路径。
+ * 完整可访问 URL 由资源抽象层（src/lib/assets.ts）解析，默认拼接 /uploads/。
+ * 兼容已带斜杠的站点绝对路径与 http(s) 外链。
  */
 export function coverSrc(cover: unknown): string {
   if (!cover || typeof cover !== 'string') return '';
-  return cover.startsWith('/') ? cover : `/uploads/${cover}`;
+  return uploadsUrl(cover);
 }

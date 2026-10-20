@@ -8,6 +8,7 @@ import { inLanguage } from '../../lib/schema';
 import { normalizeSections } from '../../lib/custom-sections';
 import CtxSuggest from '../CtxSuggest.astro';
 import { pickB, type Locale } from '../../lib/i18n';
+import { UPLOADS_BASE } from '../../lib/assets';
 
 interface Props {
   locale: Locale;
@@ -308,8 +309,8 @@ const jsonLd: any = scenario
                             <td>
                               {p.slug ? (
                                 <span class="doc-links">
-                                  <a class="doc-link" href={`/uploads/tackix-tds-${p.slug}.pdf`} target="_blank" rel="noopener">{t('TDS', 'TDS')}</a>
-                                  <a class="doc-link" href={`/uploads/tackix-sds-${p.slug}.pdf`} target="_blank" rel="noopener">{t('SDS', 'SDS')}</a>
+                                  <a class="doc-link" href={`${UPLOADS_BASE}/tackix-tds-${p.slug}.pdf`} target="_blank" rel="noopener">{t('TDS', 'TDS')}</a>
+                                  <a class="doc-link" href={`${UPLOADS_BASE}/tackix-sds-${p.slug}.pdf`} target="_blank" rel="noopener">{t('SDS', 'SDS')}</a>
                                 </span>
                               ) : '—'}
                             </td>
