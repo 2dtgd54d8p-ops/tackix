@@ -1447,20 +1447,46 @@ const showFloatContact =
         .nav-item.has-menu .nav-toggle { flex: none; display: inline-flex; padding: 6px 10px; }
         .nav-menu {
           flex: 1 1 100%;
-          display: none;
+          display: block;
           position: static;
-          opacity: 1;
+          opacity: 0;
           visibility: visible;
           transform: none;
           box-shadow: none;
           border: none;
-          border-left: 2px solid var(--accent-soft);
-          margin: 2px 0 2px 8px;
-          padding: 2px 0 2px 8px;
+          border-left: 2px solid transparent;
+          margin: 0 0 0 8px;
+          padding: 0 0 0 8px;
           background: transparent;
           min-width: 0;
+          max-height: 0;
+          overflow: hidden;
+          transition:
+            max-height 0.34s var(--ease),
+            opacity 0.26s var(--ease),
+            margin 0.34s var(--ease),
+            padding 0.34s var(--ease),
+            border-color 0.34s var(--ease);
         }
-        .nav-item.has-menu.is-open .nav-menu { display: block; }
+        .nav-item.has-menu.is-open .nav-menu {
+          opacity: 1;
+          border-left-color: var(--accent-soft);
+          margin: 2px 0 2px 8px;
+          padding: 2px 0 2px 8px;
+          max-height: 340px;
+        }
+        /* 子项逐项浮现（stagger）：展开时依次淡入下滑 */
+        .nav-menu li {
+          opacity: 0;
+          transform: translateY(-4px);
+          transition: opacity 0.22s var(--ease), transform 0.22s var(--ease);
+        }
+        .nav-item.has-menu.is-open .nav-menu li { opacity: 1; transform: none; }
+        .nav-item.has-menu.is-open .nav-menu li:nth-child(1) { transition-delay: 0.03s; }
+        .nav-item.has-menu.is-open .nav-menu li:nth-child(2) { transition-delay: 0.07s; }
+        .nav-item.has-menu.is-open .nav-menu li:nth-child(3) { transition-delay: 0.11s; }
+        .nav-item.has-menu.is-open .nav-menu li:nth-child(4) { transition-delay: 0.15s; }
+        .nav-item.has-menu.is-open .nav-menu li:nth-child(5) { transition-delay: 0.19s; }
         .nav-menu a { padding: 6px 10px; font-size: 13px; }
         .container { padding: 28px 16px 60px; }
         .section-head h2, .page-head h1 { font-size: 23px; }
