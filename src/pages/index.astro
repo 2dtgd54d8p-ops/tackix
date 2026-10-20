@@ -442,7 +442,7 @@ const orgLd = {
     margin-top: -44px;                    /* 顶到 header 下沿 */
     margin-left: calc(50% - 50vw);        /* 满屏出血 */
     margin-right: calc(50% - 50vw);
-    padding: 140px 24px 144px;
+    padding: 140px 0 144px;
   }
   /* 左侧深色蒙版：保证文字可读，同时保留右侧实景 */
   .hero::before {
@@ -478,7 +478,14 @@ const orgLd = {
     pointer-events: none;
     z-index: 0;
   }
-  .hero-inner { position: relative; z-index: 1; max-width: 880px; margin: 0; }
+  .hero-inner {
+    position: relative;
+    z-index: 1;
+    width: 100%;
+    max-width: var(--maxw);
+    margin: 0 auto;
+    padding: 0 24px;   /* 与 .container 左右内边距一致，使 Hero 文字与下方内容左缘对齐 */
+  }
   .hero-eyebrow {
     display: inline-block;
     margin-bottom: 22px;
@@ -740,7 +747,8 @@ const orgLd = {
   .sub-msg.sub-err { color: #ffd7d7; }
 
   @media (max-width: 700px) {
-    .hero { margin-top: -24px; padding: 104px 18px 108px; background-position: center; }
+    .hero { margin-top: -24px; padding: 104px 0 108px; background-position: center; }
+    .hero-inner { padding: 0 16px; }
     .hero::before { background: linear-gradient(180deg, rgba(16,10,34,0.86) 0%, rgba(16,10,34,0.72) 55%, rgba(16,10,34,0.92) 100%); }
     .hero-title { font-size: 34px; max-width: none; }
     .hero-sub { font-size: 16px; }
