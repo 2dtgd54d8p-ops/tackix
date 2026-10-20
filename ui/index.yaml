@@ -17,10 +17,6 @@ navItems:
       en: Selector
     href: /selector
   - label:
-      zh: 资料下载
-      en: Downloads
-    href: /downloads
-  - label:
       zh: 联系我们
       en: Contact us
     href: /contact
