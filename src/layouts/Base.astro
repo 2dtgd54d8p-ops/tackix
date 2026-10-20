@@ -319,6 +319,7 @@ const showFloatContact =
         )
       }
       <span>{footerText}</span>
+      <span class="footer-ai-note">{locale === 'en' ? 'Some imagery is AI-generated for illustration only.' : '部分配图由 AI 生成，仅作示意。'}</span>
       <a class="footer-admin" href="/keystatic">{footerAdminLabel}</a>
       <a class="footer-admin" href="/admin/report">{footerReportLabel}</a>
     </footer>
@@ -1033,6 +1034,7 @@ const showFloatContact =
         background: var(--surface-3);
       }
       .site-footer span { opacity: 0.95; }
+      .footer-ai-note { display: block; margin-top: 6px; font-size: 12px; color: var(--faint); opacity: 0.8; }
       .footer-admin {
         display: inline-block;
         margin-top: 8px;
