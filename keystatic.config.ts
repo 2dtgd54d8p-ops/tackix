@@ -358,6 +358,142 @@ export default config({
   },
 
   singletons: {
+    //    字段均为「覆盖式」：后台不填则前端用默认值（见 src/lib/site-data.ts 的 DEFAULT_*）。
+
+    home: {
+      label: '首页内容',
+      schema: {
+        content: fields.object(
+          {
+            heroEyebrow: bi('首屏眉标', { description: '主标题上方的小标签' }),
+            heroCta1: bi('首屏按钮 1', { description: '例如：“浏览场景方案”' }),
+            heroCta2: bi('首屏按钮 2', { description: '例如：“联系我们获取报价”' }),
+            scenariosTitle: bi('场景区标题'),
+            scenariosSub: bi('场景区副标题', { multiline: true }),
+            knowledgeTitle: bi('知识区标题'),
+            knowledgeSub: bi('知识区副标题', { multiline: true }),
+            bandTitle: bi('行动号召区标题'),
+            bandSub: bi('行动号召区副标题', { multiline: true }),
+            bandCta1: bi('行动号召按钮 1'),
+            bandCta2: bi('行动号召按钮 2'),
+          },
+          { label: '首页文案' }
+        ),
+      },
+    },
+
+
+    ui: {
+      label: '全局界面文案',
+      schema: {
+        navItems: fields.array(
+          fields.object({
+            label: bi('导航标签'),
+            href: fields.text({ label: '链接', description: '例如 /solutions' }),
+            scenariosMenu: fields.checkbox({
+              label: '下拉展示场景方案',
+              description: '开启后该导航项悬停/点击展开全部场景方案（自动读取 scenarios 集合，后台增删场景即同步）。',
+              defaultValue: false,
+            }),
+          }, { label: '导航项' }),
+          { label: '主导航' }
+        ),
+        // 页脚署名
+        content: fields.object(
+          {
+            footerText: bi('页脚文字', { description: '留空则回退到站点标题。' }),
+            footerAdminLabel: bi('后台入口标签', { description: '页脚指向后台管理系统的链接文字。' }),
+          },
+          { label: '页脚' }
+        ),
+      },
+    },
+
+
+    contact: {
+      label: '联系页',
+      schema: {
+        content: fields.object(
+          {
+            pageTitle: bi('页面标题'),
+            pageSub: bi('页面副标题', { multiline: true }),
+            contactInfoTitle: bi('联系信息标题'),
+            formSectionTitle: bi('表单区标题', { description: '例如：“给我们留言”' }),
+            formName: bi('姓名字段标签'),
+            formEmail: bi('邮箱字段标签'),
+            formMsg: bi('留言字段标签'),
+            submit: bi('提交按钮'),
+            success: bi('成功提示', { multiline: true }),
+            prelaunchTitle: bi('预上线提示标题'),
+            prelaunchBody: bi('预上线提示正文', { multiline: true }),
+            tipsTitle: bi('提示标题'),
+          },
+          { label: '联系页文案' }
+        ),
+        tipsItems: fields.array(
+          fields.object({
+            text: bi('提示内容', { multiline: true }),
+          }, { label: '提示' }),
+          { label: '提示列表' }
+        ),
+      },
+    },
+
+
+    pages: {
+      label: '列表页标题',
+      schema: {
+        content: fields.object(
+          {
+            knowledgeTitle: bi('知识库列表标题'),
+            knowledgeSub: bi('知识库列表副标题', { multiline: true }),
+            scenariosTitle: bi('场景列表标题'),
+            scenariosSub: bi('场景列表副标题', { multiline: true }),
+            searchPlaceholder: bi('搜索框占位符'),
+          },
+          { label: '列表页标题' }
+        ),
+      },
+    },
+
+
+    detail: {
+      label: '详情页区块',
+      schema: {
+        content: fields.object(
+          {
+            articleFaqTitle: bi('文章常见问题标题'),
+            articleStepsTitle: bi('文章：步骤标题'),
+            articlePitfallsTitle: bi('文章：避坑标题'),
+            scenarioConclusionTitle: bi('场景：结论标题'),
+            scenarioSelectionTitle: bi('场景：选型逻辑标题'),
+            scenarioProductsTitle: bi('场景：推荐产品标题'),
+            scenarioInquiryTitle: bi('场景：询盘 CTA 标题'),
+            scenarioArticlesTitle: bi('场景：相关内容标题', { description: '场景分类页底部「该场景下的内容」区块标题。' }),
+          },
+          { label: '详情页区块标题' }
+        ),
+      },
+    },
+
+
+    about: {
+      label: '关于页',
+      schema: {
+        content: fields.object(
+          {
+            storyTitle: bi('品牌故事标题'),
+            storyBody: bi('品牌故事正文', { multiline: true }),
+            missionTitle: bi('使命标题'),
+            missionBody: bi('使命正文', { multiline: true }),
+            factoryCaption: bi('工厂图片说明'),
+          },
+          { label: '关于页内容' }
+        ),
+        factoryImage: fields.image({ label: '工厂图片', directory: 'public/uploads', publicPath: '/uploads/' }),
+      },
+    },
+
     // 站点 & 公司信息（中英双语）。联系方式留空则不渲染对应入口。
     site: {
       label: '站点与公司信息',
@@ -430,6 +566,7 @@ export default config({
         ),
       },
     },
+
     // 分类管理：分类从此处可增删改，不再写死在代码里。
     categories: {
       label: '分类管理',
@@ -458,6 +595,7 @@ export default config({
         ),
       },
     },
+
     // 标签管理：与分类同构，但支持一篇多选（tags 是 multiselect）。
     tags: {
       label: '标签',
@@ -481,137 +619,6 @@ export default config({
               'Untitled',
           }
         ),
-      },
-    },
-    // ── 内容文案单例：把前端静态文案收归后台编辑，实现「所有模块均可编辑、前后端贯通」
-    //    字段均为「覆盖式」：后台不填则前端用默认值（见 src/lib/site-data.ts 的 DEFAULT_*）。
-
-    home: {
-      label: '首页内容',
-      schema: {
-        content: fields.object(
-          {
-            heroEyebrow: bi('首屏眉标', { description: '主标题上方的小标签' }),
-            heroCta1: bi('首屏按钮 1', { description: '例如：“浏览场景方案”' }),
-            heroCta2: bi('首屏按钮 2', { description: '例如：“联系我们获取报价”' }),
-            scenariosTitle: bi('场景区标题'),
-            scenariosSub: bi('场景区副标题', { multiline: true }),
-            knowledgeTitle: bi('知识区标题'),
-            knowledgeSub: bi('知识区副标题', { multiline: true }),
-            bandTitle: bi('行动号召区标题'),
-            bandSub: bi('行动号召区副标题', { multiline: true }),
-            bandCta1: bi('行动号召按钮 1'),
-            bandCta2: bi('行动号召按钮 2'),
-          },
-          { label: '首页文案' }
-        ),
-      },
-    },
-
-    ui: {
-      label: '全局界面文案',
-      schema: {
-        navItems: fields.array(
-          fields.object({
-            label: bi('导航标签'),
-            href: fields.text({ label: '链接', description: '例如 /solutions' }),
-            scenariosMenu: fields.checkbox({
-              label: '下拉展示场景方案',
-              description: '开启后该导航项悬停/点击展开全部场景方案（自动读取 scenarios 集合，后台增删场景即同步）。',
-              defaultValue: false,
-            }),
-          }, { label: '导航项' }),
-          { label: '主导航' }
-        ),
-        // 页脚署名
-        content: fields.object(
-          {
-            footerText: bi('页脚文字', { description: '留空则回退到站点标题。' }),
-            footerAdminLabel: bi('后台入口标签', { description: '页脚指向后台管理系统的链接文字。' }),
-          },
-          { label: '页脚' }
-        ),
-      },
-    },
-
-    contact: {
-      label: '联系页',
-      schema: {
-        content: fields.object(
-          {
-            pageTitle: bi('页面标题'),
-            pageSub: bi('页面副标题', { multiline: true }),
-            contactInfoTitle: bi('联系信息标题'),
-            formSectionTitle: bi('表单区标题', { description: '例如：“给我们留言”' }),
-            formName: bi('姓名字段标签'),
-            formEmail: bi('邮箱字段标签'),
-            formMsg: bi('留言字段标签'),
-            submit: bi('提交按钮'),
-            success: bi('成功提示', { multiline: true }),
-            prelaunchTitle: bi('预上线提示标题'),
-            prelaunchBody: bi('预上线提示正文', { multiline: true }),
-            tipsTitle: bi('提示标题'),
-          },
-          { label: '联系页文案' }
-        ),
-        tipsItems: fields.array(
-          fields.object({
-            text: bi('提示内容', { multiline: true }),
-          }, { label: '提示' }),
-          { label: '提示列表' }
-        ),
-      },
-    },
-
-    pages: {
-      label: '列表页标题',
-      schema: {
-        content: fields.object(
-          {
-            knowledgeTitle: bi('知识库列表标题'),
-            knowledgeSub: bi('知识库列表副标题', { multiline: true }),
-            scenariosTitle: bi('场景列表标题'),
-            scenariosSub: bi('场景列表副标题', { multiline: true }),
-            searchPlaceholder: bi('搜索框占位符'),
-          },
-          { label: '列表页标题' }
-        ),
-      },
-    },
-
-    detail: {
-      label: '详情页区块',
-      schema: {
-        content: fields.object(
-          {
-            articleFaqTitle: bi('文章常见问题标题'),
-            articleStepsTitle: bi('文章：步骤标题'),
-            articlePitfallsTitle: bi('文章：避坑标题'),
-            scenarioConclusionTitle: bi('场景：结论标题'),
-            scenarioSelectionTitle: bi('场景：选型逻辑标题'),
-            scenarioProductsTitle: bi('场景：推荐产品标题'),
-            scenarioInquiryTitle: bi('场景：询盘 CTA 标题'),
-            scenarioArticlesTitle: bi('场景：相关内容标题', { description: '场景分类页底部「该场景下的内容」区块标题。' }),
-          },
-          { label: '详情页区块标题' }
-        ),
-      },
-    },
-
-    about: {
-      label: '关于页',
-      schema: {
-        content: fields.object(
-          {
-            storyTitle: bi('品牌故事标题'),
-            storyBody: bi('品牌故事正文', { multiline: true }),
-            missionTitle: bi('使命标题'),
-            missionBody: bi('使命正文', { multiline: true }),
-            factoryCaption: bi('工厂图片说明'),
-          },
-          { label: '关于页内容' }
-        ),
-        factoryImage: fields.image({ label: '工厂图片', directory: 'public/uploads', publicPath: '/uploads/' }),
       },
     },
   },
