@@ -234,7 +234,6 @@ const UI_NAV_DEFAULT: { label: Bilingual; href: string; scenariosMenu?: boolean 
   { label: { zh: '场景方案', en: 'Solutions' }, href: '/solutions', scenariosMenu: true },
   { label: { zh: '知识库', en: 'Knowledge' }, href: '/knowledge' },
   { label: { zh: '选型工具', en: 'Selector' }, href: '/selector' },
-  { label: { zh: '案例库', en: 'Cases' }, href: '/cases' },
   { label: { zh: '联系我们', en: 'Contact us' }, href: '/contact' },
 ];
 const FOOTER_DEFAULT = '';

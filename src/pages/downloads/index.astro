@@ -20,7 +20,8 @@ const { locale: localeProp } = Astro.props;
 const locale: Locale = localeProp ?? getLocale(Astro);
 const t = (zh: string, en: string) => (locale === 'en' ? en : zh);
 
-// 10 个产品（slug 与 public/uploads/ 下 PDF 文件名对齐；真实文档同名覆盖即可）
+// 18 个产品（slug 与 public/uploads/ 下 PDF 文件名对齐；真实文档同名覆盖即可）
+// 前 10 个为产品系列；后 8 个为场景推荐产品（来自 scenarios 的 recommendedProducts，slug 一一对应）。
 const products: { slug: string; name: { zh: string; en: string } }[] = [
   { slug: 'aa-instant-510', name: { zh: '快固型改性丙烯酸结构胶', en: 'Fast-cure modified acrylic structural adhesive' } },
   { slug: 'acrylic-700', name: { zh: '丙烯酸密封与粘接胶', en: 'Acrylic sealant & adhesive' } },
@@ -32,6 +33,14 @@ const products: { slug: string; name: { zh: string; en: string } }[] = [
   { slug: 'pu-structural-2200', name: { zh: '聚氨酯结构胶', en: 'PU structural adhesive' } },
   { slug: 'uv-bond-3200', name: { zh: 'UV 固化胶', en: 'UV curing adhesive' } },
   { slug: 'uv-medical-3600', name: { zh: '医用级 UV 胶', en: 'Medical-grade UV adhesive' } },
+  { slug: 'silicone-kitchen-mould', name: { zh: '厨卫防霉硅酮密封胶（中性）', en: 'Neutral mould-resistant silicone sealant' } },
+  { slug: 'epoxy-tile-grout-kb', name: { zh: '厨卫防水防霉填缝剂（环氧）', en: 'Epoxy tile grout (waterproof, anti-mould)' } },
+  { slug: 'roof-coating-flex', name: { zh: '屋顶柔性防水涂料（聚氨酯/丙烯酸）', en: 'Flexible roof coating (PU/acrylic)' } },
+  { slug: 'roof-joint-sealant', name: { zh: '屋面节点高弹密封胶', en: 'High-elastic joint sealant for roofs' } },
+  { slug: 'epoxy-grout', name: { zh: '环氧美缝剂', en: 'Epoxy grout' } },
+  { slug: 'cement-grout-flex', name: { zh: '柔性水泥基填缝剂', en: 'Flexible cement-based grout' } },
+  { slug: 'silicone-weather', name: { zh: '外墙耐候硅酮密封胶', en: 'Exterior weatherproof silicone' } },
+  { slug: 'pu-window-sealant', name: { zh: '门窗专用聚氨酯密封胶', en: 'Polyurethane sealant for windows/doors' } },
 ];
 
 const prelaunch = isPreLaunch();

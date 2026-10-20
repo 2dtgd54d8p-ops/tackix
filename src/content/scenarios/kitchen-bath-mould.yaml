@@ -33,12 +33,14 @@ recommendedProducts:
   - name:
       zh: 厨卫防霉硅酮密封胶（中性）
       en: Neutral mould-resistant silicone sealant
+    slug: silicone-kitchen-mould
     params:
       zh: '[位移能力] ≥20% · [防霉等级] 0 级'
       en: '[movement] ≥20% · [mould grade] Class 0'
   - name:
       zh: 厨卫防水防霉填缝剂（环氧）
       en: Epoxy tile grout (waterproof, anti-mould)
+    slug: epoxy-tile-grout-kb
     params:
       zh: '[适用] 瓷砖缝 · [耐水] 优'
       en: '[use] tile joints · [water] excellent'

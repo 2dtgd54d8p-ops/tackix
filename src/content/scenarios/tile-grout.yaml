@@ -33,12 +33,14 @@ recommendedProducts:
   - name:
       zh: 环氧美缝剂
       en: Epoxy grout
+    slug: epoxy-grout
     params:
       zh: '[适用] 湿区瓷砖缝 · [防霉] 优'
       en: '[use] wet-area tile joints · [mould] excellent'
   - name:
       zh: 柔性水泥基填缝剂
       en: Flexible cement-based grout
+    slug: cement-grout-flex
     params:
       zh: '[缝宽] ≤8mm · [柔性] 中'
       en: '[joint] ≤8mm · [flex] medium'

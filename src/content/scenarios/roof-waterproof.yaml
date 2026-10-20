@@ -33,12 +33,14 @@ recommendedProducts:
   - name:
       zh: 屋顶柔性防水涂料（聚氨酯/丙烯酸）
       en: Flexible roof coating (PU/acrylic)
+    slug: roof-coating-flex
     params:
       zh: '[类型] 涂膜 · [耐候] 优'
       en: '[type] membrane · [weather] excellent'
   - name:
       zh: 屋面节点高弹密封胶
       en: High-elastic joint sealant for roofs
+    slug: roof-joint-sealant
     params:
       zh: '[位移能力] ≥25% · [基材] 混凝土/金属'
       en: '[movement] ≥25% · [substrate] concrete/metal'

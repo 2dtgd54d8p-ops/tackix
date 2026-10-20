@@ -90,6 +90,12 @@ const catOptions = buildFilterOptions(withMeta, categories);
       </p>
     </div>
 
+    <!-- 内容类型切换：案例库从主导航降级到这里（与「全部文章」并列的 tab） -->
+    <nav class="kb-tabs" aria-label={t('内容类型', 'Content type')}>
+      <a class="kb-tab is-active" href={`${lp}/knowledge`}>{t('全部文章', 'All articles')}</a>
+      <a class="kb-tab" href={`${lp}/cases`}>{t('案例库', 'Case Studies')}</a>
+    </nav>
+
     <!-- L6 AI 问答入口：纯前端，后端（Workers AI + Vectorize）缺失时优雅提示 -->
     <section class="ask-box" aria-label={t('AI 问答', 'AI Q&A')}>
       <div class="ask-row">
@@ -298,6 +304,21 @@ const catOptions = buildFilterOptions(withMeta, categories);
     justify-content: center;
     margin: -8px 0 36px;
   }
+  /* 内容类型切换 tab（案例库从主导航降级到此处） */
+  .kb-tabs { display: flex; gap: 8px; justify-content: center; margin: 0 0 22px; }
+  .kb-tab {
+    padding: 8px 20px;
+    border-radius: 999px;
+    border: 1px solid var(--border-strong);
+    color: var(--fg-soft);
+    font-size: 14px;
+    font-weight: 600;
+    text-decoration: none;
+    background: var(--surface);
+    transition: border-color var(--dur) var(--ease), color var(--dur) var(--ease), background var(--dur) var(--ease);
+  }
+  .kb-tab:hover { border-color: var(--accent); color: var(--accent); text-decoration: none; }
+  .kb-tab.is-active { background: var(--accent); border-color: var(--accent); color: var(--on-accent); }
   .kb-filter:first-of-type { margin-top: 4px; }
   .chip {
     display: inline-flex;

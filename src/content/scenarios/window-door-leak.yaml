@@ -33,12 +33,14 @@ recommendedProducts:
   - name:
       zh: 外墙耐候硅酮密封胶
       en: Exterior weatherproof silicone
+    slug: silicone-weather
     params:
       zh: '[位移能力] ≥25% · [耐候] 优'
       en: '[movement] ≥25% · [weather] excellent'
   - name:
       zh: 门窗专用聚氨酯密封胶
       en: Polyurethane sealant for windows/doors
+    slug: pu-window-sealant
     params:
       zh: '[弹性] 高 · [粘结] 多基材'
       en: '[elasticity] high · [bond] multi-substrate'

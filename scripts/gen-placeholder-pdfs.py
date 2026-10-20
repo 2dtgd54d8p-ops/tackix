@@ -33,6 +33,15 @@ PRODUCTS = [
     ("uv-bond-3200",        "TAC-UV3200",   "UV Curing Adhesive"),
     ("uv-medical-3600",     "TAC-UV-3600",  "Medical-Grade UV Curing Adhesive"),
     ("epoxy-structural-8800", "ABRO-8800", "Two-Component Epoxy Structural Adhesive"),
+    # 场景推荐产品（与 scenarios recommendedProducts 的 slug 一一对应）
+    ("silicone-kitchen-mould", "TAC-SI-KB",  "Neutral Mould-resistant Silicone Sealant"),
+    ("epoxy-tile-grout-kb",    "TAC-EG-KB",  "Epoxy Tile Grout (Waterproof, Anti-mould)"),
+    ("roof-coating-flex",      "TAC-RC-FL",  "Flexible Roof Coating (PU/Acrylic)"),
+    ("roof-joint-sealant",     "TAC-RJ-SE",  "High-elastic Joint Sealant for Roofs"),
+    ("epoxy-grout",            "TAC-EG-01",  "Epoxy Grout / Tile Joint Sealant"),
+    ("cement-grout-flex",      "TAC-CG-FL",  "Flexible Cement-based Grout"),
+    ("silicone-weather",       "TAC-SI-WE",  "Exterior Weatherproof Silicone Sealant"),
+    ("pu-window-sealant",      "TAC-PU-WD",  "Polyurethane Sealant for Windows/Doors"),
 ]
 
 DARK = (31, 41, 55)

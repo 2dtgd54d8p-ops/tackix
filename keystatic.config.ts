@@ -331,6 +331,7 @@ export default config({
         recommendedProducts: fields.array(
           fields.object({
             name: bi('推荐产品占位（例如：产品 A）'),
+            slug: fields.text({ label: '产品 slug（用于 TDS/SDS 下载，留空则不显示下载按钮）', description: '需与 public/uploads 下 tackix-tds-<slug>.pdf / tackix-sds-<slug>.pdf 的文件名一致' }),
             params: bi('参数占位符（例如：[位移能力] / [温度范围]）'),
           }, { label: '推荐产品' }),
           { label: '推荐产品' }

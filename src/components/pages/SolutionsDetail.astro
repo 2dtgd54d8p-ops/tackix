@@ -60,7 +60,7 @@ const matrix = (() => {
     rows.forEach((r: any) => {
       if (!keyOrder.includes(r.key)) keyOrder.push(r.key);
     });
-    return { name: pickB(locale, p.name), rows };
+    return { name: pickB(locale, p.name), slug: typeof p.slug === 'string' ? p.slug.trim() : '', rows };
   });
   return { products: perProduct, keys: keyOrder };
 })();
@@ -299,6 +299,25 @@ const jsonLd: any = scenario
                       </tr>
                     ))}
                   </tbody>
+                  {
+                    recProducts.some((p: any) => p.slug) && (
+                      <tfoot>
+                        <tr>
+                          <th>{t('技术资料', 'Docs')}</th>
+                          {matrix.products.map((p: any) => (
+                            <td>
+                              {p.slug ? (
+                                <span class="doc-links">
+                                  <a class="doc-link" href={`${lp}/uploads/tackix-tds-${p.slug}.pdf`} target="_blank" rel="noopener">{t('TDS', 'TDS')}</a>
+                                  <a class="doc-link" href={`${lp}/uploads/tackix-sds-${p.slug}.pdf`} target="_blank" rel="noopener">{t('SDS', 'SDS')}</a>
+                                </span>
+                              ) : '—'}
+                            </td>
+                          ))}
+                        </tr>
+                      </tfoot>
+                    )
+                  }
                 </table>
               </div>
               <p class="matrix-note">{t('参数为占位规格，正式资料以 TDS/SDS 为准。', 'Params are placeholders; refer to TDS/SDS for official specs.')}</p>
@@ -470,6 +489,21 @@ const jsonLd: any = scenario
   table.cmp thead th { background: var(--surface-2); color: var(--fg); }
   table.cmp tbody th { background: var(--surface-2); color: var(--fg-soft); font-weight: 600; white-space: nowrap; }
   table.cmp td { color: var(--muted); }
+  /* 方案对比矩阵底部：每个推荐产品的 TDS / SDS 下载入口 */
+  table.cmp tfoot th { background: var(--surface-2); color: var(--fg-soft); font-weight: 600; white-space: nowrap; }
+  .doc-links { display: inline-flex; gap: 8px; flex-wrap: wrap; }
+  .doc-link {
+    display: inline-block;
+    padding: 4px 10px;
+    border: 1px solid var(--accent);
+    border-radius: 999px;
+    color: var(--accent);
+    font-size: 12px;
+    font-weight: 600;
+    text-decoration: none;
+    white-space: nowrap;
+  }
+  .doc-link:hover { background: var(--accent); color: var(--on-accent); text-decoration: none; }
   .matrix-note { margin: 10px 0 0; font-size: 12px; color: var(--faint); }
 
   /* 场景相关文章 */

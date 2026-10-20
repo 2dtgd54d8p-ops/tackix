@@ -92,6 +92,11 @@ function readingMinutes(body: unknown): number {
   description={t('真实工况下的胶粘剂选型与施工案例，按场景归类，附完整方案与要点。', 'Real-world adhesive selection & application cases, grouped by scenario, with full solutions and key takeaways.')}
 >
   <section class="cases">
+    <!-- 内容类型切换：与知识库页保持一致的两个 tab（案例库当前激活） -->
+    <nav class="kb-tabs" aria-label={t('内容类型', 'Content type')}>
+      <a class="kb-tab" href={`${lp}/knowledge`}>{t('全部文章', 'All articles')}</a>
+      <a class="kb-tab is-active" href={`${lp}/cases`}>{t('案例库', 'Case Studies')}</a>
+    </nav>
     <div class="cases-hero">
       <h1>{t('案例库', 'Case Studies')}</h1>
       <p>{t(`从真实工况出发的 ${totalCases} 个实战案例，按场景归类——每个都是「问题 → 方案 → 要点」的完整拆解。`, ` ${totalCases} real-world cases grouped by scenario — each a full "problem → solution → takeaways" breakdown.`)}</p>
@@ -145,6 +150,20 @@ function readingMinutes(body: unknown): number {
 
 <style>
   .cases { max-width: 1040px; margin: 0 auto; }
+  .kb-tabs { display: flex; gap: 8px; justify-content: center; margin: 0 0 28px; }
+  .kb-tab {
+    padding: 8px 20px;
+    border-radius: 999px;
+    border: 1px solid var(--border-strong);
+    color: var(--fg-soft);
+    font-size: 14px;
+    font-weight: 600;
+    text-decoration: none;
+    background: var(--surface);
+    transition: border-color var(--dur) var(--ease), color var(--dur) var(--ease), background var(--dur) var(--ease);
+  }
+  .kb-tab:hover { border-color: var(--accent); color: var(--accent); text-decoration: none; }
+  .kb-tab.is-active { background: var(--accent); border-color: var(--accent); color: var(--on-accent); }
   .cases-hero { text-align: center; margin-bottom: 48px; }
   .cases-hero h1 { font-size: clamp(1.9rem, 3.6vw, 2.6rem); margin: 0 0 12px; }
   .cases-hero p { color: var(--muted); font-size: 16px; line-height: 1.8; max-width: 680px; margin: 0 auto; }
