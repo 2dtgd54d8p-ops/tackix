@@ -46,7 +46,7 @@ function navHref(href: string): string {
 }
 // 主导航与页脚署名来自后台「全局界面文案」singleton（可编辑、前后端贯通）。
 // 英文路径(/en)下显示 en 标签；中文路径下显示 zh 标签（loadContent(locale) 已取词）。
-// 后台未配置时回退 keystatic.config 的 UI_NAV_DEFAULT（与既有导航一致）。
+// 后台未配置时回退 src/lib/site-data.ts 的内置默认值（与既有导航一致）。
 const uiContent = await loadContent(locale);
 const navItems = uiContent.ui.navItems.map((n) => ({
   href: n.href,
@@ -112,13 +112,13 @@ function norm(p: string) { return p.replace(/\/+$/, '') || '/'; }
 function isActive(href: string) {
   const h = norm(navHref(href));
   const cur = norm(path);
-  if (href === '/keystatic') return path.startsWith('/keystatic') || path.startsWith('/admin');
+  if (href === '/admin') return path.startsWith('/admin');
   if (h === '/') return cur === '/';
   return cur === h || cur.startsWith(h + '/');
 }
 // 右下角悬浮「联系我」：联系页自身与后台区不显示，避免冗余
 const showFloatContact =
-  !path.startsWith('/contact') && !path.startsWith('/keystatic') && !path.startsWith('/admin');
+  !path.startsWith('/contact') && !path.startsWith('/admin');
 ---
 
 <!doctype html>
@@ -328,7 +328,7 @@ const showFloatContact =
       }
       <span>{footerText}</span>
       <span class="footer-ai-note">{locale === 'en' ? 'Some imagery is AI-generated for illustration only.' : '部分配图由 AI 生成，仅作示意。'}</span>
-      <a class="footer-admin" href="/admin-login">{footerAdminLabel}</a>
+      <a class="footer-admin" href="/admin">{footerAdminLabel}</a>
       <a class="footer-admin" href="/admin/report">{footerReportLabel}</a>
     </footer>
     {showFloatContact && (
@@ -1510,12 +1510,12 @@ const showFloatContact =
       }
     </style>
 
-    {/* 全站匿名访问埋点：跳过后台与 Keystatic，sendBeacon 优先，fetch keepalive 兜底 */}
+    {/* 全站匿名访问埋点：跳过后台，sendBeacon 优先，fetch keepalive 兜底 */}
     <script is:inline>
       (function () {
         try {
           var p = location.pathname;
-          if (p.indexOf('/admin') === 0 || p.indexOf('/keystatic') === 0) return;
+          if (p.indexOf('/admin') === 0) return;
           var ref = document.referrer || '';
           var url = '/api/visit?path=' + encodeURIComponent(p) + '&ref=' + encodeURIComponent(ref);
           if (navigator.sendBeacon) {

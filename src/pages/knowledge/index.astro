@@ -1,6 +1,5 @@
 ---
-import { createReader } from '@keystatic/core/reader';
-import keystaticConfig from '../../../keystatic.config';
+import { makeReader } from '../../lib/content-reader';
 import Base from '../../layouts/Base.astro';
 import { loadSiteData, loadContent, buildFilterOptions } from '../../lib/site-data';
 import { readingMinutes, coverSrc } from '../../lib/markdown';
@@ -12,7 +11,7 @@ const locale: Locale = localeProp ?? getLocale(Astro);
 const lp = locale === 'en' ? '/en' : '';
 const t = (zh: string, en: string) => (locale === 'en' ? en : zh);
 
-const reader = createReader(process.cwd(), keystaticConfig);
+const reader = makeReader();
 const L = await loadContent(locale);
 const pages = L.pages;
 

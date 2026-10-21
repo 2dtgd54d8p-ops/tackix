@@ -1,15 +1,14 @@
 // 从后台 singleton（仓库根目录 categories/index.yaml、tags/index.yaml）生成
 // 文章编辑器下拉所需的**静态选项**模块 src/generated/content-options.ts。
 //
-// 为什么需要它：Keystatic 的 fields.select / fields.multiselect 的 options 只接受
-// 静态数组（见 @keystatic/core form/fields/select 与 multiselect 的签名），无法在
-// 运行时读取文件；而 keystatic.config.ts 又会被打进浏览器端（后台 astro-island），
-// 不能用 node:fs 直接读 YAML。故改为「构建期生成一个纯数据模块 → 配置 import 它」。
+// 为什么需要它：内容后台的「分类 / 标签」下拉选项需要从仓库根目录的
+// categories/index.yaml、tags/index.yaml（单例）读取，而构建期把这些词表
+// 预生成为一个纯数据模块，供校验脚本与编辑器复用，避免散落硬编码。
 //
-// 效果：在后台「分类管理 / 标签管理」增删条目并保存后，dev 热重启或下次 build 即
-// 自动带上，无需再手改 keystatic.config.ts 里的硬编码数组。
+// 效果：在后台「分类管理 / 标签管理」增删条目后，dev 热重启或下次 build 即
+// 自动同步，无需手改硬编码数组。
 //
-// 生成时机：postinstall / predev / prebuild，以及 dev 期间分类/标签文件变化触发的重启。
+// 生成时机：predev / prebuild，以及 dev 期间分类/标签文件变化触发的重启。
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';

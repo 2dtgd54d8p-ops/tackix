@@ -15,8 +15,8 @@ Disallow: /
 # ── 正式上线后恢复为以下内容 ────────────────────────────────────
 # User-agent: *
 # Allow: /
-# Disallow: /keystatic
-# Disallow: /api/keystatic
+# Disallow: /admin
+# Disallow: /api/admin
 #
 # # AI 检索体（GPTBot / PerplexityBot / Google-Extended）显式放行，
 # # 提升站点在 AI 答案中的可见度

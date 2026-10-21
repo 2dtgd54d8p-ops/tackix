@@ -1,6 +1,6 @@
 // 内容反馈 / 无结果需求捕获（L7 反馈闭环）
 // 以 Astro API Route 实现，由 @astrojs/cloudflare 适配器并入 dist/_worker.js，
-// 与 /keystatic 共用同一套 Worker——避免根目录 functions/ 触发 Pages Functions 模式
+// 与后台 API 路由共用同一套 Worker——避免根目录 functions/ 触发 Pages Functions 模式
 // 盖掉适配器输出的 _worker.js（那会导致整站 404）。
 //
 // 部署前提：在 Cloudflare Pages 项目绑定一个 KV namespace，变量名 FEEDBACK_KV。

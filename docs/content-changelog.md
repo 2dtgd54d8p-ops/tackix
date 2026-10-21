@@ -1,7 +1,7 @@
 # 内容变更日志（自动生成）
 
 > 由 `scripts/gen-changelog.mjs` 依据 `git log` 自动生成，跟踪 `src/content/knowledge` 与 `src/content/scenarios` 的提交。
-> 生成时间：2026-10-20　·　共 5 条（最近 全部 条）。
+> 生成时间：2026-10-21　·　共 5 条（最近 全部 条）。
 
 ## 2026-10
 

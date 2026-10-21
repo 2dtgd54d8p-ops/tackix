@@ -2,8 +2,7 @@
 // 案例库（模块 5）：派生视图——自动聚合「带 scenario 的实战文章」为案例。
 // 不新增任何内容：作者每写一篇问题→方案文并打 scenario 标签，便自动归入对应场景案例区。
 // 纯静态、无后端、无编造；中英文由 locale 切换。
-import { createReader } from '@keystatic/core/reader';
-import keystaticConfig from '../../keystatic.config';
+import { makeReader } from '../lib/content-reader';
 import Base from '../layouts/Base.astro';
 import { loadSiteData, loadContent } from '../lib/site-data';
 import { getLocale, pickB, type Locale } from '../lib/i18n';
@@ -17,7 +16,7 @@ const { locale } = Astro.props;
 const lp = locale === 'en' ? '/en' : '';
 const t = (zh: string, en: string) => (locale === 'en' ? en : zh);
 
-const reader = createReader(process.cwd(), keystaticConfig);
+const reader = makeReader();
 
 let scenarioSlugs: string[] = [];
 let knowledgeSlugs: string[] = [];

@@ -1,28 +1,40 @@
 import { defineMiddleware } from 'astro/middleware';
+import { ADMIN_COOKIE } from './lib/env';
+import { getCookieValue, isAuthed } from './lib/auth';
 
-// 彻底加固：直接访问后台 SPA（/keystatic、/keystatic/*）时，若浏览器没有
-// `keystatic-gh-access-token` 会话 cookie，一律 302 到 /admin-login。
-// 这样即使有人手输/书签 /keystatic，也不会落到 Keystatic 原生 OAuth
-// （其「Log in with GitHub」按钮需浏览器直连 github.com，公司代理环境不可用）。
-//
-// 已登录用户带着 cookie 进入 → 正常放行；后台 JS 凭该 cookie 调 /api/keystatic/*
-// 服务端接口（worker 拿 PAT 以服务端身份访问 api.github.com），链路不受影响。
-// 登出由 src/pages/api/keystatic/github/logout.ts 处理（清 cookie 后回 /admin-login）。
-//
-// 注意：本中间件只看守「后台 UI 入口」（/keystatic 路径），不拦 /api/keystatic/*
-// 也不拦静态资源，避免误伤已登录会话的后台内部请求。
-const ADMIN_COOKIE = 'keystatic-gh-access-token';
-const LOGIN_PATH = '/admin-login';
+// 自建后台守卫：取代原 GitHub PAT / Keystatic 后台守护。
+// - /admin 及其子页：未登录 → 302 到 /admin/login
+// - /api/content/* 与 /api/media/*：未登录 → 401 JSON
+// - /admin/login 与 /api/admin/login：放行
+// - 其余路径：不拦截（静态页面正常服务）
+const ADMIN_LOGIN = '/admin/login';
 
 export const onRequest = defineMiddleware(async (context, next) => {
   const { pathname } = new URL(context.request.url);
-  const isAdminUi = pathname === '/keystatic' || pathname.startsWith('/keystatic/');
 
-  if (isAdminUi) {
-    const cookie = context.cookies.get(ADMIN_COOKIE);
-    const hasSession = !!cookie && !!cookie.value;
-    if (!hasSession) {
-      return context.redirect(LOGIN_PATH, 302);
+  const isLoginPage = pathname === ADMIN_LOGIN || pathname.startsWith(ADMIN_LOGIN + '/');
+  const isLoginApi = pathname === '/api/admin/login';
+  const isAdminPage = pathname === '/admin' || pathname.startsWith('/admin/');
+  const isProtectedApi =
+    pathname.startsWith('/api/content/') || pathname.startsWith('/api/media/');
+
+  // 运营类后台页（留言管理 / 运营报表）沿用各自的 ADMIN_TOKEN 网关，
+  // 不纳入统一会话鉴权，避免与内容后台的 HMAC 会话双重登录。
+  const isOpTool = pathname === '/admin/messages' || pathname === '/admin/report';
+
+  // 登录入口与登录接口始终放行
+  if (isLoginPage || isLoginApi) return next();
+
+  if ((isAdminPage && !isOpTool) || isProtectedApi) {
+    const authed = await isAuthed(context);
+    if (!authed) {
+      if (isProtectedApi) {
+        return new Response(JSON.stringify({ ok: false, error: '未登录' }), {
+          status: 401,
+          headers: { 'content-type': 'application/json' },
+        });
+      }
+      return context.redirect(ADMIN_LOGIN, 302);
     }
   }
 

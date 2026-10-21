@@ -1,0 +1,261 @@
+---
+// 通用编辑页：根据 src/lib/admin-schema.ts 的字段描述递归渲染表单，
+// 提交时把值还原成与 D1 `data` 列同构的对象。受 middleware 守卫。
+// 设为 SSR：请求期由 middleware 守卫，构建期不再被预渲染成跳转残页。
+export const prerender = false;
+import { SCHEMAS } from '../../lib/admin-schema';
+---
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>编辑 · Tackix 后台</title>
+    <style>
+      :root { color-scheme: light dark; }
+      * { box-sizing: border-box; }
+      body { margin: 0; font-family: system-ui, -apple-system, "Segoe UI", Roboto, "PingFang SC", "Microsoft YaHei", sans-serif; background: #f1f5f9; color: #0f172a; }
+      header { background: #0f172a; color: #fff; padding: 12px 20px; display: flex; align-items: center; gap: 12px; position: sticky; top: 0; z-index: 10; }
+      header h1 { font-size: 15px; margin: 0; flex: 1; }
+      header a, header button { font-size: 13px; background: #1e293b; border: 1px solid #334155; color: #e2e8f0; padding: 7px 12px; border-radius: 8px; text-decoration: none; cursor: pointer; }
+      header button.save { background: #2563eb; border-color: #2563eb; }
+      main { max-width: 860px; margin: 20px auto; padding: 0 16px 80px; }
+      .field { background: #fff; border: 1px solid #e2e8f0; border-radius: 10px; padding: 12px 14px; margin-bottom: 12px; }
+      .field > label { display: block; font-size: 13px; font-weight: 600; margin-bottom: 6px; color: #1e293b; }
+      .field .desc { font-size: 12px; color: #64748b; margin: -4px 0 8px; }
+      .bi { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+      .bi small { display:block; color:#64748b; font-size:11px; margin-bottom:3px; }
+      input[type=text], input[type=date], textarea, select { width: 100%; padding: 8px 10px; border: 1px solid #cbd5e1; border-radius: 8px; font-size: 13px; font-family: inherit; background: #fff; color: #0f172a; }
+      textarea { min-height: 90px; resize: vertical; }
+      .checks { display: flex; flex-wrap: wrap; gap: 10px; }
+      .checks label { font-weight: 400; font-size: 13px; display: inline-flex; align-items: center; gap: 5px; }
+      fieldset { border: 1px dashed #cbd5e1; border-radius: 10px; padding: 10px 12px; margin: 0; }
+      fieldset > legend { font-size: 13px; font-weight: 600; padding: 0 6px; color: #334155; }
+      .arr-item { border: 1px solid #e2e8f0; border-radius: 10px; padding: 10px 12px; margin-bottom: 10px; background: #f8fafc; position: relative; }
+      .arr-item .rm { position: absolute; top: 8px; right: 10px; font-size: 12px; background: #fee2e2; color: #991b1b; border: 0; padding: 4px 9px; border-radius: 6px; cursor: pointer; }
+      .add-btn { font-size: 12px; background: #e0e7ff; color: #3730a3; border: 0; padding: 6px 11px; border-radius: 7px; cursor: pointer; margin-top: 4px; }
+      .img-row { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+      .img-row img { max-height: 60px; border-radius: 6px; border: 1px solid #e2e8f0; }
+      #toast { position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%); background: #0f172a; color: #fff; padding: 10px 16px; border-radius: 9px; font-size: 13px; opacity: 0; transition: opacity .2s; pointer-events: none; }
+      #toast.show { opacity: 1; }
+    </style>
+  </head>
+  <body>
+    <header>
+      <a href="/admin">← 返回</a>
+      <h1 id="page-title">编辑</h1>
+      <button class="save" id="save-btn">保存</button>
+    </header>
+    <main>
+      <div id="slug-wrap" class="field" style="display:none">
+        <label for="slug-input">URL slug（创建后勿随意改）</label>
+        <input type="text" id="slug-input" placeholder="例如 choose-bathroom-sealant" />
+      </div>
+      <div id="form-root">加载中…</div>
+    </main>
+    <div id="toast"></div>
+
+    <script type="application/json" id="schemas">{JSON.stringify(SCHEMAS)}</script>
+    <script is:inline>
+      const SCHEMAS = JSON.parse(document.getElementById('schemas').textContent);
+      const params = new URLSearchParams(location.search);
+      const singleton = params.get('singleton');
+      const collection = params.get('collection');
+      const slug = params.get('slug');
+      const schema = singleton ? SCHEMAS[singleton] : SCHEMAS[collection];
+      const meta = { collection: schema ? schema.collection : (singleton || collection), slug: slug || '', isSingleton: !!singleton };
+
+      const $ = (id) => document.getElementById(id);
+      function toast(text, ok = true) {
+        const t = $('toast'); t.textContent = text; t.style.background = ok ? '#0f172a' : '#991b1b';
+        t.classList.add('show'); setTimeout(() => t.classList.remove('show'), 2600);
+      }
+      function h(tag, props = {}, children = []) {
+        const e = document.createElement(tag);
+        for (const [k, v] of Object.entries(props)) {
+          if (k === 'class') e.className = v;
+          else if (k.startsWith('on') && typeof v === 'function') e.addEventListener(k.slice(2), v);
+          else if (k === 'html') e.innerHTML = v;
+          else e.setAttribute(k, v);
+        }
+        (Array.isArray(children) ? children : [children]).forEach((c) => {
+          if (c == null) return;
+          e.appendChild(typeof c === 'string' ? document.createTextNode(c) : c);
+        });
+        return e;
+      }
+
+      const data = {};
+      let slugInput = null;
+
+      function fieldShell(field, control) {
+        const wrap = h('div', { class: 'field' });
+        wrap.appendChild(h('label', {}, field.label));
+        if (field.description) wrap.appendChild(h('div', { class: 'desc' }, field.description));
+        wrap.appendChild(control);
+        return wrap;
+      }
+
+      function renderField(parent, field, data) {
+        switch (field.type) {
+          case 'bilingual': {
+            data[field.key] = data[field.key] || { zh: '', en: '' };
+            if (typeof data[field.key] === 'string') data[field.key] = { zh: data[field.key], en: '' };
+            const zh = h('textarea', { oninput: (e) => (data[field.key].zh = e.target.value) });
+            zh.value = data[field.key].zh || '';
+            const en = h('textarea', { oninput: (e) => (data[field.key].en = e.target.value) });
+            en.value = data[field.key].en || '';
+            if (!field.multiline) { zh.setAttribute('rows', '1'); en.setAttribute('rows', '1'); }
+            const control = h('div', { class: 'bi' }, [h('div', {}, [h('small', {}, '中文'), zh]), h('div', {}, [h('small', {}, 'English'), en])]);
+            parent.appendChild(fieldShell(field, control));
+            break;
+          }
+          case 'textarea': {
+            const ta = h('textarea', { oninput: (e) => (data[field.key] = e.target.value) });
+            ta.value = data[field.key] || '';
+            parent.appendChild(fieldShell(field, ta));
+            break;
+          }
+          case 'text': {
+            const inp = h('input', { type: 'text', oninput: (e) => (data[field.key] = e.target.value) });
+            inp.value = data[field.key] || '';
+            parent.appendChild(fieldShell(field, inp));
+            break;
+          }
+          case 'date': {
+            const inp = h('input', { type: 'date', oninput: (e) => (data[field.key] = e.target.value) });
+            inp.value = (data[field.key] || '').slice(0, 10);
+            parent.appendChild(fieldShell(field, inp));
+            break;
+          }
+          case 'checkbox': {
+            data[field.key] = !!data[field.key];
+            const inp = h('input', { type: 'checkbox', onchange: (e) => (data[field.key] = e.target.checked) });
+            inp.checked = data[field.key];
+            const control = h('label', { class: 'checks' }, [inp, field.description || '']);
+            parent.appendChild(fieldShell(field, control));
+            break;
+          }
+          case 'select': {
+            const sel = h('select', { onchange: (e) => (data[field.key] = e.target.value) });
+            for (const o of field.options) {
+              const opt = h('option', { value: o.value }, o.label);
+              if (data[field.key] === o.value) opt.selected = true;
+              sel.appendChild(opt);
+            }
+            if (!field.options.some((o) => o.value === data[field.key])) {
+              sel.appendChild(h('option', { value: data[field.key] || '' }, data[field.key] || '(未列出)'));
+            }
+            parent.appendChild(fieldShell(field, sel));
+            break;
+          }
+          case 'multiselect': {
+            data[field.key] = Array.isArray(data[field.key]) ? data[field.key] : [];
+            const box = h('div', { class: 'checks' });
+            const sync = () => {
+              const vals = Array.from(box.querySelectorAll('input:checked')).map((i) => i.value);
+              data[field.key] = vals;
+            };
+            for (const o of field.options) {
+              const cb = h('input', { type: 'checkbox', value: o.value, onchange: sync });
+              if (data[field.key].includes(o.value)) cb.checked = true;
+              box.appendChild(h('label', {}, [cb, o.label]));
+            }
+            parent.appendChild(fieldShell(field, box));
+            break;
+          }
+          case 'image': {
+            data[field.key] = data[field.key] || '';
+            const urlInp = h('input', { type: 'text', placeholder: '/uploads/xxx.png', oninput: (e) => (data[field.key] = e.target.value) });
+            urlInp.value = data[field.key];
+            const img = h('img', { src: data[field.key] || '', alt: '' });
+            if (!data[field.key]) img.style.display = 'none';
+            const file = h('input', { type: 'file' });
+            file.addEventListener('change', async () => {
+              const f = file.files && file.files[0];
+              if (!f) return;
+              const fd = new FormData();
+              fd.append('file', f);
+              toast('上传中…');
+              const r = await fetch('/api/media/upload', { method: 'POST', body: fd }).then((x) => x.json()).catch(() => ({}));
+              if (r.ok) { urlInp.value = r.url; data[field.key] = r.url; img.src = r.url; img.style.display = ''; toast('已上传'); }
+              else toast(r.error || '上传失败', false);
+            });
+            const control = h('div', { class: 'img-row' }, [img, urlInp, file]);
+            parent.appendChild(fieldShell(field, control));
+            break;
+          }
+          case 'group': {
+            data[field.key] = data[field.key] || {};
+            const fs = h('fieldset', {}, [h('legend', {}, field.label)]);
+            if (field.description) fs.appendChild(h('div', { class: 'desc' }, field.description));
+            for (const sub of field.fields) renderField(fs, sub, data[field.key]);
+            parent.appendChild(fs);
+            break;
+          }
+          case 'array': {
+            data[field.key] = Array.isArray(data[field.key]) ? data[field.key] : [];
+            const container = h('div', {});
+            const renderItems = () => {
+              container.innerHTML = '';
+              data[field.key].forEach((item, idx) => {
+                const card = h('div', { class: 'arr-item' });
+                const rm = h('button', { class: 'rm', type: 'button', onclick: () => { data[field.key].splice(idx, 1); renderItems(); } }, '删除');
+                card.appendChild(rm);
+                for (const sub of field.fields) renderField(card, sub, item);
+                container.appendChild(card);
+              });
+            };
+            renderItems();
+            const add = h('button', { class: 'add-btn', type: 'button', onclick: () => { data[field.key].push({}); renderItems(); } }, '+ ' + (field.itemLabel || '添加'));
+            const fs = h('fieldset', {}, [h('legend', {}, field.label), container, add]);
+            if (field.description) fs.insertBefore(h('div', { class: 'desc' }, field.description), container);
+            parent.appendChild(fs);
+            break;
+          }
+        }
+      }
+
+      async function init() {
+        if (!schema) { $('form-root').textContent = '未知的内容类型：' + (singleton || collection); return; }
+        $('page-title').textContent = (meta.isSingleton ? '' : (meta.slug ? '编辑：' : '新建：')) + schema.title;
+
+        // 创建模式：集合项需填 slug
+        if (schema.slugEditableOnCreate && !meta.slug) {
+          $('slug-wrap').style.display = '';
+          slugInput = $('slug-input');
+        }
+
+        if (meta.slug || meta.isSingleton) {
+          const q = meta.isSingleton ? 'singleton=' + encodeURIComponent(meta.collection) : 'collection=' + encodeURIComponent(meta.collection) + '&slug=' + encodeURIComponent(meta.slug);
+          try {
+            const j = await fetch('/api/content/read?' + q, { headers: { accept: 'application/json' } }).then((r) => r.json());
+            if (j.ok && j.entry) Object.assign(data, j.entry.data || {});
+          } catch (e) { /* 新建或读取失败，留空 */ }
+        }
+
+        const root = $('form-root');
+        root.innerHTML = '';
+        for (const f of schema.fields) renderField(root, f, data);
+
+        $('save-btn').onclick = async () => {
+          let s = meta.slug;
+          if (schema.slugEditableOnCreate && !meta.slug) {
+            s = (slugInput?.value || '').trim();
+            if (!/^[a-z0-9-]+$/i.test(s)) { toast('slug 非法（仅小写字母/数字/连字符）', false); return; }
+          }
+          const payload = { collection: meta.collection, slug: s, data: data, published: !!data.published, featured: !!data.featured };
+          if (!meta.isSingleton) payload.data.title = s; // 保持与迁移数据同构（title=slug）
+          try {
+            const r = await fetch('/api/content/save', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(payload) }).then((x) => x.json());
+            if (r.ok) {
+              toast('已保存');
+              if (!meta.slug && s) { meta.slug = s; history.replaceState(null, '', '/admin/edit?collection=' + meta.collection + '&slug=' + s); $('slug-wrap').style.display = 'none'; }
+            } else toast(r.error || '保存失败', false);
+          } catch (e) { toast('网络错误：' + e.message, false); }
+        };
+      }
+      init();
+    </script>
+  </body>
+</html>

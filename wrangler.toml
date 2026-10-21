@@ -1,0 +1,26 @@
+# Tackix — Cloudflare Pages + D1 + R2 配置
+# 取代原 Keystatic/GitHub 内容后端；内容编辑链路只依赖 Cloudflare。
+# 敏感凭据（ADMIN_PASSWORD / SESSION_SECRET）不走本文件，用 `wrangler pages secret put` 注入。
+name = "tackix"
+pages_build_output_dir = "dist"
+account_id = "b4f68b37b18c0891a0df46f3bf4d07f1"
+compatibility_date = "2025-04-01"
+compatibility_flags = ["nodejs_compat"]
+
+# 生产 D1：先 `wrangler d1 create tackix-content`，把返回的 uuid 填到 database_id。
+[[d1_databases]]
+binding = "DB"
+database_name = "tackix-content"
+database_id = "REPLACE_WITH_D1_DATABASE_ID"
+migrations_dir = "migrations"
+
+# R2 媒体桶：先 `wrangler r2 bucket create tackix-media`。
+[[r2_buckets]]
+binding = "MEDIA"
+bucket_name = "tackix-media"
+
+[vars]
+SITE_URL = "https://tackix.pages.dev"
+# 发布钩子（Cloudflare Pages → Deploy Hook），由 `wrangler pages deploy-hook create` 生成后
+# 用环境变量注入更稳妥；此处留空则后台“发布”按钮会提示手动部署。
+PAGES_DEPLOY_HOOK = ""

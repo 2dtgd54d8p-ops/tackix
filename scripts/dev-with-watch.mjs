@@ -2,7 +2,7 @@
 //
 // 作用：
 //   1. 启动前先从后台 singleton 生成 src/generated/content-options.ts；
-//   2. 启动 astro dev（本地模式 KEYSTATIC_USE_LOCAL=1）；
+//   2. 启动 astro dev；
 //   3. 监听 categories/index.yaml、tags/index.yaml 的变化，自动重新生成
 //      content-options.ts，使后台「分类管理 / 标签管理」的增删即时同步到
 //      文章编辑器的「分类」下拉与「标签」多选框（Vite 检测到生成的模块变化会
@@ -24,7 +24,7 @@ generateContentOptions();
 // 2) 启动 astro dev
 const astro = spawn('npx', ['astro', 'dev'], {
   cwd: ROOT,
-  env: { ...process.env, KEYSTATIC_USE_LOCAL: '1' },
+  env: { ...process.env },
   stdio: 'inherit',
 });
 

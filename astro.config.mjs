@@ -1,14 +1,12 @@
 // @ts-check
 import { defineConfig } from 'astro/config';
 import react from '@astrojs/react';
-import keystatic from '@keystatic/astro';
 import cloudflare from '@astrojs/cloudflare';
-import keystaticUiEnhance from './keystatic-ui-enhance.mjs';
 
-// 独立站平台：Astro + Keystatic + Cloudflare Pages
+// 独立站平台：Astro + Cloudflare Pages（自建 D1 后台，无 GitHub / Keystatic 依赖）
 // - output: 'static'（默认）-> 页面默认静态预渲染（快/免费/无限带宽）；
-//   仅 @keystatic/astro 集成自动把 /keystatic 与 /api/keystatic/* 标记为
-//   prerender:false，走 Cloudflare Pages Functions（OAuth 回调需要服务端）
+//   仅后台登录态相关页面（/admin/*）与内容 CRUD 接口（/api/content/*、/api/media/*）
+//   走 Cloudflare Pages Functions（SSR）。
 // - adapter: cloudflare()（高级模式，编译进 dist/_worker.js）
 //   注意：@astrojs/cloudflare v13+ 已转向 Workers，Pages 必须锁 v12
 export default defineConfig({
@@ -17,6 +15,9 @@ export default defineConfig({
   site: import.meta.env.PUBLIC_SITE_URL || 'https://tackix.pages.dev',
   output: 'static',
   adapter: cloudflare(),
+  // 本后台鉴权用自签会话 cookie（src/lib/auth.ts），不依赖 Astro Sessions。
+  // 显式指定 memory 驱动，避免 @astrojs/cloudflare 自动强行要求 SESSION KV 绑定。
+  session: { driver: 'memory' },
   // 多语言路由：中文为默认语种，路由无前缀（/）；英文位于 /en/ 下。
   // prefixDefaultLocale:false 让默认语种不带 /zh-CN 前缀，保持首页干净。
   i18n: {
@@ -26,27 +27,5 @@ export default defineConfig({
   },
   integrations: [
     react(),
-    keystatic(), // 注入 /keystatic 后台与 /api/keystatic/* 接口
-    // 后台 UI 增强：把 multiselect（标签等）由单列改为多列，缩短编辑页
-    keystaticUiEnhance(),
   ],
-  vite: {
-    // ⚠️ 必须注入 __KEYSTATIC_USE_LOCAL__：keystatic.config.ts 同时跑在浏览器端
-    //（/keystatic 的 astro-island 会 import 它），而浏览器没有 process，读不到
-    // KEYSTATIC_USE_LOCAL → 本地 dev 会被误判成 github 模式并渲染登录按钮。
-    // 用 define 在构建期把真实值写死进产物，浏览器/服务端一致。
-    define: {
-      __KEYSTATIC_USE_LOCAL__: JSON.stringify(
-        process.env.KEYSTATIC_USE_LOCAL === '1'
-      ),
-    },
-    optimizeDeps: {
-      // 只排除 @keystatic/astro：它内部 import 'astro:env/server'（Astro 虚拟模块），
-      // 会被 Vite 的 esbuild 预构建器误扫描而报 "Could not resolve 'astro:env/server'"。
-      // 注意：@keystatic/core 绝不能排除——它的 CJS 依赖（如 lodash）需要 Vite 做
-      // CJS→ESM 互操作，否则客户端会报 "does not provide an export named 'default'"，
-      // 导致 /keystatic 后台 React 挂载失败、页面空白。
-      exclude: ['@keystatic/astro'],
-    },
-  },
 });

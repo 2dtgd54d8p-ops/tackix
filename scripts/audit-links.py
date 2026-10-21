@@ -2,9 +2,9 @@ import os, re
 
 DIST = 'dist'
 
-# 运行时由 Cloudflare Worker / Keystatic 集成提供的 SPA 路由，
+# 运行时由 Cloudflare Pages Functions（自建后台 /admin）提供的 SSR 路由，
 # 不会作为静态 HTML 预渲染进 dist/，但实际线上可访问，审计时跳过。
-RUNTIME_ROUTES = ('/keystatic',)
+RUNTIME_ROUTES = ('/admin',)
 SCRIPT_RE = re.compile(r'<script.*?</script>', re.S | re.I)
 
 html_files = []
@@ -58,7 +58,7 @@ for src, link in sorted(set(dead)):
 # 检测可疑空页（main 内容极少）
 # 已知由 JS 在浏览器端注入内容的页（后台面板 / 搜索 UI / 登录页），
 # 静态 main 文本本来就极少，不在告警范围。
-JS_RENDERED = ('admin', 'search', 'admin-login')
+JS_RENDERED = ('admin', 'search')
 print("\n===== 可疑空/短页（main 文本 < 200 字，已排除 JS 渲染页）=====")
 for hf in html_files:
     rel = os.path.relpath(hf, DIST)

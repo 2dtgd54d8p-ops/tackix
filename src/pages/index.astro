@@ -1,6 +1,5 @@
 ---
-import { createReader } from '@keystatic/core/reader';
-import keystaticConfig from '../../keystatic.config';
+import { makeReader } from '../lib/content-reader';
 import Base from '../layouts/Base.astro';
 import { loadSiteData, loadContent } from '../lib/site-data';
 import { organizationSchema } from '../lib/schema';
@@ -13,7 +12,7 @@ const locale: Locale = localeProp ?? getLocale(Astro);
 const lp = locale === 'en' ? '/en' : '';
 const t = (zh: string, en: string) => (locale === 'en' ? en : zh);
 
-const reader = createReader(process.cwd(), keystaticConfig);
+const reader = makeReader();
 
 // 场景方案 & 知识库文章（已发布）。
 let scenarioSlugs: string[] = [];
@@ -21,12 +20,12 @@ let knowledgeSlugs: string[] = [];
 try {
   scenarioSlugs = await reader.collections.scenarios.list();
 } catch (e) {
-  console.warn('[build] scenarios list failed（检查 KEYSTATIC_GITHUB_TOKEN 是否有效）：', e);
+  console.warn('[build] scenarios list failed（检查 content.json 快照是否有效）：', e);
 }
 try {
   knowledgeSlugs = await reader.collections.knowledge.list();
 } catch (e) {
-  console.warn('[build] knowledge list failed（检查 KEYSTATIC_GITHUB_TOKEN 是否有效）：', e);
+  console.warn('[build] knowledge list failed（检查 content.json 快照是否有效）：', e);
 }
 
 const scenarios = (

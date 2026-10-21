@@ -1,0 +1,135 @@
+---
+// 后台仪表盘（受 middleware 守卫：未登录跳 /admin/login）。
+// 静态外壳 + 客户端按需拉取列表；编辑/新建跳转 edit.astro。
+// 设为 SSR：请求期由 middleware 守卫，构建期不再被预渲染成跳转残页。
+export const prerender = false;
+const SINGLETONS = [
+  { key: 'home', label: '首页内容' },
+  { key: 'ui', label: '全局界面文案' },
+  { key: 'contact', label: '联系页' },
+  { key: 'pages', label: '列表页标题' },
+  { key: 'detail', label: '详情页区块' },
+  { key: 'about', label: '关于页' },
+  { key: 'site', label: '站点与公司信息' },
+  { key: 'categories', label: '分类管理' },
+  { key: 'tags', label: '标签' },
+];
+---
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>内容后台 · Tackix</title>
+    <style>
+      :root { color-scheme: light dark; }
+      * { box-sizing: border-box; }
+      body { margin: 0; font-family: system-ui, -apple-system, "Segoe UI", Roboto, "PingFang SC", "Microsoft YaHei", sans-serif; background: #f1f5f9; color: #0f172a; }
+      header { background: #0f172a; color: #fff; padding: 14px 22px; display: flex; align-items: center; gap: 14px; }
+      header h1 { font-size: 16px; margin: 0; flex: 1; }
+      header a, header button { color: #e2e8f0; text-decoration: none; font-size: 13px; background: #1e293b; border: 1px solid #334155; padding: 7px 12px; border-radius: 8px; cursor: pointer; }
+      header button.publish { background: #2563eb; border-color: #2563eb; }
+      main { max-width: 920px; margin: 22px auto; padding: 0 16px; }
+      section { background: #fff; border: 1px solid #e2e8f0; border-radius: 12px; padding: 16px 18px; margin-bottom: 18px; }
+      h2 { font-size: 15px; margin: 0 0 12px; display: flex; align-items: center; gap: 10px; }
+      .new { margin-left: auto; font-size: 12px; background: #2563eb; color: #fff; border: 0; padding: 6px 11px; border-radius: 7px; text-decoration: none; }
+      ul { list-style: none; margin: 0; padding: 0; }
+      li { display: flex; align-items: center; gap: 10px; padding: 9px 0; border-top: 1px solid #f1f5f9; }
+      li:first-child { border-top: 0; }
+      .name { flex: 1; font-size: 14px; }
+      .name small { color: #64748b; margin-left: 8px; font-size: 12px; }
+      .badge { font-size: 11px; padding: 2px 8px; border-radius: 999px; }
+      .badge.on { background: #dcfce7; color: #166534; }
+      .badge.off { background: #fee2e2; color: #991b1b; }
+      .badge.feat { background: #fef9c3; color: #854d0e; margin-left: 6px; }
+      a.edit, button.del { font-size: 12px; text-decoration: none; padding: 5px 10px; border-radius: 7px; cursor: pointer; }
+      a.edit { background: #e0e7ff; color: #3730a3; }
+      button.del { background: #fee2e2; color: #991b1b; border: 0; }
+      .singletons { display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 10px; }
+      .singletons a { display: block; padding: 12px; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 9px; text-decoration: none; color: #0f172a; font-size: 13px; }
+      .singletons a:hover { border-color: #2563eb; }
+      #toast { position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%); background: #0f172a; color: #fff; padding: 10px 16px; border-radius: 9px; font-size: 13px; opacity: 0; transition: opacity .2s; pointer-events: none; }
+      #toast.show { opacity: 1; }
+    </style>
+  </head>
+  <body>
+    <header>
+      <h1>Tackix 内容后台</h1>
+      <a href="/">查看站点</a>
+      <button class="publish" id="publish-btn">发布（重建站点）</button>
+      <a href="/admin/login" id="logout">退出</a>
+    </header>
+    <main>
+      <section>
+        <h2>知识库文章 <a class="new" href="/admin/edit?collection=knowledge">+ 新建文章</a></h2>
+        <ul id="list-knowledge"><li><span class="name">加载中…</span></li></ul>
+      </section>
+      <section>
+        <h2>场景方案 <a class="new" href="/admin/edit?collection=scenarios">+ 新建场景</a></h2>
+        <ul id="list-scenarios"><li><span class="name">加载中…</span></li></ul>
+      </section>
+      <section>
+        <h2>单例配置</h2>
+        <div class="singletons">
+          {SINGLETONS.map((s) => <a href={`/admin/edit?singleton=${s.key}`}>{s.label}</a>)}
+        </div>
+      </section>
+    </main>
+    <div id="toast"></div>
+
+    <script is:inline>
+      const $ = (id) => document.getElementById(id);
+      function toast(text, ok = true) {
+        const t = $('toast'); t.textContent = text; t.style.background = ok ? '#0f172a' : '#991b1b';
+        t.classList.add('show'); setTimeout(() => t.classList.remove('show'), 2600);
+      }
+      async function checkAuth() {
+        const me = await fetch('/api/admin/me').then((r) => r.json()).catch(() => ({ authed: false }));
+        if (!me.authed) location.href = '/admin/login';
+      }
+      function renderList(ulId, kind, collection) {
+        fetch('/api/content/list?kind=' + kind)
+          .then((r) => r.json())
+          .then((j) => {
+            const ul = $(ulId);
+            if (!j.ok || !j.rows?.length) { ul.innerHTML = '<li><span class="name">（暂无）</span></li>'; return; }
+            ul.innerHTML = '';
+            for (const row of j.rows) {
+              const li = document.createElement('li');
+              const name = row.title_zh || row.title_en || row.slug;
+              const badges =
+                (row.published ? '<span class="badge on">已发布</span>' : '<span class="badge off">草稿</span>') +
+                (row.featured ? '<span class="badge feat">首页</span>' : '');
+              li.innerHTML = `<span class="name">${name}<small>${row.slug}</small> ${badges}</span>`;
+              const edit = document.createElement('a');
+              edit.className = 'edit'; edit.href = `/admin/edit?collection=${collection}&slug=${row.slug}`; edit.textContent = '编辑';
+              const del = document.createElement('button'); del.className = 'del'; del.textContent = '删除';
+              del.onclick = async () => {
+                if (!confirm('确定删除「' + name + '」？此操作不可撤销。')) return;
+                const r = await fetch('/api/content/delete', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ collection, slug: row.slug }) });
+                const out = await r.json().catch(() => ({}));
+                if (out.ok) { toast('已删除'); renderList(ulId, kind, collection); } else toast(out.error || '删除失败', false);
+              };
+              li.appendChild(edit); li.appendChild(del); ul.appendChild(li);
+            }
+          })
+          .catch(() => { $(ulId).innerHTML = '<li><span class="name">加载失败</span></li>'; });
+      }
+      $('publish-btn').onclick = async () => {
+        if (!confirm('发布将触发重建，约 1–2 分钟后线上生效。继续？')) return;
+        const r = await fetch('/api/content/publish', { method: 'POST' }).then((x) => x.json()).catch(() => ({}));
+        toast(r.message || r.error || '已触发', !!r.ok);
+      };
+      $('logout').onclick = async (e) => {
+        e.preventDefault();
+        await fetch('/api/admin/logout', { method: 'POST' }).catch(() => {});
+        location.href = '/admin/login';
+      };
+      (async () => {
+        await checkAuth();
+        renderList('list-knowledge', 'knowledge', 'knowledge');
+        renderList('list-scenarios', 'scenario', 'scenarios');
+      })();
+    </script>
+  </body>
+</html>

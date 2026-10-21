@@ -30,8 +30,8 @@ const mode = revert ? '预上线（停止收录）' : '正式上线（允许收�
 
 const ONLINE_BLOCK = `User-agent: *
 Allow: /
-Disallow: /keystatic
-Disallow: /api/keystatic
+Disallow: /admin
+Disallow: /api/admin
 
 # AI 检索体（GPTBot / PerplexityBot / Google-Extended）显式放行，
 # 提升站点在 AI 答案中的可见度
@@ -95,7 +95,7 @@ function toggleRobots() {
  * 全站 noindex 开关。
  *
  * 不依赖锚点标记 —— Cloudflare _headers 是「路径块」语法，按行号猜块边界极易
- * 误删 /keystatic、/admin、/api 的 noindex。改为定位「第一个 /* 块」并判断
+ * 误删 /admin、/api 的 noindex。改为定位「第一个 /* 块」并判断
  * 其中 X-Robots-Tag 行**是否被注释**：
  *   · 未注释（生效中）→ 注释掉
  *   · 已注释（已停用）→ 取消注释
@@ -150,7 +150,7 @@ function toggleHeaders() {
   }
   fs.writeFileSync(HEADERS, lines.join('\n'));
   console.log(
-    `  ✓ _headers    → 全站 X-Robots-Tag 已${wantOn ? '启用' : '停用'}（后台 /keystatic /admin /api 的 noindex 不受影响）`
+    `  ✓ _headers    → 全站 X-Robots-Tag 已${wantOn ? '启用' : '停用'}（后台 /admin /api 的 noindex 不受影响）`
   );
 }
 

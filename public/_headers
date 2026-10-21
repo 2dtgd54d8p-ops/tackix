@@ -15,10 +15,6 @@ X-Robots-Tag: noindex, nofollow, noarchive
 /_astro/*
   Cache-Control: public, max-age=31536000, immutable
 
-# 管理后台禁止被搜索引擎收录
-/keystatic*
-  X-Robots-Tag: noindex, nofollow, noarchive
-
 # 留言后台：不在导航露出，禁止收录，且不允许被 iframe 套入
 /admin/*
   X-Robots-Tag: noindex, nofollow, noarchive

@@ -1,11 +1,10 @@
 ---
 import SolutionsDetail from '../../../components/pages/SolutionsDetail.astro';
-import { createReader } from '@keystatic/core/reader';
-import keystaticConfig from '../../../../keystatic.config';
+import { makeReader } from '../../../lib/content-reader';
 
 // 英文镜像：枚举所有已发布场景生成 /en/solutions/<slug>。
 export async function getStaticPaths() {
-  const reader = createReader(process.cwd(), keystaticConfig);
+  const reader = makeReader();
   let slugs: string[] = [];
   try {
     slugs = await reader.collections.scenarios.list();

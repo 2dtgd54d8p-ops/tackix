@@ -1,5 +1,4 @@
-import { createReader } from '@keystatic/core/reader';
-import keystaticConfig from '../../keystatic.config';
+import { makeReader } from '../lib/content-reader';
 import { loadSiteData } from '../lib/site-data';
 import { pickB } from '../lib/i18n';
 import type { APIRoute } from 'astro';
@@ -11,7 +10,7 @@ export const prerender = true;
 export const GET: APIRoute = async (Astro) => {
   const base = Astro.site ?? new URL('https://tackix.pages.dev');
   const { site } = await loadSiteData();
-  const reader = createReader(process.cwd(), keystaticConfig);
+  const reader = makeReader();
 
   // 知识库文章（已发布）
   let postSlugs: string[] = [];

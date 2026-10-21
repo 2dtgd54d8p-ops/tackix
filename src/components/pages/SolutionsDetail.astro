@@ -1,6 +1,5 @@
 ---
-import { createReader } from '@keystatic/core/reader';
-import keystaticConfig from '../../../keystatic.config';
+import { makeReader } from '../../lib/content-reader';
 import Base from '../../layouts/Base.astro';
 import { loadSiteData, loadContent } from '../../lib/site-data';
 import { readingMinutes, coverSrc, renderMarkdown } from '../../lib/markdown';
@@ -22,7 +21,7 @@ const content = await loadContent(locale);
 const detail = content.detail;
 const detail_bottomline_label = detail.scenarioConclusionTitle;
 
-const reader = createReader(process.cwd(), keystaticConfig);
+const reader = makeReader();
 let item: any = null;
 try {
   item = await reader.collections.scenarios.read(slug);

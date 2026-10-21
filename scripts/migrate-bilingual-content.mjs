@@ -1,5 +1,5 @@
 // 一次性迁移脚本：把根目录 singleton YAML（旧的 xxx / xxxEn 平铺双语形态）
-// 改写为统一的 { zh, en } 对象形态，以匹配 keystatic.config.ts 的新 schema。
+// 改写为统一的 { zh, en } 对象形态，以匹配内容后台（D1 / content.json）的新 schema。
 // 仅本地使用，跑完可删除。
 import fs from 'node:fs';
 import path from 'node:path';

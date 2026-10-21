@@ -33,7 +33,7 @@ node scripts/launch.js
 
 它会做两件事：
 - `public/robots.txt` → 改为 `Allow: /` + 恢复 GPTBot/PerplexityBot/Google-Extended 放行 + 提交 Sitemap
-- `public/_headers` → 注释掉全站 `X-Robots-Tag`（`/keystatic`、`/admin`、`/api` 的 noindex **保留**）
+- `public/_headers` → 注释掉全站 `X-Robots-Tag`（`/admin`、`/api` 的 noindex **保留**）
 
 ### 第 2 步：设环境变量
 

@@ -13,10 +13,57 @@
  * 只接受静态数组、无法运行时读文件。因此文章表单里的下拉仍是静态的，
  * 而**前台展示**读取 singleton，做到后台改完即生效。
  */
-import { createReader } from '@keystatic/core/reader';
-import keystaticConfig from '../../keystatic.config';
+// 内容后端已改为 Cloudflare D1：构建期由 scripts/fetch-content.mjs 把 D1 抽成
+// src/generated/content.json（形状与「Keystatic reader 返回值」一一对应），此处用
+// JSON-backed 假 reader 消费它，旧的 loadContent/loadSiteData 转换与兜底逻辑完全不变。
+import contentSnapshot from '../generated/content.json';
 import { pickB, DEFAULT_LOCALE } from './i18n';
 import type { Bilingual, Locale } from './i18n';
+
+type ReaderEntry = Record<string, any>;
+interface FakeReader {
+  singletons: Record<string, { read: () => Promise<ReaderEntry | null> }>;
+  collections: Record<string, { list: () => Promise<string[]>; read: (slug: string) => Promise<ReaderEntry | null> }>;
+}
+
+/**
+ * 由 content.json 构造「假 reader」，对外暴露与 @keystatic/core/reader 等价的
+ * singletons.X.read() / collections.X.list() / .read(slug) 接口，使下游代码零改动。
+ */
+function buildReader(): FakeReader {
+  const snap = contentSnapshot as {
+    knowledge: { slug: string; data: ReaderEntry }[];
+    scenarios: { slug: string; data: ReaderEntry }[];
+    singletons: Record<string, ReaderEntry>;
+  };
+  // 用 Proxy 兜底：任意未配置的单例 key（如未建 YAML 的 about）都返回「读空」reader，
+  // 与 Keystatic createReader 对不存在单例返回 null 的行为一致，避免后台未填即崩溃。
+  const store = snap.singletons ?? {};
+  const NULL_READER = { read: async () => null };
+  const singletons: FakeReader['singletons'] = new Proxy(store, {
+    get(target, prop, receiver) {
+      if (typeof prop === 'string' && prop in target) {
+        const value = Reflect.get(target, prop, receiver) as ReaderEntry;
+        return { read: async () => (value ? structuredClone(value) : null) };
+      }
+      return NULL_READER;
+    },
+  }) as FakeReader['singletons'];
+  const makeCollection = (items: { slug: string; data: ReaderEntry }[]) => ({
+    list: async () => items.map((i) => i.slug),
+    read: async (slug: string) => {
+      const hit = items.find((i) => i.slug === slug);
+      return hit ? structuredClone(hit.data) : null;
+    },
+  });
+  return {
+    singletons,
+    collections: {
+      knowledge: makeCollection(snap.knowledge ?? []),
+      scenarios: makeCollection(snap.scenarios ?? []),
+    },
+  };
+}
 
 // 重新导出，方便页面从本模块直接取用
 export { pickB } from './i18n';
@@ -81,7 +128,7 @@ export function uncategorizedLabel(locale: Locale): string {
 
 /** 读 singleton；任一失败都静默回落到默认值，保证构建不中断 */
 export async function loadSiteData(locale: Locale = DEFAULT_LOCALE) {
-  const reader = createReader(process.cwd(), keystaticConfig);
+  const reader = buildReader();
 
   let categories = DEFAULT_CATEGORIES;
   let tags = DEFAULT_TAGS;
@@ -328,7 +375,7 @@ function pickContent(locale: Locale, backend: Bilingual | undefined | null, def:
  * 后台任意字段留空即回退默认值。
  */
 export async function loadContent(locale: Locale = DEFAULT_LOCALE) {
-  const reader = createReader(process.cwd(), keystaticConfig);
+  const reader = buildReader();
   const [home, ui, contact, pages, detail, about] = await Promise.all([
     reader.singletons.home.read().catch(() => null),
     reader.singletons.ui.read().catch(() => null),

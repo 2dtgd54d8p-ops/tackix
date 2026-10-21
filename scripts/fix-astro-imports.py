@@ -3,9 +3,9 @@
 修正 Astro 页面的相对导入层级。
 
 背景（本项目反复踩坑）：
-  - `keystatic.config.ts` 在**项目根目录**；
+  - 模块分散在**项目根目录**与**根下的 src/ 里**；
   - `src/layouts/`、`src/lib/` 在**根下的 src/ 里**；
-  - ⇒ 同一文件里两者的 `../` 层级永远相差 2。
+  - ⇒ 同一文件里两者的 `../` 层级需按实际位置计算。
     src/pages/ 下的页面手写层级极易算错，报错还只是
     "Could not resolve ... from ..."，逐个试错很慢。
 
@@ -21,7 +21,6 @@ EXT_CANDIDATES = ('', '.ts', '.astro', '.tsx', '.js', '.mjs')
 
 # 需要校验/修正的目标（相对 root 的模块名）
 TARGETS = (
-    'keystatic.config',
     'layouts/Base.astro',
     'lib/i18n-content',
     'lib/site-data',

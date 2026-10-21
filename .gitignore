@@ -21,6 +21,9 @@ node_modules/
 # project memory (local)
 .workbuddy/
 
+# local playwright-cli session recordings
+.playwright-cli/
+
 # local push helper (reads PAT from env var, never commit)
 .push_tac.py
 .wrangler/

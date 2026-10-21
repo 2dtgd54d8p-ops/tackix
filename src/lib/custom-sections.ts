@@ -1,7 +1,7 @@
 /**
  * 自定义内容区块（customSections）类型与归一化。
  *
- * 后台「自定义内容区块」数组（见 keystatic.config.ts 的 customSectionsField）
+ * 后台「自定义内容区块」数组（由内容后台写入 D1，构建期经 content.json 读取）
  * 让编辑者自由组合任意结构化区块：标题 / 段落 / 图片 / 提示框 / 引用。
  * 与正文（Markdown）互补，满足「任意自定义内容的填报与发布」。
  *

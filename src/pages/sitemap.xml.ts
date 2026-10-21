@@ -1,9 +1,8 @@
-import { createReader } from '@keystatic/core/reader';
-import keystaticConfig from '../../keystatic.config';
+import { makeReader } from '../lib/content-reader';
 import type { APIRoute } from 'astro';
 
 // 静态预渲染：构建期生成 /sitemap.xml，无需额外依赖。
-// 动态文章/场景由 Keystatic reader 列出，保证新增内容后 sitemap 自动更新。
+// 动态文章/场景由内容 reader（D1 / content.json 快照）列出，保证新增内容后 sitemap 自动更新。
 // 全站中英双语（中文 / + 英文 /en），每个 URL 输出 zh-CN / en / x-default 的 hreflang 备用链接。
 export const prerender = true;
 
@@ -33,7 +32,7 @@ async function publishedSlugs(reader: any, name: string): Promise<string[]> {
 
 export const GET: APIRoute = async (Astro) => {
   const base = Astro.site ?? new URL('https://tackix.pages.dev');
-  const reader = createReader(process.cwd(), keystaticConfig);
+  const reader = makeReader();
 
   const knowledge = await publishedSlugs(reader, 'knowledge');
   const scenarios = await publishedSlugs(reader, 'scenarios');

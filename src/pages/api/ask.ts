@@ -1,6 +1,6 @@
 // AI 问答（L6 AI 原生）—— 基于 Vectorize + Workers AI 的 RAG
 // 以 Astro API Route 实现，由 @astrojs/cloudflare 适配器并入 dist/_worker.js，
-// 与 /keystatic 共用同一套 Worker（消除 functions/ 与适配器 _worker.js 的冲突）。
+// 与后台 API 路由共用同一套 Worker（消除 functions/ 与适配器 _worker.js 的冲突）。
 //
 // 部署前提（Cloudflare Pages 项目绑定）：
 //   - Vectorize index -> 变量名 VECTORIZE（先运行 scripts/embed.mjs 灌入知识库切片 embeddings）

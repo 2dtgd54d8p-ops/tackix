@@ -2,7 +2,7 @@
 //
 // 隐私口径：
 //  - 仅用匿名访客 ID（vuid cookie，HttpOnly + 1 年）做 UV 去重，不存储 IP / 账号等 PII。
-//  - 自动跳过 /admin、/keystatic、/api/* 与静态资源（带扩展名）。
+//  - 自动跳过 /admin、/api/* 与静态资源（带扩展名）。
 //  - DB 未绑定时优雅降级（204，静默忽略），不影响前端。
 //  - 内部跳转的 referer 折叠为 (internal)，只保留站外来源用于「主要来源」统计。
 //
@@ -32,8 +32,8 @@ function genVuid(): string {
   return 'v-' + Date.now().toString(36) + '-' + Math.random().toString(36).slice(2, 12);
 }
 
-// 跳过后台、Keystatic、API 自身、带扩展名的静态资源
-const SKIP = /^\/(admin|keystatic|api)\b|\.[a-z0-9]+$/i;
+// 跳过后台、API 自身、带扩展名的静态资源
+const SKIP = /^\/(admin|api)\b|\.[a-z0-9]+$/i;
 
 async function handle(request: Request, locals: any): Promise<Response> {
   const env = (locals as any)?.runtime?.env ?? (locals as any)?.env;

@@ -4,10 +4,12 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "gen:options": "node scripts/gen-content-options.mjs",
-    "predev": "node scripts/gen-content-options.mjs",
+    "fetch:content": "node scripts/fetch-content.mjs",
+    "migrate:local": "node scripts/migrate-to-d1.mjs --local",
+    "migrate:remote": "node scripts/migrate-to-d1.mjs --remote",
+    "predev": "node scripts/fetch-content.mjs",
     "dev": "node scripts/dev-with-watch.mjs",
-    "prebuild": "node scripts/gen-content-options.mjs && node scripts/gen-knowledge-index.mjs && node scripts/quality-score.mjs && node scripts/build-checks.mjs",
+    "prebuild": "node scripts/fetch-content.mjs && node scripts/gen-knowledge-index.mjs && node scripts/quality-score.mjs && node scripts/build-checks.mjs",
     "quality": "node scripts/quality-score.mjs",
     "check": "node scripts/build-checks.mjs",
     "changelog": "node scripts/gen-changelog.mjs",
@@ -15,14 +17,11 @@
     "postbuild": "pagefind --site dist && node scripts/gen-changelog.mjs",
     "preview": "astro preview",
     "astro": "astro",
-    "cf:dev": "wrangler pages dev ./dist",
-    "postinstall": "node scripts/patch-keystatic.mjs"
+    "cf:dev": "wrangler pages dev ./dist"
   },
   "dependencies": {
     "@astrojs/cloudflare": "^12.6.13",
     "@astrojs/react": "^4.4.2",
-    "@keystatic/astro": "^6.0.0",
-    "@keystatic/core": "^0.6.9",
     "astro": "^5.18.2",
     "marked": "^12.0.0",
     "react": "^18.3.1",

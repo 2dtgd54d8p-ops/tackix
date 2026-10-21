@@ -1,7 +1,7 @@
 // 邮件订阅（L5 个性化）：捕获访客邮箱，落库到 Cloudflare KV（变量名 FEEDBACK_KV）
 // 与反馈共用同一 KV，key 前缀 sub:。无 KV 绑定时返回 ok:false，前端仍乐观显示"已订阅"。
 // 以 Astro API Route 实现，由 @astrojs/cloudflare 适配器并入 dist/_worker.js，
-// 与 /keystatic、/api/ask、/api/feedback 共用同一套 Worker。
+// 与 /api/ask、/api/feedback 等后台 API 路由共用同一套 Worker。
 export const prerender = false;
 
 import type { APIRoute } from 'astro';

@@ -1,0 +1,78 @@
+---
+// 自建后台登录页（无守卫，任何人可访问；登录后拿到会话 cookie）。
+// 设为 SSR：在请求期由 middleware 守卫，构建期不再被预渲染成跳转残页。
+export const prerender = false;
+const title = 'Tackix 后台登录';
+---
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>{title}</title>
+    <style>
+      :root { color-scheme: light dark; }
+      * { box-sizing: border-box; }
+      body {
+        margin: 0; min-height: 100vh; display: grid; place-items: center;
+        font-family: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, "PingFang SC", "Microsoft YaHei", sans-serif;
+        background: #0f172a; color: #e2e8f0;
+      }
+      .card {
+        width: min(380px, 92vw); background: #1e293b; border: 1px solid #334155;
+        border-radius: 14px; padding: 28px 26px; box-shadow: 0 20px 60px rgba(0,0,0,.4);
+      }
+      h1 { font-size: 18px; margin: 0 0 4px; }
+      .sub { color: #94a3b8; font-size: 13px; margin-bottom: 20px; }
+      label { display:block; font-size: 13px; color:#cbd5e1; margin-bottom: 6px; }
+      input[type=password] {
+        width: 100%; padding: 11px 12px; border-radius: 9px; border: 1px solid #475569;
+        background: #0f172a; color: #e2e8f0; font-size: 14px;
+      }
+      button {
+        margin-top: 16px; width: 100%; padding: 11px; border: 0; border-radius: 9px;
+        background: #2563eb; color: #fff; font-size: 15px; font-weight: 600; cursor: pointer;
+      }
+      button:hover { background: #1d4ed8; }
+      .msg { margin-top: 14px; font-size: 13px; min-height: 18px; }
+      .msg.err { color: #f87171; }
+      .msg.ok { color: #4ade80; }
+    </style>
+  </head>
+  <body>
+    <form class="card" id="login-form">
+      <h1>Tackix 内容后台</h1>
+      <div class="sub">输入管理口令以进入</div>
+      <label for="pw">管理口令</label>
+      <input id="pw" type="password" name="password" autocomplete="current-password" autofocus />
+      <button type="submit">登录</button>
+      <div class="msg" id="msg"></div>
+    </form>
+
+    <script is:inline>
+      const form = document.getElementById('login-form');
+      const msg = document.getElementById('msg');
+      form.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const pw = document.getElementById('pw').value;
+        msg.className = 'msg'; msg.textContent = '登录中…';
+        try {
+          const res = await fetch('/api/admin/login', {
+            method: 'POST',
+            headers: { 'content-type': 'application/json' },
+            body: JSON.stringify({ password: pw }),
+          });
+          const j = await res.json().catch(() => ({}));
+          if (res.ok && j.ok) {
+            msg.className = 'msg ok'; msg.textContent = '登录成功，正在进入…';
+            location.href = '/admin';
+          } else {
+            msg.className = 'msg err'; msg.textContent = j.error || '登录失败';
+          }
+        } catch (err) {
+          msg.className = 'msg err'; msg.textContent = '网络错误：' + err.message;
+        }
+      });
+    </script>
+  </body>
+</html>
