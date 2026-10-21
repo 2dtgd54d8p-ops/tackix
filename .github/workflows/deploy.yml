@@ -1,4 +1,7 @@
 # 自动部署到 Cloudflare Pages
+# 自建后台：Cloudflare D1（内容）+ R2（媒体），无 GitHub App / 无 Keystatic 依赖。
+# 内容在构建期由 scripts/fetch-content.mjs 从 D1 拉取（或回退到已提交的 content.json 快照），
+# 页面静态预渲染；后台「保存并发布」会触发 PAGES_DEPLOY_HOOK 重建以刷新静态页。
 name: Deploy to Cloudflare Pages
 
 on:
@@ -32,10 +35,15 @@ jobs:
       - name: Build
         run: npm run build
         env:
-          PUBLIC_GITHUB_OWNER: 2dtgd54d8p-ops
-          PUBLIC_GITHUB_REPO: tackix
-          PUBLIC_KEYSTATIC_GITHUB_APP_SLUG: tackix-cms-app
+          # 内联进前端的站点域名（canonical / sitemap / 绝对链接）
           PUBLIC_SITE_URL: https://tackix.pages.dev
+          # 构建期从 D1 拉取可编辑内容（fetch-content.mjs）。
+          # 未配置 token 时自动回退到已提交的 content.json 快照，构建永不中断。
+          CLOUDFLARE_ACCOUNT_ID: b4f68b37b18c0891a0df46f3bf4d07f1
+          D1_DB_NAME: tackix-content
+          # D1_DATABASE_ID 留空则由 DB 名解析；配置后优先用 id 直连。
+          D1_DATABASE_ID: ${{ secrets.D1_DATABASE_ID }}
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
 
       - name: Deploy to Cloudflare Pages
         uses: cloudflare/wrangler-action@v3
