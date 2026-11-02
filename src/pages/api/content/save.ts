@@ -4,7 +4,7 @@ export const prerender = false;
 import type { APIRoute } from 'astro';
 import { getEnv } from '../../../lib/env';
 import { isAuthed } from '../../../lib/auth';
-import { upsertRow, kindOfCollection, titlesFromData } from '../../../lib/content-db';
+import { upsertRow, addRevision, kindOfCollection, titlesFromData } from '../../../lib/content-db';
 
 export const POST: APIRoute = async ({ request, locals }) => {
   if (!(await isAuthed(locals))) {
@@ -42,6 +42,9 @@ export const POST: APIRoute = async ({ request, locals }) => {
   } catch (e: any) {
     return new Response(JSON.stringify({ ok: false, error: '写入失败: ' + (e?.message || e) }), { status: 500, headers: { 'content-type': 'application/json' } });
   }
+
+  // 写一条修订快照（表未建时内部静默降级，不阻断保存）
+  await addRevision(db, { id, collection, slug, data, action: 'save' });
 
   return new Response(JSON.stringify({ ok: true, id }), {
     status: 200,

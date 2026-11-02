@@ -64,6 +64,35 @@ export async function upsertRow(
     .run();
 }
 
+/**
+ * 追加一条内容修订快照（全量 D1 的版本回滚基础）。
+ * 表未建（0003 迁移未应用）时静默降级，不阻断保存主流程。
+ */
+export async function addRevision(
+  db: any,
+  r: { id: string; collection: string; slug: string; data: any; action?: string }
+): Promise<void> {
+  try {
+    await db
+      .prepare(
+        `INSERT INTO content_revisions (entry_id, collection, slug, data, action, created_at)
+         VALUES (?, ?, ?, ?, ?, ?)`
+      )
+      .bind(
+        r.id,
+        r.collection,
+        r.slug,
+        JSON.stringify(r.data ?? {}),
+        r.action ?? 'save',
+        Date.now()
+      )
+      .run();
+  } catch (e: any) {
+    // 未应用 0003_revisions.sql 时不阻断保存
+    console.warn('[content-db] 写修订失败（可能未应用 0003_revisions.sql）:', e?.message || e);
+  }
+}
+
 export async function deleteRow(db: any, id: string): Promise<void> {
   await db.prepare('DELETE FROM content_entries WHERE id=?').bind(id).run();
 }
