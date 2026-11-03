@@ -11,7 +11,7 @@ compatibility_flags = ["nodejs_compat"]
 [[d1_databases]]
 binding = "DB"
 database_name = "tackix-content"
-database_id = "REPLACE_WITH_D1_DATABASE_ID"
+database_id = "6983915c-5ed7-4e64-be33-16c1d4da8498"
 migrations_dir = "migrations"
 
 # R2 媒体桶：先 `wrangler r2 bucket create tackix-media`。
