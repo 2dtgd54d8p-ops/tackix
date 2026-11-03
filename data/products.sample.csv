@@ -1,0 +1,4 @@
+id,slug,brand,name_zh,name_en,category,chemistry,cure_type,color,viscosity,tensile_str,elongation,temp_min,temp_max,shore,mix_ratio,pot_life_min,cure_time_min,shelf_life,features
+P-0001,epoxy-structural-1,Acme,环氧结构胶,Epoxy Structural 1,structural,epoxy,2-part,灰色,45000,25,3,-40,120,D80,1:1,5,1440,12m,"[""high-strength"",""metal""]"
+P-0002,pu-sealant-flex,Acme,聚氨酯密封胶,PU Flexible Sealant,sealant,polyurethane,1-part,黑色,30000,8,300,-40,90,A50,,10,60,12m,"[""flexible"",""weatherproof""]"
+P-0003,silicone-high-temp,Acme,耐高温硅酮胶,Silicone High-Temp,sealant,silicone,1-part,红色,20000,3,150,-60,300,A40,,15,30,18m,"[""high-temp"",""electrical""]"

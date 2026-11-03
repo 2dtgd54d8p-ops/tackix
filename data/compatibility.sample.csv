@@ -1,0 +1,8 @@
+﻿product_id,substrate_id,suitability,primer_req,surface_prep,note
+P-0001,aluminum,3,true,打磨除油,需底涂
+P-0001,steel,4,false,打磨除锈,结构粘接首选
+P-0001,SUB-PP,1,false,-,低表面能，不推荐
+P-0002,wood,3,false,清洁干燥,-
+P-0002,concrete,3,false,清洁,-
+P-0003,glass,4,false,清洁,耐高温场景
+P-0003,ceramic,3,false,清洁,-
