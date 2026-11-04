@@ -27,6 +27,7 @@ const SINGLETONS = [
     <style is:global>
       :root { color-scheme: light dark; }
       * { box-sizing: border-box; }
+      :focus-visible { outline: 2px solid #2563eb; outline-offset: 2px; border-radius: 4px; }
       body { margin: 0; font-family: system-ui, -apple-system, "Segoe UI", Roboto, "PingFang SC", "Microsoft YaHei", sans-serif; background: #f1f5f9; color: #0f172a; }
       header { background: #0f172a; color: #fff; padding: 14px 22px; display: flex; align-items: center; gap: 14px; }
       header h1 { font-size: 16px; margin: 0; flex: 1; }
@@ -49,6 +50,9 @@ const SINGLETONS = [
       a.edit { background: #e0e7ff; color: #3730a3; }
       button.del { background: #fee2e2; color: #991b1b; border: 0; }
       .singletons { display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 10px; }
+      .filterbar { display: flex; gap: 10px; margin-bottom: 6px; }
+      .filterbar input { flex: 1; padding: 8px 12px; border: 1px solid #cbd5e1; border-radius: 8px; font-size: 13px; background: #fff; color: #0f172a; }
+      .filterbar select { padding: 8px 12px; border: 1px solid #cbd5e1; border-radius: 8px; font-size: 13px; background: #fff; color: #0f172a; }
       .singletons a { display: block; padding: 12px; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 9px; text-decoration: none; color: #0f172a; font-size: 13px; }
       .singletons a:hover { border-color: #2563eb; }
       #toast { position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%); background: #0f172a; color: #fff; padding: 10px 16px; border-radius: 9px; font-size: 13px; opacity: 0; transition: opacity .2s; pointer-events: none; }
@@ -67,10 +71,20 @@ const SINGLETONS = [
     <header>
       <h1>Tackix 内容后台</h1>
       <a href="/">查看站点</a>
+      <a href="/admin/messages">留言</a>
+      <a href="/admin/report">报表</a>
       <button class="publish" id="publish-btn">发布（重建站点）</button>
       <a href="/admin/login" id="logout">退出</a>
     </header>
     <main>
+      <div class="filterbar">
+        <input id="filter-q" type="search" placeholder="搜索标题 / slug" aria-label="搜索标题或 slug" />
+        <select id="filter-state" aria-label="按状态筛选">
+          <option value="all">全部状态</option>
+          <option value="pub">已发布</option>
+          <option value="draft">草稿</option>
+        </select>
+      </div>
       <section>
         <h2>知识库文章 <a class="new" href="/admin/edit?collection=knowledge">+ 新建文章</a></h2>
         <ul id="list-knowledge"><li><span class="name">加载中…</span></li></ul>
@@ -86,7 +100,7 @@ const SINGLETONS = [
         </div>
       </section>
     </main>
-    <div id="toast"></div>
+    <div id="toast" role="status" aria-live="polite"></div>
 
     <script is:inline>
       const $ = (id) => document.getElementById(id);
@@ -124,34 +138,67 @@ const SINGLETONS = [
         const me = await fetch('/api/admin/me').then((r) => r.json()).catch(() => ({ authed: false }));
         if (!me.authed) location.href = '/admin/login';
       }
+      const allRows = { knowledge: [], scenario: [] };
+
+      function filterRows(rows) {
+        const q = ($('filter-q')?.value || '').trim().toLowerCase();
+        const state = $('filter-state')?.value || 'all';
+        return rows.filter((row) => {
+          if (state === 'pub' && !row.published) return false;
+          if (state === 'draft' && row.published) return false;
+          if (q) {
+            const hay = ((row.title_zh || '') + ' ' + (row.title_en || '') + ' ' + (row.slug || '')).toLowerCase();
+            if (!hay.includes(q)) return false;
+          }
+          return true;
+        });
+      }
+
+      function renderFiltered(ulId, kind, collection) {
+        const ul = $(ulId);
+        const rows = filterRows(allRows[kind] || []);
+        if (!rows.length) { ul.innerHTML = '<li><span class="name">（暂无匹配）</span></li>'; return; }
+        ul.innerHTML = '';
+        for (const row of rows) {
+          const li = document.createElement('li');
+          const name = row.title_zh || row.title_en || row.slug;
+          const badges =
+            (row.published ? '<span class="badge on">已发布</span>' : '<span class="badge off">草稿</span>') +
+            (row.featured ? '<span class="badge feat">首页</span>' : '');
+          li.innerHTML = `<span class="name">${name}<small>${row.slug}</small> ${badges}</span>`;
+          const edit = document.createElement('a');
+          edit.className = 'edit'; edit.href = `/admin/edit?collection=${collection}&slug=${row.slug}`; edit.textContent = '编辑';
+          const del = document.createElement('button'); del.className = 'del'; del.textContent = '删除';
+          del.onclick = async () => {
+            if (!(await confirmDialog('删除「' + name + '」？\n删除后仍可从版本历史恢复。', { danger: true }))) return;
+            const r = await fetch('/api/content/delete', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ collection, slug: row.slug }) });
+            const out = await r.json().catch(() => ({}));
+            if (out.ok) { toast('已删除'); renderList(ulId, kind, collection); } else toast(out.error || '删除失败', false);
+          };
+          li.appendChild(edit); li.appendChild(del); ul.appendChild(li);
+        }
+      }
+
       function renderList(ulId, kind, collection) {
         fetch('/api/content/list?kind=' + kind)
           .then((r) => r.json())
           .then((j) => {
-            const ul = $(ulId);
-            if (!j.ok || !j.rows?.length) { ul.innerHTML = '<li><span class="name">（暂无）</span></li>'; return; }
-            ul.innerHTML = '';
-            for (const row of j.rows) {
-              const li = document.createElement('li');
-              const name = row.title_zh || row.title_en || row.slug;
-              const badges =
-                (row.published ? '<span class="badge on">已发布</span>' : '<span class="badge off">草稿</span>') +
-                (row.featured ? '<span class="badge feat">首页</span>' : '');
-              li.innerHTML = `<span class="name">${name}<small>${row.slug}</small> ${badges}</span>`;
-              const edit = document.createElement('a');
-              edit.className = 'edit'; edit.href = `/admin/edit?collection=${collection}&slug=${row.slug}`; edit.textContent = '编辑';
-              const del = document.createElement('button'); del.className = 'del'; del.textContent = '删除';
-              del.onclick = async () => {
-                if (!(await confirmDialog('删除「' + name + '」？\n删除后仍可从版本历史恢复。', { danger: true }))) return;
-                const r = await fetch('/api/content/delete', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ collection, slug: row.slug }) });
-                const out = await r.json().catch(() => ({}));
-                if (out.ok) { toast('已删除'); renderList(ulId, kind, collection); } else toast(out.error || '删除失败', false);
-              };
-              li.appendChild(edit); li.appendChild(del); ul.appendChild(li);
-            }
+            allRows[kind] = j.ok ? (j.rows || []) : [];
+            renderFiltered(ulId, kind, collection);
           })
-          .catch(() => { $(ulId).innerHTML = '<li><span class="name">加载失败</span></li>'; });
+          .catch(() => { allRows[kind] = []; $(ulId).innerHTML = '<li><span class="name">加载失败</span></li>'; });
       }
+
+      let filterTimer = null;
+      function onFilterChange() {
+        clearTimeout(filterTimer);
+        filterTimer = setTimeout(() => {
+          renderFiltered('list-knowledge', 'knowledge', 'knowledge');
+          renderFiltered('list-scenarios', 'scenario', 'scenarios');
+        }, 150);
+      }
+      $('filter-q')?.addEventListener('input', onFilterChange);
+      $('filter-state')?.addEventListener('change', onFilterChange);
       $('publish-btn').onclick = async () => {
         if (!(await confirmDialog('发布将触发重建，约 1–2 分钟后线上生效。继续？'))) return;
         const r = await fetch('/api/content/publish', { method: 'POST' }).then((x) => x.json()).catch(() => ({}));

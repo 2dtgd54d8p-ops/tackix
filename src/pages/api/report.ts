@@ -12,6 +12,7 @@ export const prerender = false;
 
 import type { APIRoute } from 'astro';
 import { getTraffic } from '../../lib/traffic';
+import { isAuthed } from '../../lib/auth';
 
 interface ReportEnv {
   FEEDBACK_KV?: {
@@ -40,16 +41,14 @@ export const GET: APIRoute = async ({ request, locals, url }) => {
     if (!env?.FEEDBACK_KV) {
       return json({ ok: false, reason: 'no KV binding' });
     }
-    // 未设置管理令牌：报表默认关闭（避免暴露访客提交的自由文本）
-    if (!env?.ADMIN_TOKEN) {
-      return json({ ok: false, reason: 'not configured' });
-    }
-    // 校验令牌：?token= 或 Authorization: Bearer
+    // 双鉴权：主后台会话 cookie（tackix_session）优先，其次兼容 ?token= / Bearer ADMIN_TOKEN
+    const sessionOk = await isAuthed({ locals, request });
     const q = url.searchParams.get('token');
     const auth = request.headers.get('authorization');
     const bearer = auth && auth.startsWith('Bearer ') ? auth.slice(7) : null;
     const provided = q || bearer;
-    if (!provided || provided !== env.ADMIN_TOKEN) {
+    const tokenOk = !!(env.ADMIN_TOKEN && provided === env.ADMIN_TOKEN);
+    if (!sessionOk && !tokenOk) {
       return json({ ok: false, reason: 'unauthorized' }, 401);
     }
 

@@ -18,14 +18,12 @@ export const onRequest = defineMiddleware(async (context, next) => {
   const isProtectedApi =
     pathname.startsWith('/api/content/') || pathname.startsWith('/api/media/');
 
-  // 运营类后台页（留言管理 / 运营报表）沿用各自的 ADMIN_TOKEN 网关，
-  // 不纳入统一会话鉴权，避免与内容后台的 HMAC 会话双重登录。
-  const isOpTool = pathname === '/admin/messages' || pathname === '/admin/report';
-
   // 登录入口与登录接口始终放行
   if (isLoginPage || isLoginApi) return next();
 
-  if ((isAdminPage && !isOpTool) || isProtectedApi) {
+  // 留言/报表已纳入统一会话鉴权（接口侧同时兼容旧 ADMIN_TOKEN），
+  // 故 /admin 下所有页面一律要求登录态，不再有 isOpTool 例外。
+  if (isAdminPage || isProtectedApi) {
     const authed = await isAuthed(context);
     if (!authed) {
       if (isProtectedApi) {

@@ -1,43 +1,36 @@
 ---
 // 运营报表（运营仪表盘）：内容表现 + 流量统计，仅运营/编辑访问。
-// 纯静态页面：token 输入 → 客户端 fetch /api/report?token= → 渲染。
+// 受 middleware 会话守卫（未登录 302）；独立成页（不套站点 Base），统一深色顶栏 + 浅色正文。
 // 说明：本页卡片/表格/图表均由脚本 innerHTML 动态生成，故样式必须用 <style is:global>
 //       （Astro 默认 scoped 样式不会命中动态插入的节点）；全部选择器以 .rk-page 前缀收敛。
-import Base from '../../layouts/Base.astro';
-import { getLocale, type Locale } from '../../lib/i18n';
-
-const { locale: localeProp } = Astro.props;
-const locale: Locale = localeProp ?? getLocale(Astro);
-const t = (zh: string, en: string) => (locale === 'en' ? en : zh);
+export const prerender = false;
+const t = (zh: string, _en: string) => zh;
 ---
 
-<Base title={t('运营报表', 'Operations Report')}>
-  <section class="rk-page">
-    <header class="rk-hero">
-      <div class="rk-hero-glow" aria-hidden="true"></div>
-      <div class="rk-hero-inner">
-        <span class="rk-badge">● {t('实时数据', 'Live data')}</span>
-        <h1>{t('运营报表', 'Operations Report')}</h1>
-        <p>{t('流量统计与内容表现一站式视图。输入运营令牌即可查看。', 'Traffic analytics and content performance in one view. Enter the operator token to load.')}</p>
-      </div>
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="robots" content="noindex, nofollow" />
+    <title>运营报表 · Tackix 后台</title>
+  </head>
+  <body>
+    <header class="admin-bar">
+      <a href="/admin">← 后台</a>
+      <h1>运营报表</h1>
+      <a href="/">查看站点</a>
     </header>
-
-    <div class="rk-tokenbar">
-      <div class="rk-field">
-        <span class="rk-field-ico" aria-hidden="true">🔑</span>
-        <input
-          id="rk-token"
-          type="password"
-          autocomplete="off"
-          placeholder={t('输入运营令牌 (ADMIN_TOKEN)', 'Enter operator token (ADMIN_TOKEN)')}
-        />
-      </div>
-      <button type="button" class="rk-btn" id="rk-load">
-        <span class="rk-btn-ico" aria-hidden="true">↻</span>
-        <span>{t('加载报表', 'Load report')}</span>
-      </button>
-    </div>
-    <p class="rk-status" id="rk-status" aria-live="polite"></p>
+    <section class="rk-page">
+      <header class="rk-hero">
+        <div class="rk-hero-glow" aria-hidden="true"></div>
+        <div class="rk-hero-inner">
+          <span class="rk-badge">● {t('实时数据', 'Live data')}</span>
+          <h1>{t('运营报表', 'Operations Report')}</h1>
+          <p>{t('流量统计与内容表现一站式视图。', 'Traffic analytics and content performance in one view.')}</p>
+        </div>
+      </header>
+      <p class="rk-status" id="rk-status" aria-live="polite"></p>
 
     <div id="rk-report" hidden>
       <section class="rk-panel">
@@ -78,7 +71,6 @@ const t = (zh: string, en: string) => (locale === 'en' ? en : zh);
       </section>
     </div>
   </section>
-</Base>
 
 <script is:inline>
   function t(zh, en) { return document.documentElement.lang === 'en' ? en : zh; }
@@ -88,13 +80,8 @@ const t = (zh: string, en: string) => (locale === 'en' ? en : zh);
     });
   }
 
-  var TOKEN_KEY = 'tackix_report_token';
-  var tokenInput = document.getElementById('rk-token');
-  var loadBtn = document.getElementById('rk-load');
   var statusEl = document.getElementById('rk-status');
   var reportEl = document.getElementById('rk-report');
-
-  try { var saved = localStorage.getItem(TOKEN_KEY); if (saved) tokenInput.value = saved; } catch (e) {}
 
   var titleMap = {};
   fetch('/knowledge-index.json').then(function (r) { return r.ok ? r.json() : {}; }).then(function (m) {
@@ -332,21 +319,13 @@ const t = (zh: string, en: string) => (locale === 'en' ? en : zh);
   }
 
   function load() {
-    var token = (tokenInput.value || '').trim();
-    if (!token) { setStatus(t('请先输入运营令牌', 'Enter the operator token first.'), 'err'); return; }
-    try { localStorage.setItem(TOKEN_KEY, token); } catch (e) {}
-    loadBtn.disabled = true;
-    loadBtn.classList.add('is-loading');
     setStatus(t('加载中…', 'Loading…'));
-    fetch('/api/report?token=' + encodeURIComponent(token))
+    fetch('/api/report')
       .then(function (r) { return r.json().then(function (j) { return { status: r.status, body: j }; }); })
       .then(function (res) {
         var b = res.body || {};
         if (res.status === 401 || b.reason === 'unauthorized') {
-          setStatus(t('令牌无效', 'Invalid token.'), 'err'); reportEl.hidden = true; return;
-        }
-        if (b.reason === 'not configured') {
-          setStatus(t('报表未启用：请在 Cloudflare 配置 ADMIN_TOKEN 与 FEEDBACK_KV。', 'Report disabled: set ADMIN_TOKEN and FEEDBACK_KV on Cloudflare.'), 'err'); reportEl.hidden = true; return;
+          setStatus(t('未登录或会话已过期。', 'Not logged in.'), 'err'); reportEl.hidden = true; return;
         }
         if (b.reason === 'no KV binding') {
           setStatus(t('后端存储未配置（FEEDBACK_KV 缺失），报表暂不可用。', 'Backend storage not configured (FEEDBACK_KV missing).'), 'err'); reportEl.hidden = true; return;
@@ -359,22 +338,42 @@ const t = (zh: string, en: string) => (locale === 'en' ? en : zh);
       })
       .catch(function () {
         setStatus(t('网络错误：无法连接报表接口。', 'Network error: cannot reach the report API.'), 'err'); reportEl.hidden = true;
-      })
-      .finally(function () { loadBtn.disabled = false; loadBtn.classList.remove('is-loading'); });
+      });
   }
 
-  loadBtn.addEventListener('click', load);
-  tokenInput.addEventListener('keydown', function (e) { if (e.key === 'Enter') load(); });
-  // 已保存令牌则自动加载，省一次点击
-  if ((tokenInput.value || '').trim()) load();
+  load();
 </script>
 
 <style is:global>
   /* 说明：本页内容由脚本动态生成，必须使用全局样式（scoped 不会命中 innerHTML 节点）。
      全部规则以 .rk-page 收敛，且本组件仅在本页渲染，不会外泄到其他页面。 */
+  :root {
+    --bg: #f1f5f9; --surface: #ffffff; --surface-2: #f5f6f9; --surface-3: #fafbfd;
+    --fg: #0f172a; --fg-soft: #334155; --muted: #64748b; --faint: #94a3b8;
+    --accent: #2563eb; --accent-strong: #1d4ed8; --accent-soft: #dbeafe; --on-accent: #ffffff;
+    --success: #166534; --success-bg: #dcfce7; --danger: #991b1b; --danger-bg: #fee2e2;
+    --border: #e2e8f0; --border-strong: #cbd5e1;
+    --shadow-sm: 0 1px 2px rgba(15,23,42,.05), 0 1px 3px rgba(15,23,42,.06);
+    --shadow-md: 0 8px 22px rgba(15,23,42,.08), 0 2px 6px rgba(15,23,42,.04);
+    --shadow-lg: 0 20px 48px rgba(15,23,42,.12);
+    --shadow-accent: 0 10px 26px rgba(37,99,235,.24);
+    --r-sm: 8px; --r-md: 12px; --r-lg: 18px; --r-pill: 999px;
+    --maxw: 1120px; --readw: 720px;
+    --font-sans: system-ui, -apple-system, "Segoe UI", Roboto, "PingFang SC", "Microsoft YaHei", sans-serif;
+    --font-display: system-ui, -apple-system, "PingFang SC", "Microsoft YaHei", sans-serif;
+    --font-mono: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    --dur: 0.18s; --ease: cubic-bezier(0.4, 0, 0.2, 1);
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; font-family: var(--font-sans); background: var(--bg); color: var(--fg); line-height: 1.7; -webkit-font-smoothing: antialiased; }
+  :focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; border-radius: 4px; }
+  .admin-bar { background: #0f172a; color: #fff; padding: 14px 22px; display: flex; align-items: center; gap: 14px; position: sticky; top: 0; z-index: 50; }
+  .admin-bar h1 { font-size: 16px; margin: 0; flex: 1; }
+  .admin-bar a { color: #e2e8f0; text-decoration: none; font-size: 13px; background: #1e293b; border: 1px solid #334155; padding: 7px 12px; border-radius: 8px; cursor: pointer; }
   .rk-page {
     max-width: 1040px;
     margin: 0 auto;
+    padding: 22px 24px 80px;
     --rk-radius: 16px;
   }
 
@@ -729,3 +728,5 @@ const t = (zh: string, en: string) => (locale === 'en' ? en : zh);
     .rk-dist { grid-template-columns: 22px 70px 1fr 58px; }
   }
 </style>
+  </body>
+</html>

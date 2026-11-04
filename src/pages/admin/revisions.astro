@@ -17,6 +17,7 @@ export const prerender = false;
     <style is:global>
       :root { color-scheme: light dark; }
       * { box-sizing: border-box; }
+      :focus-visible { outline: 2px solid #2563eb; outline-offset: 2px; border-radius: 4px; }
       body { margin: 0; font-family: system-ui, -apple-system, "Segoe UI", Roboto, "PingFang SC", "Microsoft YaHei", sans-serif; background: #f1f5f9; color: #0f172a; }
       header { background: #0f172a; color: #fff; padding: 12px 20px; display: flex; align-items: center; gap: 12px; position: sticky; top: 0; z-index: 10; }
       header h1 { font-size: 15px; margin: 0; flex: 1; }
@@ -66,7 +67,7 @@ export const prerender = false;
       </div>
       <div class="card" id="list"><div class="empty">加载中…</div></div>
     </main>
-    <div id="toast"></div>
+    <div id="toast" role="status" aria-live="polite"></div>
 
     <script is:inline>
       const $ = (id) => document.getElementById(id);
