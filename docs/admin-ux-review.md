@@ -205,7 +205,7 @@ async function publishNow() {
 | 批次 | 内容 | 涉及文件 | 风险 |
 |---|---|---|---|
 | P0（半天） ✅ 已落地 | ① 删除/回滚/发布统一确认层 + 改「不可撤销」文案 ② 编辑页脏保护 ③ 保存后「未发布」提示条 + 发布入口 | index/revisions/edit.astro | 低（纯前端交互） |
-| P1（1-2 天） | ④ 仪表盘过滤条 ⑤ 留言/报表纳入会话鉴权 + 深色后台壳 + 仪表盘入口 ⑥ toast aria-live + 焦点可见 | index/messages/report/middleware | 中（动鉴权，需回归） |
+| P1（1-2 天） ✅ 已落地 | ④ 仪表盘过滤条 ⑤ 留言/报表纳入会话鉴权 + 深色后台壳 + 仪表盘入口 ⑥ toast aria-live + 焦点可见 | index/messages/report/middleware/submissions/report.ts | 中（动鉴权，已回归） |
 | P2（增强） | ⑦ 版本历史字段摘要预览 + diff ⑧ 表单字段级校验 + Markdown 预览 + Cmd+S + 图片移除 | edit/revisions.astro | 中 |
 
 > 建议先做 P0——它零风险、立即消除「误删恐慌」和「改了以为上线」两个最高频困惑；P1 里动鉴权那步（⑤）需要一次真机回归（可复用 `npm run smoke -- --cookie`）。
@@ -217,4 +217,9 @@ async function publishNow() {
   - 统一确认层 `confirmDialog`（`<dialog>.showModal()`，焦点陷阱 + Esc 取消）替换三页原生 `confirm()`；删除文案改为「删除后仍可从版本历史恢复」。
   - 编辑页脏保护：`beforeunload` + 站内返回/版本历史跳转拦截（**先 `preventDefault` 再异步确认，避免默认导航竞态**）。
   - 保存成功后顶部「已保存，尚未发布」提示条 + 页内「立即发布」入口（走 `/api/content/publish`）。
-- P1 / P2 尚未落地。需落地请说「直接干」并指明批次。
+- **P1 已于 2026-11-04 落地并真机回归通过**（19/19），涉及 `src/middleware.ts`、`src/pages/api/submissions.ts`、`src/pages/api/report.ts`、`src/pages/admin/{index,messages,report,edit,revisions}.astro`。
+  - middleware 去掉 `isOpTool` 例外，`/admin/messages`、`/admin/report` 纳入统一会话鉴权。
+  - `/api/submissions`、`/api/report` 改双鉴权：会话 cookie 优先，兼容旧 `ADMIN_TOKEN`（`x-admin-token`/`?token=`/`Bearer`）。
+  - messages/report 独立成页：去站点 Base 壳、去 ADMIN_TOKEN 门控、统一深色顶栏；index 顶栏加「留言/报表」入口 + 关键词/状态过滤条。
+  - 后台各页 toast 加 `role=status aria-live=polite`、按钮补 `:focus-visible`。
+- P2 尚未落地。需落地请说「直接干 P2」。
