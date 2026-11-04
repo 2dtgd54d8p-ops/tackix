@@ -204,7 +204,7 @@ async function publishNow() {
 
 | 批次 | 内容 | 涉及文件 | 风险 |
 |---|---|---|---|
-| P0（半天） | ① 删除/回滚/发布统一确认层 + 改「不可撤销」文案 ② 编辑页脏保护 ③ 保存后「未发布」提示条 + 发布入口 | index/revisions/edit.astro | 低（纯前端交互） |
+| P0（半天） ✅ 已落地 | ① 删除/回滚/发布统一确认层 + 改「不可撤销」文案 ② 编辑页脏保护 ③ 保存后「未发布」提示条 + 发布入口 | index/revisions/edit.astro | 低（纯前端交互） |
 | P1（1-2 天） | ④ 仪表盘过滤条 ⑤ 留言/报表纳入会话鉴权 + 深色后台壳 + 仪表盘入口 ⑥ toast aria-live + 焦点可见 | index/messages/report/middleware | 中（动鉴权，需回归） |
 | P2（增强） | ⑦ 版本历史字段摘要预览 + diff ⑧ 表单字段级校验 + Markdown 预览 + Cmd+S + 图片移除 | edit/revisions.astro | 中 |
 
@@ -212,5 +212,9 @@ async function publishNow() {
 
 ---
 
-## 附：本评审未改动任何代码
-本文是**评审 + 方案**，未改文件。如需我按 P0/P1/P2 落地，请说「直接干」并指明批次（如「P0」）。
+## 附：落地进度
+- **P0 已于 2026-11-04 落地并真机回归通过**（13/13 + 提示条 5/5），涉及 `src/pages/admin/index.astro`、`revisions.astro`、`edit.astro`。
+  - 统一确认层 `confirmDialog`（`<dialog>.showModal()`，焦点陷阱 + Esc 取消）替换三页原生 `confirm()`；删除文案改为「删除后仍可从版本历史恢复」。
+  - 编辑页脏保护：`beforeunload` + 站内返回/版本历史跳转拦截（**先 `preventDefault` 再异步确认，避免默认导航竞态**）。
+  - 保存成功后顶部「已保存，尚未发布」提示条 + 页内「立即发布」入口（走 `/api/content/publish`）。
+- P1 / P2 尚未落地。需落地请说「直接干」并指明批次。
