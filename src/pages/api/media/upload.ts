@@ -5,8 +5,9 @@ import type { APIRoute } from 'astro';
 import { getEnv } from '../../../lib/env';
 import { isAuthed } from '../../../lib/auth';
 
-export const POST: APIRoute = async ({ request, locals }) => {
-  if (!(await isAuthed(locals))) {
+export const POST: APIRoute = async (ctx) => {
+  const { request, locals } = ctx;
+  if (!(await isAuthed(ctx))) {
     return new Response(JSON.stringify({ ok: false, error: '未登录' }), { status: 401, headers: { 'content-type': 'application/json' } });
   }
   const env = getEnv(locals);

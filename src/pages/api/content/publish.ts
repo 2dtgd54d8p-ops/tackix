@@ -18,8 +18,9 @@ function fail(error: string, status: number) {
   return new Response(JSON.stringify({ ok: false, error }), { status, headers: JSON_HEADERS });
 }
 
-export const POST: APIRoute = async ({ locals }) => {
-  if (!(await isAuthed(locals))) {
+export const POST: APIRoute = async (ctx) => {
+  const { locals } = ctx;
+  if (!(await isAuthed(ctx))) {
     return fail('未登录', 401);
   }
 
