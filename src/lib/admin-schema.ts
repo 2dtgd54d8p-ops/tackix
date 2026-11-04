@@ -12,6 +12,12 @@
  *  - 外部链接 `https://…`（不落存储，渲染时原样输出）
  * 渲染侧由 src/lib/assets.ts 的 uploadsUrl() 统一解析，页面无需区分。
  */
+import {
+  CATEGORY_OPTIONS as CATEGORY_VOCAB,
+  TAG_OPTIONS as TAG_VOCAB,
+  SCENARIO_OPTIONS as SCENARIO_VOCAB,
+} from '../generated/content-options';
+
 export type FieldDef =
   | { type: 'text'; key: string; label: string; description?: string; placeholder?: string }
   | { type: 'bilingual'; key: string; label: string; multiline?: boolean; description?: string }
@@ -32,35 +38,16 @@ export interface CollectionSchema {
   fields: FieldDef[];
 }
 
-// ── 下拉选项（与站点默认值对齐；编辑分类/标签本身是另一个单例）──────────────
-export const SCENARIO_OPTIONS = [
-  { label: '无', value: 'none' },
-  { label: '厨卫防霉防漏', value: 'kitchen-bath-mould' },
-  { label: '屋顶防水', value: 'roof-waterproof' },
-  { label: '门窗渗漏', value: 'window-door-leak' },
-  { label: '瓷砖美缝', value: 'tile-grout' },
-];
-export const CATEGORY_OPTIONS = [
-  { label: '未分类', value: 'uncategorized' },
-  { label: '选型指南', value: 'selection-guide' },
-  { label: '应用避坑', value: 'application-pitfalls' },
-  { label: '故障排查', value: 'troubleshooting' },
-];
-export const TAG_OPTIONS = [
-  { label: '硅酮密封胶', value: 'silicone-sealant' },
-  { label: '聚氨酯', value: 'polyurethane' },
-  { label: '环氧', value: 'epoxy' },
-  { label: 'MS 聚合物', value: 'ms-polymer' },
-  { label: '防水', value: 'waterproofing' },
-  { label: '防霉', value: 'mould-resistant' },
-  { label: '瓷砖与石材', value: 'tile-stone' },
-  { label: '伸缩缝', value: 'expansion-joints' },
-  { label: '表面处理', value: 'surface-prep' },
-  { label: '基材', value: 'substrate' },
-  { label: '温度', value: 'temperature' },
-  { label: 'DIY', value: 'diy' },
-  { label: '专业', value: 'professional' },
-];
+// ── 下拉选项：来自构建期 codegen 的词表（D1 快照 → src/generated/content-options.ts）──
+// 在后台「分类管理 / 标签管理 / 场景方案」增删条目后，重新构建即同步到这里，无需改代码。
+// 显示中文优先（labelZh），与后台中文界面一致；label 保留英文优先，供站点侧消费。
+type Opt = { label: string; value: string; labelZh?: string };
+const zhOpts = (list: ReadonlyArray<Opt>) =>
+  list.map((o) => ({ label: o.labelZh || o.label, value: o.value }));
+
+export const SCENARIO_OPTIONS = [{ label: '无', value: 'none' }, ...zhOpts(SCENARIO_VOCAB)];
+export const CATEGORY_OPTIONS = [{ label: '未分类', value: 'uncategorized' }, ...zhOpts(CATEGORY_VOCAB)];
+export const TAG_OPTIONS = zhOpts(TAG_VOCAB);
 
 // 自定义区块类型与提示色调
 const CUSTOM_SECTION_TYPES = [
