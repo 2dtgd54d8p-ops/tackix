@@ -881,8 +881,14 @@ const dlData = post
     if (prBtn) prBtn.addEventListener('click', function () { window.print(); });
   })();
 </script>
-<script is:inline define:vars={{ viewSlug: slug }}>
+<span id="view-slug" data-slug={slug} hidden></span>
+<script is:inline>
+  // 注意：这里刻意不用 `define:vars`。
+  // define:vars 会把值内联进 JS 源码，历史上存在 script 闭合序列转义不完整导致的 XSS
+  // （GHSA-j687-52p2-xcff，Astro <=7.3.1）。改为通过 data-* 属性传值，由 Astro 正常转义。
   (function () {
+    var el = document.getElementById('view-slug');
+    var viewSlug = el ? el.getAttribute('data-slug') : '';
     if (!viewSlug) return;
     try {
       var KEY = 'tackix_viewed';
