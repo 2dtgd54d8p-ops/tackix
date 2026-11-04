@@ -335,8 +335,17 @@ import { SCHEMAS } from '../../lib/admin-schema';
         window.addEventListener('beforeunload', (e) => {
           if (dirty) { e.preventDefault(); e.returnValue = ''; }
         });
-        $('back-link').addEventListener('click', async (e) => { if (!(await confirmLeave())) e.preventDefault(); });
-        $('history-link').addEventListener('click', async (e) => { if (!(await confirmLeave())) e.preventDefault(); });
+        // 先同步 preventDefault 阻止默认导航，再异步确认；否则 await 之后才 preventDefault 会因
+        // 浏览器默认动作已执行而失效（页面已跳走）。
+        $('back-link').addEventListener('click', async (e) => {
+          e.preventDefault();
+          if (await confirmLeave()) location.href = '/admin';
+        });
+        $('history-link').addEventListener('click', async (e) => {
+          e.preventDefault();
+          const href = e.currentTarget.getAttribute('href');
+          if (await confirmLeave()) location.href = href;
+        });
 
         // —— P0：「立即发布」入口（编辑页即可触发重建，避免回仪表盘）——
         $('publish-now').onclick = async () => {
