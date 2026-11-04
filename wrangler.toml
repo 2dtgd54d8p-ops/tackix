@@ -14,13 +14,22 @@ database_name = "tackix-content"
 database_id = "6983915c-5ed7-4e64-be33-16c1d4da8498"
 migrations_dir = "migrations"
 
-# R2 媒体桶：先 `wrangler r2 bucket create tackix-media`。
-[[r2_buckets]]
-binding = "MEDIA"
-bucket_name = "tackix-media"
+# KV：反馈 + 邮件订阅共用（src/pages/api/feedback.ts、subscribe.ts，key 前缀 fb: / sub:）。
+# 必须显式声明，否则带 wrangler.toml 的部署可能覆盖掉控制台里的既有绑定。
+[[kv_namespaces]]
+binding = "FEEDBACK_KV"
+id = "a4c32751980b47659adf481425e59bba"
+
+# R2 媒体桶：账号未开通 R2 时**必须保持注释**，否则 `wrangler pages deploy` 会因桶不存在而失败（code 10042）。
+# 媒体路由 src/pages/uploads/[...slug].ts 有静态资源回退（env.ASSETS），未绑 R2 也能正常出图。
+# 将来开通 R2 后：`wrangler r2 bucket create tackix-media`，再解开下面两行并重新部署。
+# [[r2_buckets]]
+# binding = "MEDIA"
+# bucket_name = "tackix-media"
 
 [vars]
 SITE_URL = "https://tackix.pages.dev"
-# 发布钩子（Cloudflare Pages → Deploy Hook），由 `wrangler pages deploy-hook create` 生成后
-# 用环境变量注入更稳妥；此处留空则后台“发布”按钮会提示手动部署。
+# 发布通道：本项目 Pages 为「直接上传」模式（未连 Git），Deploy Hook 不可用，
+# 后台“发布”按钮实际走 GITHUB_DISPATCH_TOKEN → GitHub Actions workflow_dispatch。
+# 该 token 属敏感凭据，用 `wrangler pages secret put GITHUB_DISPATCH_TOKEN` 注入，不写在此处。
 PAGES_DEPLOY_HOOK = ""
