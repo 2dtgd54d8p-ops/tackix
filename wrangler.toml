@@ -1,13 +1,18 @@
-# Tackix — Cloudflare Pages + D1 + R2 配置
+# Tackix — Cloudflare Pages + D1 配置
 # 取代原 Keystatic/GitHub 内容后端；内容编辑链路只依赖 Cloudflare。
-# 敏感凭据（ADMIN_PASSWORD / SESSION_SECRET）不走本文件，用 `wrangler pages secret put` 注入。
+#
+# 注意（踩过的坑）：
+# 1. Pages 项目的 wrangler.toml 不支持 account_id —— 写了会让 `wrangler pages deploy` 直接校验失败。
+#    账号由 CI 的 accountId 参数或 `CLOUDFLARE_ACCOUNT_ID` 环境变量提供。
+# 2. 不在此文件写 [vars]。环境变量/密钥（ADMIN_PASSWORD、SESSION_SECRET、GITHUB_DISPATCH_TOKEN 等）
+#    统一在 Cloudflare Pages 控制台维护；写进 [vars] 有覆盖控制台配置的风险。
 name = "tackix"
 pages_build_output_dir = "dist"
-account_id = "b4f68b37b18c0891a0df46f3bf4d07f1"
 compatibility_date = "2025-04-01"
 compatibility_flags = ["nodejs_compat"]
 
-# 生产 D1：先 `wrangler d1 create tackix-content`，把返回的 uuid 填到 database_id。
+# 生产 D1：全量内容库（content_entries / content_revisions + 选型域表 + submissions / visits）。
+# 历史库 tackix-db(169af261…) 已并入本库，仅作冷备，不再绑定。
 [[d1_databases]]
 binding = "DB"
 database_name = "tackix-content"
@@ -22,14 +27,7 @@ id = "a4c32751980b47659adf481425e59bba"
 
 # R2 媒体桶：账号未开通 R2 时**必须保持注释**，否则 `wrangler pages deploy` 会因桶不存在而失败（code 10042）。
 # 媒体路由 src/pages/uploads/[...slug].ts 有静态资源回退（env.ASSETS），未绑 R2 也能正常出图。
-# 将来开通 R2 后：`wrangler r2 bucket create tackix-media`，再解开下面两行并重新部署。
+# 将来开通 R2 后：`wrangler r2 bucket create tackix-media`，再解开下面三行并重新部署。
 # [[r2_buckets]]
 # binding = "MEDIA"
 # bucket_name = "tackix-media"
-
-[vars]
-SITE_URL = "https://tackix.pages.dev"
-# 发布通道：本项目 Pages 为「直接上传」模式（未连 Git），Deploy Hook 不可用，
-# 后台“发布”按钮实际走 GITHUB_DISPATCH_TOKEN → GitHub Actions workflow_dispatch。
-# 该 token 属敏感凭据，用 `wrangler pages secret put GITHUB_DISPATCH_TOKEN` 注入，不写在此处。
-PAGES_DEPLOY_HOOK = ""
