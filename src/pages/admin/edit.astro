@@ -17,7 +17,8 @@ import { SCHEMAS } from '../../lib/admin-schema';
       :root { color-scheme: light dark; }
       * { box-sizing: border-box; }
       body { margin: 0; font-family: system-ui, -apple-system, "Segoe UI", Roboto, "PingFang SC", "Microsoft YaHei", sans-serif; background: #f1f5f9; color: #0f172a; }
-      header { background: #0f172a; color: #fff; padding: 12px 20px; display: flex; align-items: center; gap: 12px; position: sticky; top: 0; z-index: 10; }
+      #topbar { position: sticky; top: 0; z-index: 10; }
+      header { background: #0f172a; color: #fff; padding: 12px 20px; display: flex; align-items: center; gap: 12px; }
       header h1 { font-size: 15px; margin: 0; flex: 1; }
       header a, header button { font-size: 13px; background: #1e293b; border: 1px solid #334155; color: #e2e8f0; padding: 7px 12px; border-radius: 8px; text-decoration: none; cursor: pointer; }
       header button.save { background: #2563eb; border-color: #2563eb; }
@@ -40,15 +41,36 @@ import { SCHEMAS } from '../../lib/admin-schema';
       .img-row img { max-height: 60px; border-radius: 6px; border: 1px solid #e2e8f0; }
       #toast { position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%); background: #0f172a; color: #fff; padding: 10px 16px; border-radius: 9px; font-size: 13px; opacity: 0; transition: opacity .2s; pointer-events: none; }
       #toast.show { opacity: 1; }
+      #pending-bar { display: none; align-items: center; gap: 12px; background: #fef9c3; border-bottom: 1px solid #fde68a; color: #854d0e; font-size: 13px; padding: 9px 16px; }
+      #pending-bar.show { display: flex; }
+      #pending-bar.published { background: #dcfce7; border-color: #bbf7d0; color: #166534; }
+      #pending-bar .grow { flex: 1; }
+      #pending-bar button { font-size: 12px; background: #2563eb; color: #fff; border: 0; padding: 6px 12px; border-radius: 7px; cursor: pointer; }
+      #pending-bar button:disabled { background: #94a3b8; cursor: not-allowed; }
+      #pending-bar.published button { background: #16a34a; }
+      dialog.cdlg { border: 0; border-radius: 12px; padding: 0; box-shadow: 0 12px 40px rgba(0,0,0,.28); max-width: 440px; width: calc(100vw - 32px); color: #0f172a; }
+      dialog.cdlg::backdrop { background: rgba(15,23,42,.5); }
+      .cdlg form { margin: 0; }
+      .cdlg p { margin: 0; padding: 20px 22px 6px; font-size: 14px; line-height: 1.65; white-space: pre-wrap; }
+      .cdlg menu { margin: 0; padding: 14px 22px 20px; display: flex; justify-content: flex-end; gap: 10px; }
+      .cdlg button { font-size: 13px; padding: 8px 16px; border-radius: 8px; cursor: pointer; border: 1px solid #cbd5e1; background: #fff; color: #334155; }
+      .cdlg button.cdlg-ok { background: #2563eb; border-color: #2563eb; color: #fff; }
+      .cdlg button.cdlg-ok.danger { background: #dc2626; border-color: #dc2626; }
     </style>
   </head>
   <body>
-    <header>
-      <a href="/admin">← 返回</a>
-      <h1 id="page-title">编辑</h1>
-      <a href="#" id="history-link" style="display:none">版本历史</a>
-      <button class="save" id="save-btn">保存</button>
-    </header>
+    <div id="topbar">
+      <header>
+        <a href="/admin" id="back-link">← 返回</a>
+        <h1 id="page-title">编辑</h1>
+        <a href="#" id="history-link" style="display:none">版本历史</a>
+        <button class="save" id="save-btn">保存</button>
+      </header>
+      <div id="pending-bar" role="status" aria-live="polite">
+        <span class="grow" id="pending-text">已保存，尚未发布 —— 前台暂未更新。</span>
+        <button id="publish-now" type="button">立即发布</button>
+      </div>
+    </div>
     <main>
       <div id="slug-wrap" class="field" style="display:none">
         <label for="slug-input">URL slug（创建后勿随意改）</label>
@@ -83,11 +105,59 @@ import { SCHEMAS } from '../../lib/admin-schema';
         const t = $('toast'); t.textContent = text; t.style.background = ok ? '#0f172a' : '#991b1b';
         t.classList.add('show'); setTimeout(() => t.classList.remove('show'), 2600);
       }
+      // —— P0：脏数据保护 —— 任何用户输入置位，保存成功后复位
+      let dirty = false;
+      function markDirty() { dirty = true; }
+      // 统一确认层（替换原生 confirm）：<dialog>.showModal() 自带焦点陷阱 + Esc 取消
+      function confirmDialog(message, { danger = false } = {}) {
+        const d = document.createElement('dialog');
+        d.className = 'cdlg';
+        const form = document.createElement('form');
+        form.method = 'dialog';
+        const p = document.createElement('p');
+        p.textContent = message;
+        const menu = document.createElement('menu');
+        const cancel = document.createElement('button');
+        cancel.value = 'cancel';
+        cancel.className = 'cdlg-c';
+        cancel.textContent = '取消';
+        const ok = document.createElement('button');
+        ok.value = 'ok';
+        ok.className = 'cdlg-ok' + (danger ? ' danger' : '');
+        ok.textContent = '确认';
+        menu.append(cancel, ok);
+        form.append(p, menu);
+        d.appendChild(form);
+        document.body.appendChild(d);
+        d.showModal();
+        return new Promise((resolve) => {
+          d.addEventListener('close', () => { resolve(d.returnValue === 'ok'); d.remove(); }, { once: true });
+        });
+      }
+      async function confirmLeave() {
+        if (!dirty) return true;
+        const ok = await confirmDialog('有未保存的更改，确定离开？');
+        if (ok) dirty = false; // 已确认放弃更改，避免 beforeunload 二次提示
+        return ok;
+      }
+      // —— P0：保存后「未发布」提示条 ——
+      function showPendingBar() {
+        const bar = $('pending-bar');
+        bar.classList.remove('published');
+        $('pending-text').textContent = '已保存，尚未发布 —— 前台暂未更新。';
+        bar.classList.add('show');
+      }
+      function markPublished() {
+        const bar = $('pending-bar');
+        bar.classList.add('published');
+        $('pending-text').textContent = '已发布，前台已更新。';
+        setTimeout(() => { bar.classList.remove('show'); bar.classList.remove('published'); }, 4000);
+      }
       function h(tag, props = {}, children = []) {
         const e = document.createElement(tag);
         for (const [k, v] of Object.entries(props)) {
           if (k === 'class') e.className = v;
-          else if (k.startsWith('on') && typeof v === 'function') e.addEventListener(k.slice(2), v);
+          else if (k.startsWith('on') && typeof v === 'function') e.addEventListener(k.slice(2), (ev) => { markDirty(); v(ev); });
           else if (k === 'html') e.innerHTML = v;
           else e.setAttribute(k, v);
         }
@@ -209,6 +279,7 @@ import { SCHEMAS } from '../../lib/admin-schema';
             file.addEventListener('change', async () => {
               const f = file.files && file.files[0];
               if (!f) return;
+              markDirty();
               const fd = new FormData();
               fd.append('file', f);
               toast('上传中…');
@@ -260,10 +331,28 @@ import { SCHEMAS } from '../../lib/admin-schema';
         $('page-title').textContent = (meta.isSingleton ? '' : (meta.slug ? '编辑：' : '新建：')) + schema.title;
         syncHistoryLink();
 
+        // —— P0：脏数据保护 —— 站内跳转前确认；关页/刷新走 beforeunload 兜底
+        window.addEventListener('beforeunload', (e) => {
+          if (dirty) { e.preventDefault(); e.returnValue = ''; }
+        });
+        $('back-link').addEventListener('click', async (e) => { if (!(await confirmLeave())) e.preventDefault(); });
+        $('history-link').addEventListener('click', async (e) => { if (!(await confirmLeave())) e.preventDefault(); });
+
+        // —— P0：「立即发布」入口（编辑页即可触发重建，避免回仪表盘）——
+        $('publish-now').onclick = async () => {
+          const btn = $('publish-now');
+          btn.disabled = true; btn.textContent = '发布中…';
+          const r = await fetch('/api/content/publish', { method: 'POST' }).then((x) => x.json()).catch(() => ({}));
+          btn.disabled = false; btn.textContent = '立即发布';
+          if (r.ok) { toast(r.message || '已发布'); markPublished(); }
+          else toast(r.error || '发布失败', false);
+        };
+
         // 创建模式：集合项需填 slug
         if (schema.slugEditableOnCreate && !meta.slug) {
           $('slug-wrap').style.display = '';
           slugInput = $('slug-input');
+          slugInput.addEventListener('input', markDirty);
         }
 
         if (meta.slug || meta.isSingleton) {
@@ -292,6 +381,8 @@ import { SCHEMAS } from '../../lib/admin-schema';
             const r = await fetch('/api/content/save', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(payload) }).then((x) => x.json());
             if (r.ok) {
               toast('已保存');
+              dirty = false;
+              showPendingBar();
               if (!meta.isSingleton && !meta.slug && s) { meta.slug = s; history.replaceState(null, '', '/admin/edit?collection=' + meta.collection + '&slug=' + s); $('slug-wrap').style.display = 'none'; syncHistoryLink(); }
             } else toast(r.error || '保存失败', false);
           } catch (e) { toast('网络错误：' + e.message, false); }

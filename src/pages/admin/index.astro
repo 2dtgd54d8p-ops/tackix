@@ -53,6 +53,14 @@ const SINGLETONS = [
       .singletons a:hover { border-color: #2563eb; }
       #toast { position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%); background: #0f172a; color: #fff; padding: 10px 16px; border-radius: 9px; font-size: 13px; opacity: 0; transition: opacity .2s; pointer-events: none; }
       #toast.show { opacity: 1; }
+      dialog.cdlg { border: 0; border-radius: 12px; padding: 0; box-shadow: 0 12px 40px rgba(0,0,0,.28); max-width: 440px; width: calc(100vw - 32px); color: #0f172a; }
+      dialog.cdlg::backdrop { background: rgba(15,23,42,.5); }
+      .cdlg form { margin: 0; }
+      .cdlg p { margin: 0; padding: 20px 22px 6px; font-size: 14px; line-height: 1.65; white-space: pre-wrap; }
+      .cdlg menu { margin: 0; padding: 14px 22px 20px; display: flex; justify-content: flex-end; gap: 10px; }
+      .cdlg button { font-size: 13px; padding: 8px 16px; border-radius: 8px; cursor: pointer; border: 1px solid #cbd5e1; background: #fff; color: #334155; }
+      .cdlg button.cdlg-ok { background: #2563eb; border-color: #2563eb; color: #fff; }
+      .cdlg button.cdlg-ok.danger { background: #dc2626; border-color: #dc2626; }
     </style>
   </head>
   <body>
@@ -86,6 +94,32 @@ const SINGLETONS = [
         const t = $('toast'); t.textContent = text; t.style.background = ok ? '#0f172a' : '#991b1b';
         t.classList.add('show'); setTimeout(() => t.classList.remove('show'), 2600);
       }
+      // 统一确认层（替换原生 confirm）：<dialog>.showModal() 自带焦点陷阱 + Esc 取消
+      function confirmDialog(message, { danger = false } = {}) {
+        const d = document.createElement('dialog');
+        d.className = 'cdlg';
+        const form = document.createElement('form');
+        form.method = 'dialog';
+        const p = document.createElement('p');
+        p.textContent = message;
+        const menu = document.createElement('menu');
+        const cancel = document.createElement('button');
+        cancel.value = 'cancel';
+        cancel.className = 'cdlg-c';
+        cancel.textContent = '取消';
+        const ok = document.createElement('button');
+        ok.value = 'ok';
+        ok.className = 'cdlg-ok' + (danger ? ' danger' : '');
+        ok.textContent = '确认';
+        menu.append(cancel, ok);
+        form.append(p, menu);
+        d.appendChild(form);
+        document.body.appendChild(d);
+        d.showModal();
+        return new Promise((resolve) => {
+          d.addEventListener('close', () => { resolve(d.returnValue === 'ok'); d.remove(); }, { once: true });
+        });
+      }
       async function checkAuth() {
         const me = await fetch('/api/admin/me').then((r) => r.json()).catch(() => ({ authed: false }));
         if (!me.authed) location.href = '/admin/login';
@@ -108,7 +142,7 @@ const SINGLETONS = [
               edit.className = 'edit'; edit.href = `/admin/edit?collection=${collection}&slug=${row.slug}`; edit.textContent = '编辑';
               const del = document.createElement('button'); del.className = 'del'; del.textContent = '删除';
               del.onclick = async () => {
-                if (!confirm('确定删除「' + name + '」？此操作不可撤销。')) return;
+                if (!(await confirmDialog('删除「' + name + '」？\n删除后仍可从版本历史恢复。', { danger: true }))) return;
                 const r = await fetch('/api/content/delete', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ collection, slug: row.slug }) });
                 const out = await r.json().catch(() => ({}));
                 if (out.ok) { toast('已删除'); renderList(ulId, kind, collection); } else toast(out.error || '删除失败', false);
@@ -119,7 +153,7 @@ const SINGLETONS = [
           .catch(() => { $(ulId).innerHTML = '<li><span class="name">加载失败</span></li>'; });
       }
       $('publish-btn').onclick = async () => {
-        if (!confirm('发布将触发重建，约 1–2 分钟后线上生效。继续？')) return;
+        if (!(await confirmDialog('发布将触发重建，约 1–2 分钟后线上生效。继续？'))) return;
         const r = await fetch('/api/content/publish', { method: 'POST' }).then((x) => x.json()).catch(() => ({}));
         toast(r.message || r.error || '已触发', !!r.ok);
       };
