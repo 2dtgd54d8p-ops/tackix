@@ -96,6 +96,7 @@ node scripts/import-products.mjs --file data/products.csv --sql-only   # 只生�
 
 - 2026-11-02 初版：确定选型领域基座；新增 `0002_domain.sql`（8 表 + 种子）、`import-products.mjs`；本文档。
 - 2026-11-04 全量 D1 落地（见下节第 8 节）。
+- 2026-11-04 媒体改 KV（§8.7）、版本回滚闭环（§9）、死配置核查与清理（§10）。
 
 ## 8. 全量 D1 落地实况（2026-11-04）
 
@@ -139,8 +140,9 @@ Pages 项目为**直接上传模式**（`source=undefined`，未连 Git）→ **
   → `/api/content/list` 读到 D1 条目 → `POST /api/content/publish` 触发 GitHub Actions
 
 ### 8.7 尚未完成
-- R2 未开通（`tackix-media` 未创建），媒体走 `src/pages/uploads/[...slug].ts` 的 `ASSETS` 静态回退；
-  `/api/media/upload` 目前会返回「MEDIA 未绑定」
+- ~~R2 未开通，媒体走 ASSETS 回退~~ → **已改 KV**（2026-11-04）：`MEDIA_KV` = `e959f2b9…`，
+  读取链 `R2 → KV → ASSETS` 三级回退，上传落 KV（单文件 20MB，图片 + PDF）。R2 仍需绑卡才能开，
+  不是必需项；将来开通只需加绑定，代码不用改。
 - 选型域表尚未接后台录入 UI（P3）与 `/api/select`（P5）
 - 站点仍处于预上线态（noindex + 询盘闸门关闭）
 
@@ -161,3 +163,63 @@ GITHUB_TOKEN=<PAT> node scripts/push-via-api.mjs --dry-run # 只看会推什么
 > 注意：用脚本推完后，本地的 commit sha 与远端**不同**（内容相同）。下次本地继续开发不受影响
 > ——脚本每次都会重新按 tree 对齐基点。若哪天 `github.com` 恢复，`git fetch && git reset --hard origin/main`
 > 即可把本地历史与远端对齐。
+
+## 9. 内容版本历史与一键回滚（2026-11-04）
+
+`content_revisions` 表此前**只写不读**——每次保存都留快照，但没有任何读取/恢复入口，等于内容被
+后台改坏后无法回退。现已补齐闭环，三层：
+
+| 层 | 文件 | 作用 |
+|---|---|---|
+| 数据 | `src/lib/content-db.ts` | `listRevisions` / `readRevision` / `countRevisions`，全部 try/catch（未应用 `0003` 迁移时返空，不阻断页面） |
+| 接口 | `src/pages/api/content/revisions.ts` | `GET ?id=` 列表、`GET ?revisionId=` 单快照、`POST {id,revisionId}` 回滚 |
+| 界面 | `src/pages/admin/revisions.astro` | 历史列表（时间/动作/体积）+ 懒加载 JSON 预览 + 一键回滚；入口在 `/admin/edit` 顶部「版本历史」 |
+
+设计要点：
+- **entry id 规则**与 `save.ts` 一致：`${kind}/${slug}`，如 `singleton/contact`、`knowledge/xxx`。
+- **防跨条目回滚**：回滚前校验 `rev.entry_id === id`，不匹配返 400。
+- **回滚也留痕**：回滚写一条 `action='restore:<revisionId>'` 的新快照，所以「回滚」本身还能被回滚。
+- **回滚不等于上线**：只改 D1，需点「发布」重建站点前台才生效（接口 message 已明说）。
+- `published` / `featured` 不在快照里，回滚时沿用当前行的值，避免把已发布状态改掉。
+
+生产验收（`https://tackix.pages.dev`，23 项全过）：登录 → 保存产生快照 → 预览快照与当前内容
+sha256 一致 → 跨条目回滚 400 → 回滚 200 且有 `restoredFrom` → 快照数再 +1 且 `action=restore:N`
+→ 内容 sha256 与 baseline 一致 → 页面 200 / 未登录 302。
+
+## 10. 遗留 YAML 与死配置清理（2026-11-04 核查）
+
+### 10.1 `src/content/*.yaml`（16 个文件）—— **不能删**
+原计划当死文件删掉，逐个核查后发现仍有真实引用，删除会造成回归：
+
+| 引用方 | 用途 | 删除后后果 |
+|---|---|---|
+| `scripts/build-checks.mjs`（prebuild） | 校验文章字段/词表一致性 | 目录不存在时打日志跳过，校验静默失效 |
+| `scripts/quality-score.mjs`（prebuild） | 生成 `reports/quality-report.json` | 质量报告归零 |
+| `scripts/fetch-content.mjs --from-yaml` | D1 不可达时的引导重建路径 | 引导通道断掉 |
+| `scripts/migrate-to-d1.mjs` | 一次性迁移工具 | 无法重放迁移 |
+| `scripts/ai-enrich.mjs` / `embed.mjs` | 本地内容加工工具 | 工具失效 |
+| `scripts/gen-content-options.mjs` | codegen `src/generated/content-options.ts` | 该生成物停止更新 |
+
+结论：保留，作为「引导 + 校验 + 工具链」的输入。真正的真相源已是 D1，两者关系是
+**D1 为主、YAML 为历史/引导**；日常运营不再动 YAML。
+
+### 10.2 `src/generated/content-options.ts` 实际无人消费（已知缺口）
+`src/lib/admin-schema.ts` 的下拉选项是**硬编码数组**（`SCENARIO_OPTIONS` / `CATEGORY_OPTIONS` /
+`TAG_OPTIONS`），并未 import 生成的 `content-options.ts`。后果：在后台新增分类/标签/场景后，
+文章编辑器的下拉**不会自动出现新项**（`edit.astro` 会把未知值补一个「(未列出)」选项兜底，所以不
+会写坏数据，只是不好选）。修法（未做，属独立小任务）：`admin-schema.ts` 改读 `content-options.ts`
+并把 `gen-content-options.mjs` 的场景来源从 YAML 换成 `src/generated/content.json`（D1 快照）。
+
+### 10.3 Cloudflare 死环境变量 —— **已清理**
+`KEYSTATIC_ADMIN_PASSWORD` / `KEYSTATIC_PAT` / `KEYSTATIC_GITHUB_TOKEN` / `KEYSTATIC_SECRET` /
+`KEYSTATIC_GITHUB_CLIENT_SECRET` 5 个（Keystatic 时代遗留，代码已零引用），production 与 preview
+各删一遍：**11 → 6 个**。现存全部 `secret_text`：
+
+`ADMIN_PASSWORD`、`SESSION_SECRET`、`GITHUB_DISPATCH_TOKEN`、`ADMIN_TOKEN`、`RESEND_API_KEY`、`CONTACT_NOTIFY_TO`
+
+清理后回归：登录 200、`/api/admin/me` authed、`/api/content/list` 24 条、版本历史 2 条、后台页 200。
+
+> 说明：`PUBLIC_GITHUB_*` / `PUBLIC_KEYSTATIC_GITHUB_APP_SLUG` 在更早的部署里已随 `[vars]` 移除而不存在。
+> `.astro/keystatic-imports.js` 是构建缓存（`.astro/` 已 gitignore），无需处理。
+> 仓库根 `DEPLOY-RUNBOOK.md` 仍是「D1 + R2」旧口径（且未纳入版本管理），建议删除或重写。
+
