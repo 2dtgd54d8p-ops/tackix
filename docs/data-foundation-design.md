@@ -143,3 +143,21 @@ Pages 项目为**直接上传模式**（`source=undefined`，未连 Git）→ **
   `/api/media/upload` 目前会返回「MEDIA 未绑定」
 - 选型域表尚未接后台录入 UI（P3）与 `/api/select`（P5）
 - 站点仍处于预上线态（noindex + 询盘闸门关闭）
+
+### 8.8 推送兜底：`scripts/push-via-api.mjs`
+本机网络经公司代理，`github.com`（git 传输层）经常被拦——`git push` 报
+`CONNECT tunnel failed, response 502` 或直连超时，但 `api.github.com` 通常仍可达。
+
+此时用：
+
+```bash
+GITHUB_TOKEN=<PAT> node scripts/push-via-api.mjs           # 推当前分支 + 快进 main
+GITHUB_TOKEN=<PAT> node scripts/push-via-api.mjs --dry-run # 只看会推什么
+```
+
+原理：读远端分支 head 的 tree，在本地历史里找 tree 相同的提交当基点（API 造出的提交本地没有
+对象，但 tree 一致，可据此对齐），然后逐提交上传 blob → 建 tree → 建 commit → 移动分支指针。
+
+> 注意：用脚本推完后，本地的 commit sha 与远端**不同**（内容相同）。下次本地继续开发不受影响
+> ——脚本每次都会重新按 tree 对齐基点。若哪天 `github.com` 恢复，`git fetch && git reset --hard origin/main`
+> 即可把本地历史与远端对齐。
