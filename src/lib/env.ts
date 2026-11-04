@@ -8,7 +8,8 @@ import type { AstroGlobal } from 'astro';
 // Cloudflare 专属类型用 any 兜底，避免强依赖 @cloudflare/workers-types 造成的类型报错。
 export interface Env {
   DB: any; // D1Database
-  MEDIA: any; // R2Bucket
+  MEDIA: any; // R2Bucket（未开通 R2 时为空）
+  MEDIA_KV: any; // KVNamespace：R2 未开通时的媒体存储后端
   ASSETS: any; // Fetcher（访问静态资源，用于媒体回退）
   ADMIN_PASSWORD: string;
   SESSION_SECRET: string;

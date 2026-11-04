@@ -166,11 +166,22 @@ import { SCHEMAS } from '../../lib/admin-schema';
           }
           case 'image': {
             data[field.key] = data[field.key] || '';
-            const urlInp = h('input', { type: 'text', placeholder: '/uploads/xxx.png', oninput: (e) => (data[field.key] = e.target.value) });
+            const img = h('img', { alt: '' });
+            const preview = () => {
+              // 兼容本站路径（/uploads/…）与外链（https://…），渲染层由 coverSrc/uploadsUrl 统一处理
+              const v = data[field.key];
+              if (v) { img.src = v; img.style.display = ''; }
+              else { img.removeAttribute('src'); img.style.display = 'none'; }
+            };
+            img.addEventListener('error', () => { img.style.display = 'none'; });
+            const urlInp = h('input', {
+              type: 'text',
+              placeholder: '/uploads/xxx.png  或  https://example.com/a.png',
+              oninput: (e) => { data[field.key] = e.target.value.trim(); preview(); },
+            });
             urlInp.value = data[field.key];
-            const img = h('img', { src: data[field.key] || '', alt: '' });
-            if (!data[field.key]) img.style.display = 'none';
-            const file = h('input', { type: 'file' });
+            preview();
+            const file = h('input', { type: 'file', accept: 'image/*,application/pdf' });
             file.addEventListener('change', async () => {
               const f = file.files && file.files[0];
               if (!f) return;
@@ -178,11 +189,15 @@ import { SCHEMAS } from '../../lib/admin-schema';
               fd.append('file', f);
               toast('上传中…');
               const r = await fetch('/api/media/upload', { method: 'POST', body: fd }).then((x) => x.json()).catch(() => ({}));
-              if (r.ok) { urlInp.value = r.url; data[field.key] = r.url; img.src = r.url; img.style.display = ''; toast('已上传'); }
-              else toast(r.error || '上传失败', false);
+              if (r.ok) {
+                urlInp.value = r.url; data[field.key] = r.url; preview();
+                toast('已上传（' + (r.backend === 'r2' ? 'R2' : 'KV') + '）');
+              } else toast(r.error || '上传失败', false);
             });
             const control = h('div', { class: 'img-row' }, [img, urlInp, file]);
-            parent.appendChild(fieldShell(field, control));
+            const wrap = fieldShell(field, control);
+            wrap.appendChild(h('div', { class: 'desc' }, '可上传到本站存储（图片 / PDF），也可直接填外部链接 https://…。'));
+            parent.appendChild(wrap);
             break;
           }
           case 'group': {

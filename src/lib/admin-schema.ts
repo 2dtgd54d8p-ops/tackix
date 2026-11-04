@@ -7,7 +7,10 @@
  *  - group：对象分组（对应 data 的某个子对象，如 content/info/trust/items）
  *  - array：可重复数组（对应 steps/faq/navItems 等），item 内再是一组 fields
  *
- * 双语字段统一存成 { zh, en }；image 存成 /uploads/<key> 字符串。
+ * 双语字段统一存成 { zh, en }；image 存成字符串，两种形态都支持：
+ *  - 本站媒体路径 `/uploads/<key>`（上传来，落 R2 或 KV）
+ *  - 外部链接 `https://…`（不落存储，渲染时原样输出）
+ * 渲染侧由 src/lib/assets.ts 的 uploadsUrl() 统一解析，页面无需区分。
  */
 export type FieldDef =
   | { type: 'text'; key: string; label: string; description?: string; placeholder?: string }

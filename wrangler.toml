@@ -25,6 +25,14 @@ migrations_dir = "migrations"
 binding = "FEEDBACK_KV"
 id = "a4c32751980b47659adf481425e59bba"
 
+# 媒体存储（R2 的免费替代，无需绑卡）：
+# 后台 /api/media/upload 在 R2 未绑定时写入此 KV；/uploads/* 按 R2 → KV → ASSETS 三级回退读取。
+# 限制：单文件 ≤ 25 MiB（KV value 上限）、总存量 1 GB（免费额度）、写入 1000 次/天。
+# 值里存二进制，content-type 放在 metadata 里。
+[[kv_namespaces]]
+binding = "MEDIA_KV"
+id = "e959f2b9958b41aca9d038eb4fe4f704"
+
 # R2 媒体桶：账号未开通 R2 时**必须保持注释**，否则 `wrangler pages deploy` 会因桶不存在而失败（code 10042）。
 # 媒体路由 src/pages/uploads/[...slug].ts 有静态资源回退（env.ASSETS），未绑 R2 也能正常出图。
 # 将来开通 R2 后：`wrangler r2 bucket create tackix-media`，再解开下面三行并重新部署。
