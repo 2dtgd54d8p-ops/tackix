@@ -1,0 +1,246 @@
+---
+// 内容版本历史：列表 + 快照预览 + 一键回滚。
+// 入口：/admin/edit 顶部「版本历史」按钮。
+// 参数：?singleton=home  或  ?collection=knowledge&slug=xxx
+// entry.id 规则与 save.ts 一致：`${kind}/${slug}`。
+// 受 middleware 守卫（/admin/* 未登录 302 到 /admin/login）。
+export const prerender = false;
+---
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>版本历史 · Tackix 后台</title>
+    <style>
+      :root { color-scheme: light dark; }
+      * { box-sizing: border-box; }
+      body { margin: 0; font-family: system-ui, -apple-system, "Segoe UI", Roboto, "PingFang SC", "Microsoft YaHei", sans-serif; background: #f1f5f9; color: #0f172a; }
+      header { background: #0f172a; color: #fff; padding: 12px 20px; display: flex; align-items: center; gap: 12px; position: sticky; top: 0; z-index: 10; }
+      header h1 { font-size: 15px; margin: 0; flex: 1; }
+      header h1 small { font-weight: 400; color: #94a3b8; margin-left: 8px; font-size: 12px; }
+      header a, header button { font-size: 13px; background: #1e293b; border: 1px solid #334155; color: #e2e8f0; padding: 7px 12px; border-radius: 8px; text-decoration: none; cursor: pointer; }
+      main { max-width: 920px; margin: 20px auto; padding: 0 16px 60px; }
+      .hint { background: #eff6ff; border: 1px solid #bfdbfe; color: #1e40af; font-size: 12.5px; line-height: 1.6; padding: 10px 14px; border-radius: 10px; margin-bottom: 14px; }
+      .card { background: #fff; border: 1px solid #e2e8f0; border-radius: 12px; overflow: hidden; }
+      .row { display: flex; align-items: center; gap: 12px; padding: 12px 16px; border-top: 1px solid #f1f5f9; }
+      .row:first-child { border-top: 0; }
+      .time { font-size: 13px; font-weight: 600; color: #0f172a; min-width: 150px; }
+      .time small { display: block; font-weight: 400; color: #64748b; font-size: 11px; margin-top: 2px; }
+      .badge { font-size: 11px; padding: 2px 8px; border-radius: 999px; white-space: nowrap; }
+      .badge.save { background: #e0e7ff; color: #3730a3; }
+      .badge.restore { background: #fef9c3; color: #854d0e; }
+      .badge.delete { background: #fee2e2; color: #991b1b; }
+      .badge.cur { background: #dcfce7; color: #166534; }
+      .grow { flex: 1; font-size: 12px; color: #64748b; }
+      button.act { font-size: 12px; padding: 5px 10px; border-radius: 7px; border: 0; cursor: pointer; }
+      button.view { background: #e2e8f0; color: #334155; }
+      button.roll { background: #2563eb; color: #fff; }
+      button.roll:disabled { background: #cbd5e1; cursor: not-allowed; }
+      .snapshot { background: #0f172a; color: #e2e8f0; margin: 0; padding: 14px 16px; font-size: 12px; line-height: 1.55; max-height: 420px; overflow: auto; white-space: pre-wrap; word-break: break-word; font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; }
+      .empty { padding: 34px 16px; text-align: center; color: #64748b; font-size: 13px; }
+      #toast { position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%); background: #0f172a; color: #fff; padding: 10px 16px; border-radius: 9px; font-size: 13px; opacity: 0; transition: opacity .2s; pointer-events: none; z-index: 20; max-width: 80vw; }
+      #toast.show { opacity: 1; }
+    </style>
+  </head>
+  <body>
+    <header>
+      <a href="/admin" id="back-admin">← 后台</a>
+      <h1 id="page-title">版本历史<small id="page-sub"></small></h1>
+      <a href="#" id="back-edit">返回编辑</a>
+    </header>
+    <main>
+      <div class="hint">
+        每次「保存」都会留一条快照，回滚 = 用旧快照覆盖当前内容，并自动记录一次回滚动作（所以回滚本身也能被回滚）。
+        回滚不会自动上线，需回到后台点「发布」重建站点后前台才生效。
+      </div>
+      <div class="card" id="list"><div class="empty">加载中…</div></div>
+    </main>
+    <div id="toast"></div>
+
+    <script is:inline>
+      const $ = (id) => document.getElementById(id);
+      const params = new URLSearchParams(location.search);
+      const singleton = params.get('singleton');
+      const collection = params.get('collection');
+      const slug = params.get('slug') || '';
+
+      function kindOf(c) {
+        if (c === 'knowledge') return 'knowledge';
+        if (c === 'scenarios') return 'scenario';
+        return 'singleton';
+      }
+      const coll = singleton || collection || '';
+      const entryId = slug ? kindOf(collection) + '/' + slug : 'singleton/' + coll;
+
+      // 编辑页回跳链接：保留原始参数
+      $('back-edit').href = singleton
+        ? '/admin/edit?singleton=' + encodeURIComponent(singleton)
+        : '/admin/edit?collection=' + encodeURIComponent(collection || '') + '&slug=' + encodeURIComponent(slug);
+
+      $('page-sub').textContent = entryId;
+
+      let toastTimer = null;
+      function toast(text, ok = true) {
+        const t = $('toast');
+        t.textContent = text;
+        t.style.background = ok ? '#0f172a' : '#991b1b';
+        t.classList.add('show');
+        clearTimeout(toastTimer);
+        toastTimer = setTimeout(() => t.classList.remove('show'), 3200);
+      }
+
+      function fmtTime(ms) {
+        const d = new Date(Number(ms) || 0);
+        const pad = (n) => String(n).padStart(2, '0');
+        return d.getFullYear() + '-' + pad(d.getMonth() + 1) + '-' + pad(d.getDate()) + ' ' + pad(d.getHours()) + ':' + pad(d.getMinutes());
+      }
+      function relTime(ms) {
+        const diff = Date.now() - Number(ms || 0);
+        if (!Number.isFinite(diff) || diff < 0) return '';
+        const m = Math.floor(diff / 60000);
+        if (m < 1) return '刚刚';
+        if (m < 60) return m + ' 分钟前';
+        const h = Math.floor(m / 60);
+        if (h < 24) return h + ' 小时前';
+        return Math.floor(h / 24) + ' 天前';
+      }
+      function actionLabel(action) {
+        if (action === 'delete') return { text: '删除', cls: 'delete' };
+        if (String(action).indexOf('restore:') === 0) {
+          return { text: '回滚自 #' + String(action).split(':')[1], cls: 'restore' };
+        }
+        return { text: '保存', cls: 'save' };
+      }
+      function fmtBytes(n) {
+        const b = Number(n) || 0;
+        return b < 1024 ? b + ' B' : (b / 1024).toFixed(1) + ' KB';
+      }
+
+      async function load() {
+        const box = $('list');
+        let j;
+        try {
+          j = await fetch('/api/content/revisions?id=' + encodeURIComponent(entryId) + '&limit=50', {
+            headers: { accept: 'application/json' },
+          }).then((r) => r.json());
+        } catch (e) {
+          box.innerHTML = '<div class="empty">加载失败：网络错误</div>';
+          return;
+        }
+        if (!j || !j.ok) {
+          box.innerHTML = '<div class="empty">' + ((j && j.error) || '加载失败') + '</div>';
+          return;
+        }
+        const rows = j.rows || [];
+        if (!rows.length) {
+          box.innerHTML = '<div class="empty">暂无历史快照。<br />第一次在编辑页点「保存」后，这里就会出现版本记录。</div>';
+          return;
+        }
+        box.innerHTML = '';
+        rows.forEach((row, idx) => {
+          const lab = actionLabel(row.action);
+
+          const line = document.createElement('div');
+          line.className = 'row';
+
+          const time = document.createElement('div');
+          time.className = 'time';
+          time.textContent = fmtTime(row.created_at);
+          const sm = document.createElement('small');
+          sm.textContent = relTime(row.created_at) + ' · #' + row.id;
+          time.appendChild(sm);
+
+          const badge = document.createElement('span');
+          badge.className = 'badge ' + lab.cls;
+          badge.textContent = lab.text;
+
+          const grow = document.createElement('div');
+          grow.className = 'grow';
+          grow.textContent = fmtBytes(row.bytes) + (idx === 0 ? ' · 最新一次' : '');
+
+          const viewBtn = document.createElement('button');
+          viewBtn.className = 'act view';
+          viewBtn.textContent = '预览';
+
+          const rollBtn = document.createElement('button');
+          rollBtn.className = 'act roll';
+          rollBtn.textContent = '回滚到此';
+          if (idx === 0) {
+            rollBtn.disabled = true;
+            rollBtn.title = '这已是最新一次快照';
+          }
+
+          line.appendChild(time);
+          line.appendChild(badge);
+          line.appendChild(grow);
+          line.appendChild(viewBtn);
+          line.appendChild(rollBtn);
+          box.appendChild(line);
+
+          // 预览面板（懒加载，点开才请求）
+          const panel = document.createElement('pre');
+          panel.className = 'snapshot';
+          panel.style.display = 'none';
+          box.appendChild(panel);
+
+          let loaded = false;
+          viewBtn.onclick = async () => {
+            if (panel.style.display !== 'none') {
+              panel.style.display = 'none';
+              viewBtn.textContent = '预览';
+              return;
+            }
+            if (!loaded) {
+              panel.textContent = '加载中…';
+              panel.style.display = '';
+              const r = await fetch('/api/content/revisions?revisionId=' + row.id, {
+                headers: { accept: 'application/json' },
+              }).then((x) => x.json()).catch(() => null);
+              if (!r || !r.ok) {
+                panel.textContent = (r && r.error) || '快照读取失败';
+                return;
+              }
+              panel.textContent = JSON.stringify(r.revision.data, null, 2);
+              loaded = true;
+            }
+            panel.style.display = '';
+            viewBtn.textContent = '收起';
+          };
+
+          rollBtn.onclick = async () => {
+            const ok = confirm(
+              '回滚到 ' + fmtTime(row.created_at) + '（#' + row.id + '）？\n\n' +
+              '当前内容会被这个旧快照整体覆盖。回滚后需要在后台点「发布」才会在前台生效。'
+            );
+            if (!ok) return;
+            rollBtn.disabled = true;
+            rollBtn.textContent = '回滚中…';
+            const r = await fetch('/api/content/revisions', {
+              method: 'POST',
+              headers: { 'content-type': 'application/json' },
+              body: JSON.stringify({ id: entryId, revisionId: row.id }),
+            }).then((x) => x.json()).catch(() => ({}));
+            if (r.ok) {
+              toast(r.message || '已回滚');
+              await load();
+            } else {
+              toast(r.error || '回滚失败', false);
+              rollBtn.disabled = false;
+              rollBtn.textContent = '回滚到此';
+            }
+          };
+        });
+      }
+
+      (async () => {
+        const me = await fetch('/api/admin/me').then((r) => r.json()).catch(() => ({ authed: false }));
+        if (!me.authed) {
+          location.href = '/admin/login';
+          return;
+        }
+        await load();
+      })();
+    </script>
+  </body>
+</html>

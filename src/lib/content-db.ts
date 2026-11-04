@@ -97,6 +97,54 @@ export async function deleteRow(db: any, id: string): Promise<void> {
   await db.prepare('DELETE FROM content_entries WHERE id=?').bind(id).run();
 }
 
+/** 某条内容的修订历史（新→旧），不含完整 data（列表用）。 */
+export async function listRevisions(db: any, entryId: string, limit = 30): Promise<any[]> {
+  try {
+    const res = await db
+      .prepare(
+        `SELECT id, entry_id, collection, slug, action, created_at, length(data) AS bytes
+         FROM content_revisions WHERE entry_id=? ORDER BY created_at DESC LIMIT ?`
+      )
+      .bind(entryId, Math.min(Math.max(limit, 1), 100))
+      .all();
+    return (res as any)?.results ?? [];
+  } catch {
+    // 未应用 0003_revisions.sql 时返回空，UI 显示"暂无历史"
+    return [];
+  }
+}
+
+/** 读取单个修订快照（含完整 data）。 */
+export async function readRevision(db: any, revisionId: number): Promise<any | null> {
+  try {
+    const row = await db
+      .prepare('SELECT * FROM content_revisions WHERE id=?')
+      .bind(revisionId)
+      .first();
+    if (!row) return null;
+    let data = row.data;
+    if (typeof data === 'string') {
+      try { data = JSON.parse(data); } catch { data = {}; }
+    }
+    return { ...row, data };
+  } catch {
+    return null;
+  }
+}
+
+/** 某条内容的修订总数（UI 上显示角标）。 */
+export async function countRevisions(db: any, entryId: string): Promise<number> {
+  try {
+    const r: any = await db
+      .prepare('SELECT COUNT(*) AS n FROM content_revisions WHERE entry_id=?')
+      .bind(entryId)
+      .first();
+    return Number(r?.n ?? 0);
+  } catch {
+    return 0;
+  }
+}
+
 /** collection 名 → kind（单例走 singleton）。 */
 export function kindOfCollection(collection: string): Row['kind'] {
   if (collection === 'knowledge') return 'knowledge';

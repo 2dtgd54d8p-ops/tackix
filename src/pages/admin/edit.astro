@@ -44,6 +44,7 @@ import { SCHEMAS } from '../../lib/admin-schema';
     <header>
       <a href="/admin">← 返回</a>
       <h1 id="page-title">编辑</h1>
+      <a href="#" id="history-link" style="display:none">版本历史</a>
       <button class="save" id="save-btn">保存</button>
     </header>
     <main>
@@ -87,6 +88,17 @@ import { SCHEMAS } from '../../lib/admin-schema';
 
       const data = {};
       let slugInput = null;
+
+      // 「版本历史」入口：仅在编辑已存在条目（有 slug 或单例）时出现
+      function syncHistoryLink() {
+        const el = $('history-link');
+        if (!el) return;
+        if (!meta.isSingleton && !meta.slug) { el.style.display = 'none'; return; }
+        el.style.display = '';
+        el.href = meta.isSingleton
+          ? '/admin/revisions?singleton=' + encodeURIComponent(meta.collection)
+          : '/admin/revisions?collection=' + encodeURIComponent(meta.collection) + '&slug=' + encodeURIComponent(meta.slug);
+      }
 
       function fieldShell(field, control) {
         const wrap = h('div', { class: 'field' });
@@ -234,6 +246,7 @@ import { SCHEMAS } from '../../lib/admin-schema';
       async function init() {
         if (!schema) { $('form-root').textContent = '未知的内容类型：' + (singleton || collection); return; }
         $('page-title').textContent = (meta.isSingleton ? '' : (meta.slug ? '编辑：' : '新建：')) + schema.title;
+        syncHistoryLink();
 
         // 创建模式：集合项需填 slug
         if (schema.slugEditableOnCreate && !meta.slug) {
@@ -265,7 +278,7 @@ import { SCHEMAS } from '../../lib/admin-schema';
             const r = await fetch('/api/content/save', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(payload) }).then((x) => x.json());
             if (r.ok) {
               toast('已保存');
-              if (!meta.slug && s) { meta.slug = s; history.replaceState(null, '', '/admin/edit?collection=' + meta.collection + '&slug=' + s); $('slug-wrap').style.display = 'none'; }
+              if (!meta.slug && s) { meta.slug = s; history.replaceState(null, '', '/admin/edit?collection=' + meta.collection + '&slug=' + s); $('slug-wrap').style.display = 'none'; syncHistoryLink(); }
             } else toast(r.error || '保存失败', false);
           } catch (e) { toast('网络错误：' + e.message, false); }
         };
