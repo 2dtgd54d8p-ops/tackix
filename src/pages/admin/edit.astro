@@ -277,8 +277,10 @@ import { SCHEMAS } from '../../lib/admin-schema';
         for (const f of schema.fields) renderField(root, f, data);
 
         $('save-btn').onclick = async () => {
-          let s = meta.slug;
-          if (schema.slugEditableOnCreate && !meta.slug) {
+          // 单例的 entry id 是 singleton/<collection>，没有独立 slug —— 这里必须用 collection 键，
+          // 否则 slug 为空串，/api/content/save 直接 400「参数缺失」。
+          let s = meta.isSingleton ? meta.collection : meta.slug;
+          if (!meta.isSingleton && schema.slugEditableOnCreate && !meta.slug) {
             s = (slugInput?.value || '').trim();
             if (!/^[a-z0-9-]+$/i.test(s)) { toast('slug 非法（仅小写字母/数字/连字符）', false); return; }
           }
@@ -288,7 +290,7 @@ import { SCHEMAS } from '../../lib/admin-schema';
             const r = await fetch('/api/content/save', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(payload) }).then((x) => x.json());
             if (r.ok) {
               toast('已保存');
-              if (!meta.slug && s) { meta.slug = s; history.replaceState(null, '', '/admin/edit?collection=' + meta.collection + '&slug=' + s); $('slug-wrap').style.display = 'none'; syncHistoryLink(); }
+              if (!meta.isSingleton && !meta.slug && s) { meta.slug = s; history.replaceState(null, '', '/admin/edit?collection=' + meta.collection + '&slug=' + s); $('slug-wrap').style.display = 'none'; syncHistoryLink(); }
             } else toast(r.error || '保存失败', false);
           } catch (e) { toast('网络错误：' + e.message, false); }
         };
