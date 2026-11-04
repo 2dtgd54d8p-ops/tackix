@@ -37,6 +37,8 @@ const title = 'Tackix 后台登录';
       .msg { margin-top: 14px; font-size: 13px; min-height: 18px; }
       .msg.err { color: #f87171; }
       .msg.ok { color: #4ade80; }
+      .show { display: flex; align-items: center; gap: 6px; font-weight: 400; font-size: 12px; color: #94a3b8; margin-top: 8px; }
+      .show input { margin: 0; }
     </style>
   </head>
   <body>
@@ -44,7 +46,13 @@ const title = 'Tackix 后台登录';
       <h1>Tackix 内容后台</h1>
       <div class="sub">输入管理口令以进入</div>
       <label for="pw">管理口令</label>
-      <input id="pw" type="password" name="password" autocomplete="current-password" autofocus />
+      {/* autocomplete 关掉：浏览器会把旧口令（Keystatic 时代）自动填进来，
+          用户看到一串圆点以为填好了，实际一直是错的 */}
+      <input id="pw" type="password" name="password" autocomplete="off"
+             autocapitalize="off" autocorrect="off" spellcheck="false" autofocus />
+      <label class="show" for="pw-show">
+        <input type="checkbox" id="pw-show" /> 显示口令（核对有没有多/少字符）
+      </label>
       <button type="submit">登录</button>
       <div class="msg" id="msg"></div>
     </form>
@@ -52,6 +60,9 @@ const title = 'Tackix 后台登录';
     <script is:inline>
       const form = document.getElementById('login-form');
       const msg = document.getElementById('msg');
+      document.getElementById('pw-show').addEventListener('change', (e) => {
+        document.getElementById('pw').type = e.target.checked ? 'text' : 'password';
+      });
       form.addEventListener('submit', async (e) => {
         e.preventDefault();
         const pw = document.getElementById('pw').value;
@@ -67,7 +78,9 @@ const title = 'Tackix 后台登录';
             msg.className = 'msg ok'; msg.textContent = '登录成功，正在进入…';
             location.href = '/admin';
           } else {
-            msg.className = 'msg err'; msg.textContent = j.error || '登录失败';
+            // 带上输入长度，方便判断是不是多了空格/少了几位（不泄露口令本身）
+            const hint = res.status === 401 ? '（当前输入 ' + pw.length + ' 位）' : '';
+            msg.className = 'msg err'; msg.textContent = (j.error || '登录失败') + hint;
           }
         } catch (err) {
           msg.className = 'msg err'; msg.textContent = '网络错误：' + err.message;

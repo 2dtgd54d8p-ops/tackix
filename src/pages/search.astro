@@ -19,7 +19,9 @@ const searchPlaceholder = pages.searchPlaceholder;
       <p>{t('按关键词搜索全站内容（索引由 Pagefind 在构建时生成）。', 'Search the site by keyword (index built by Pagefind at build time).')}</p>
     </div>
     <link rel="stylesheet" href="/pagefind/pagefind-ui.css" />
-    <div id="search"></div>
+    {/* 占位符经 data 属性下传：is:inline 脚本不会被 Astro 求值，
+        写成 {JSON.stringify(x)} 会原样进入 JS，导致 SyntaxError、搜索框不渲染 */}
+    <div id="search" data-ph={searchPlaceholder || ''}></div>
 
     {/* L7 无结果捕获：搜索零结果时引导访客留下需求，后端（KV）缺失则优雅降级 */}
     <div class="nrc" id="nrc" hidden>
@@ -41,13 +43,17 @@ const searchPlaceholder = pages.searchPlaceholder;
 
   window.addEventListener('DOMContentLoaded', function () {
     if (!window.PagefindUI) return;
+    // 占位符来自后台「列表页标题」singleton，经 #search 的 data-ph 下传（见上方注释）
+    var searchEl = document.getElementById('search');
+    var ph = (searchEl && searchEl.getAttribute('data-ph')) || '';
+    var translations = {
+      zero_results: t('未找到与 [SEARCH_TERM] 相关的结果', 'No results for [SEARCH_TERM]'),
+    };
+    if (ph) translations.placeholder = ph;
     const ui = new window.PagefindUI({
       element: '#search',
       showSubResults: true,
-      translations: {
-        placeholder: {JSON.stringify(searchPlaceholder)},
-        zero_results: t('未找到与 [SEARCH_TERM] 相关的结果', 'No results for [SEARCH_TERM]'),
-      },
+      translations: translations,
     });
     // 顶栏常驻搜索框提交到 /search?q=… 后，自动执行该查询并回填输入框
     const q = new URLSearchParams(location.search).get('q');

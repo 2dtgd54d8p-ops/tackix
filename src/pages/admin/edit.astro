@@ -56,9 +56,19 @@ import { SCHEMAS } from '../../lib/admin-schema';
     </main>
     <div id="toast"></div>
 
-    <script type="application/json" id="schemas">{JSON.stringify(SCHEMAS)}</script>
+    {/* 必须用 set:html：普通 script 标签里的 {…} 不会被求值，会原样输出成
+        “{JSON.stringify(SCHEMAS)}”，前端 JSON.parse 直接抛 SyntaxError、表单永远停在「加载中…」。
+        < 转成 \u003c 防止字段值里出现标签闭合序列破坏 script。 */}
+    <script type="application/json" id="schemas" set:html={JSON.stringify(SCHEMAS).replace(/</g, '\\u003c')}></script>
     <script is:inline>
-      const SCHEMAS = JSON.parse(document.getElementById('schemas').textContent);
+      let SCHEMAS = {};
+      try {
+        SCHEMAS = JSON.parse(document.getElementById('schemas').textContent || '{}');
+      } catch (e) {
+        document.getElementById('form-root').textContent =
+          '表单配置解析失败：' + e.message + '（请把这条信息发给开发，页面已停止渲染以免误改数据）';
+        throw e;
+      }
       const params = new URLSearchParams(location.search);
       const singleton = params.get('singleton');
       const collection = params.get('collection');
