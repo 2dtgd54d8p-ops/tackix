@@ -95,3 +95,51 @@ node scripts/import-products.mjs --file data/products.csv --sql-only   # 只生�
 ## 7. 变更记录
 
 - 2026-11-02 初版：确定选型领域基座；新增 `0002_domain.sql`（8 表 + 种子）、`import-products.mjs`；本文档。
+- 2026-11-04 全量 D1 落地（见下节第 8 节）。
+
+## 8. 全量 D1 落地实况（2026-11-04）
+
+### 8.1 单库收敛（终态）
+只有一个 D1 库：`tackix-content` = `6983915c-5ed7-4e64-be33-16c1d4da8498`（WNAM），绑定名 `DB`。
+历史上还有 `tackix-db` = `169af261-6c6f-4590-84c7-c7e994bd42b5`，只存 `submissions` / `visits`，
+已通过 `migrations/0004_business.sql` + 数据搬迁并入 `tackix-content`（1 条询盘 + 77 条访问，原子无损）。
+旧库仅作**冷备**保留，不再有任何绑定，确认无问题后可在控制台删除。
+
+Pages 只支持**一个** `DB` 绑定，这是必须单库的硬约束。
+
+### 8.2 表清单（tackix-content）
+- 内容：`content_entries`、`content_revisions`
+- 选型域：`products`、`substrates`、`applications`、`compatibility`、`product_docs`、`product_applications`、`suppliers`、`selection_rules`
+- 业务：`submissions`、`visits`
+
+### 8.3 发布机制（重要变更）
+Pages 项目为**直接上传模式**（`source=undefined`，未连 Git）→ **Deploy Hook 不可用**。
+后台「发布」按钮改为双通道（`src/pages/api/content/publish.ts`）：
+1. `PAGES_DEPLOY_HOOK`（若将来项目改为连 Git 仓库，配了就用这条）
+2. `GITHUB_DISPATCH_TOKEN` → `POST /repos/2dtgd54d8p-ops/tackix/actions/workflows/deploy.yml/dispatches`（`ref=main`）
+
+### 8.4 环境变量（Cloudflare Pages 项目，production）
+密钥类全部为 **secret_text**：`ADMIN_PASSWORD`、`SESSION_SECRET`、`GITHUB_DISPATCH_TOKEN`、
+`ADMIN_TOKEN`、`RESEND_API_KEY`、`CONTACT_NOTIFY_TO`。构建期变量由 GitHub Actions 注入，
+不写在 `wrangler.toml`。
+
+> ⚠️ **坑**：`wrangler pages deploy` 会把 `wrangler.toml` 未声明的 **plain_text** 变量清空
+> （secret_text 不受影响）。因此所有线上变量都必须是 secret_text，且 `wrangler.toml` 里
+> **不要写 `[vars]`**、**不要写 `account_id`**（Pages 配置校验会直接报错）。
+
+### 8.5 两个已修复的线上 Bug
+1. `wrangler.toml` 含 `account_id` → `wrangler pages deploy` 校验失败（CI run 41752433655 红）。
+2. **API 路由只把 `locals` 传给 `isAuthed`** → Cloudflare 适配器下 `locals` 无 `request`/`cookies`，
+   会话 cookie 恒读不到，表现为「登录成功但所有后台接口 401」。修复：7 个路由统一改传完整 `ctx`。
+
+### 8.6 验证基线
+- 构建期 D1 拉取：`[fetch-content] ✅ …（knowledge 12 / scenarios 4 / singletons 8）`
+- 生成快照与 D1 语义**完全一致**（仅 key 顺序不同），证明迁移无损
+- 后台链路：`POST /api/admin/login` → 会话 cookie（HttpOnly+Secure）→ `/api/admin/me` 返回 `authed:true`
+  → `/api/content/list` 读到 D1 条目 → `POST /api/content/publish` 触发 GitHub Actions
+
+### 8.7 尚未完成
+- R2 未开通（`tackix-media` 未创建），媒体走 `src/pages/uploads/[...slug].ts` 的 `ASSETS` 静态回退；
+  `/api/media/upload` 目前会返回「MEDIA 未绑定」
+- 选型域表尚未接后台录入 UI（P3）与 `/api/select`（P5）
+- 站点仍处于预上线态（noindex + 询盘闸门关闭）
