@@ -128,10 +128,22 @@ Pages 项目为**直接上传模式**（`source=undefined`，未连 Git）→ **
 > （secret_text 不受影响）。因此所有线上变量都必须是 secret_text，且 `wrangler.toml` 里
 > **不要写 `[vars]`**、**不要写 `account_id`**（Pages 配置校验会直接报错）。
 
-### 8.5 两个已修复的线上 Bug
+### 8.5 已修复的线上 Bug
 1. `wrangler.toml` 含 `account_id` → `wrangler pages deploy` 校验失败（CI run 41752433655 红）。
 2. **API 路由只把 `locals` 传给 `isAuthed`** → Cloudflare 适配器下 `locals` 无 `request`/`cookies`，
    会话 cookie 恒读不到，表现为「登录成功但所有后台接口 401」。修复：7 个路由统一改传完整 `ctx`。
+
+**2026-11-04 下午，用无头 Chrome 真机回归又挖出 4 个（都是 7779a37 那次 D1 重构埋的，此前只测了接口、没测浏览器）**：
+
+| # | 现象 | 根因 | 修法 |
+|---|---|---|---|
+| 3 | 所有「编辑」页永远停在「加载中…」，控制台 `SyntaxError: Expected property name or '}' in JSON at position 1` | `<script type="application/json">` 里的 `{JSON.stringify(SCHEMAS)}` 不会被 Astro 求值，原样输出成字面量 | 改 `set:html` 注入，并把 `<` 转 `\u003c`；解析失败时给出可读报错而不是静默卡住 |
+| 4 | `/search` 搜索框完全不渲染，`SyntaxError: Unexpected token '.'` | `is:inline` 脚本里写了 `{JSON.stringify(searchPlaceholder)}`，进入 JS 后是非法对象字面量 | 占位符改走 `#search` 的 `data-ph` 属性 |
+| 5 | 单例保存报「参数缺失（需 collection/slug/data）」 | 保存时 slug 取 `meta.slug`，单例没有 slug 参数 → 空串 | 单例改取 `collection` 键（与 `read.ts` 的 `singleton/<key>` 约定一致） |
+| 6 | 后台列表/表单/版本历史全是无样式裸文本，输入框没有宽度和边框 | `<style>` 默认 scoped，只给模板元素加 `astro-cid`；这三页的行/徽标/按钮/字段全是 `createElement` 动态生成 | 三页 `<style>` 改 `is:global`（均独立成页，不套 Base，无外泄） |
+
+回归方式（可复用）：`/tmp/tk_verify.mjs` —— 本机 Chrome 无头模式 + CDP 注入会话 cookie，
+逐页断言 DOM 与异常、并落截图。这类「服务端 200 但前端白屏」的问题只能靠真浏览器发现。
 
 ### 8.6 验证基线
 - 构建期 D1 拉取：`[fetch-content] ✅ …（knowledge 12 / scenarios 4 / singletons 8）`
