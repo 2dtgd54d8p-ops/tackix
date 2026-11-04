@@ -12,7 +12,9 @@ export const prerender = false;
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>版本历史 · Tackix 后台</title>
-    <style>
+    {/* is:global 必需：历史行、徽标、按钮、快照面板均为脚本动态插入，
+        scoped 样式不会命中（缺 astro-cid 属性），会变成无样式裸文本。 */}
+    <style is:global>
       :root { color-scheme: light dark; }
       * { box-sizing: border-box; }
       body { margin: 0; font-family: system-ui, -apple-system, "Segoe UI", Roboto, "PingFang SC", "Microsoft YaHei", sans-serif; background: #f1f5f9; color: #0f172a; }

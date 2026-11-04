@@ -11,7 +11,9 @@ import { SCHEMAS } from '../../lib/admin-schema';
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>编辑 · Tackix 后台</title>
-    <style>
+    {/* is:global 必需：表单字段由 edit.astro 的脚本按 schema 动态创建，
+        scoped 样式命不中动态节点（无 astro-cid 属性），输入框会失去宽度与边框。 */}
+    <style is:global>
       :root { color-scheme: light dark; }
       * { box-sizing: border-box; }
       body { margin: 0; font-family: system-ui, -apple-system, "Segoe UI", Roboto, "PingFang SC", "Microsoft YaHei", sans-serif; background: #f1f5f9; color: #0f172a; }

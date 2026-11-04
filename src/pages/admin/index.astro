@@ -21,7 +21,10 @@ const SINGLETONS = [
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>内容后台 · Tackix</title>
-    <style>
+    {/* is:global 必需：列表行/徽标/编辑删除按钮都是 JS 动态创建的节点，
+        Astro 的 scoped 样式只作用于模板里的元素，动态节点拿不到 astro-cid 属性，
+        会退化成无样式裸文本。本页独立成页（不套 Base），全局化无外泄风险。 */}
+    <style is:global>
       :root { color-scheme: light dark; }
       * { box-sizing: border-box; }
       body { margin: 0; font-family: system-ui, -apple-system, "Segoe UI", Roboto, "PingFang SC", "Microsoft YaHei", sans-serif; background: #f1f5f9; color: #0f172a; }
