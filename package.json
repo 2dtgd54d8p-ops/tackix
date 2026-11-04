@@ -12,6 +12,7 @@
     "prebuild": "node scripts/fetch-content.mjs && node scripts/gen-content-options.mjs && node scripts/gen-knowledge-index.mjs && node scripts/quality-score.mjs && node scripts/build-checks.mjs",
     "quality": "node scripts/quality-score.mjs",
     "check": "node scripts/build-checks.mjs",
+    "smoke": "node scripts/smoke-pages.mjs",
     "changelog": "node scripts/gen-changelog.mjs",
     "build": "astro build",
     "postbuild": "pagefind --site dist && node scripts/gen-changelog.mjs",

@@ -215,12 +215,26 @@ sha256 一致 → 跨条目回滚 400 → 回滚 200 且有 `restoredFrom` → �
 结论：保留，作为「引导 + 校验 + 工具链」的输入。真正的真相源已是 D1，两者关系是
 **D1 为主、YAML 为历史/引导**；日常运营不再动 YAML。
 
-### 10.2 `src/generated/content-options.ts` 实际无人消费（已知缺口）
-`src/lib/admin-schema.ts` 的下拉选项是**硬编码数组**（`SCENARIO_OPTIONS` / `CATEGORY_OPTIONS` /
-`TAG_OPTIONS`），并未 import 生成的 `content-options.ts`。后果：在后台新增分类/标签/场景后，
-文章编辑器的下拉**不会自动出现新项**（`edit.astro` 会把未知值补一个「(未列出)」选项兜底，所以不
-会写坏数据，只是不好选）。修法（未做，属独立小任务）：`admin-schema.ts` 改读 `content-options.ts`
-并把 `gen-content-options.mjs` 的场景来源从 YAML 换成 `src/generated/content.json`（D1 快照）。
+### 10.2 后台下拉选项已改为跟随 D1（2026-11-04 修复）
+原先 `src/lib/admin-schema.ts` 的三组下拉（场景 / 分类 / 标签）是**硬编码数组**，后台新增
+分类或场景后，文章编辑器下拉不会出现新项（`edit.astro` 只能补「(未列出)」兜底）。现已打通：
+
+```
+D1 content_entries（singleton: categories / tags；kind=scenario）
+  → scripts/fetch-content.mjs（构建期拉取）
+  → src/generated/content.json（快照）
+  → scripts/gen-content-options.mjs（prebuild/predev 生成）
+  → src/generated/content-options.ts（{label, labelZh, value}）
+  → src/lib/admin-schema.ts（后台下拉，中文优先显示）
+```
+
+要点：
+- 生成物新增 `labelZh`（中文优先），后台编辑器显示中文；`label` 仍是英文优先，供站点侧消费。
+- `gen-content-options.mjs` 优先读 `content.json`，快照缺失才回落仓库根 YAML（历史词表）。
+- **`gen-content-options` 已加进 prebuild/predev**：之前只在 `dev-with-watch` 里跑，
+  CI 构建读的是仓库里提交的旧生成物，「跟随 D1」只在本地成立。
+- 验证：真机读到 场景 5（含「无」）/ 分类 4（含「未分类」）/ 标签 13，全中文标签、零异常；
+  另做了快照注入往返实验（注入 1 分类 + 1 场景 → 生成物立即出现 4/5，还原后回 3/4）。
 
 ### 10.3 Cloudflare 死环境变量 —— **已清理**
 `KEYSTATIC_ADMIN_PASSWORD` / `KEYSTATIC_PAT` / `KEYSTATIC_GITHUB_TOKEN` / `KEYSTATIC_SECRET` /
