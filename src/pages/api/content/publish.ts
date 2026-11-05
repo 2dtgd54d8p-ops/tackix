@@ -18,6 +18,17 @@ function fail(error: string, status: number) {
   return new Response(JSON.stringify({ ok: false, error }), { status, headers: JSON_HEADERS });
 }
 
+// 记录最后一次成功触发发布的时间（毫秒），供 /api/content/pending 计算「待发布」条数。
+async function markPublished(env: any) {
+  const kv = env?.FEEDBACK_KV || env?.MEDIA_KV;
+  if (!kv) return;
+  try {
+    await kv.put('admin:last_publish_at', String(Date.now()));
+  } catch {
+    /* 记录失败不阻断发布 */
+  }
+}
+
 export const POST: APIRoute = async (ctx) => {
   const { locals } = ctx;
   if (!(await isAuthed(ctx))) {
@@ -35,6 +46,7 @@ export const POST: APIRoute = async (ctx) => {
       if (!res.ok) {
         return fail(`触发部署失败（Deploy Hook HTTP ${res.status}）`, 502);
       }
+      await markPublished(env);
       return new Response(
         JSON.stringify({ ok: true, via: 'deploy-hook', message: '已触发重建，稍候 1–2 分钟刷新即可看到更新。' }),
         { status: 200, headers: JSON_HEADERS }
@@ -70,6 +82,7 @@ export const POST: APIRoute = async (ctx) => {
           502
         );
       }
+      await markPublished(env);
       return new Response(
         JSON.stringify({
           ok: true,

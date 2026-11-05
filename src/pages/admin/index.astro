@@ -33,6 +33,8 @@ const SINGLETONS = [
       header h1 { font-size: 16px; margin: 0; flex: 1; }
       header a, header button { color: #e2e8f0; text-decoration: none; font-size: 13px; background: #1e293b; border: 1px solid #334155; padding: 7px 12px; border-radius: 8px; cursor: pointer; }
       header button.publish { background: #2563eb; border-color: #2563eb; }
+      header .pending { font-size: 12px; background: #fef9c3; color: #854d0e; border: 1px solid #fde68a; padding: 5px 10px; border-radius: 999px; white-space: nowrap; cursor: default; }
+      header .pending[hidden] { display: none; }
       main { max-width: 920px; margin: 22px auto; padding: 0 16px; }
       section { background: #fff; border: 1px solid #e2e8f0; border-radius: 12px; padding: 16px 18px; margin-bottom: 18px; }
       h2 { font-size: 15px; margin: 0 0 12px; display: flex; align-items: center; gap: 10px; }
@@ -75,6 +77,7 @@ const SINGLETONS = [
       <a href="/">查看站点</a>
       <a href="/admin/messages">留言</a>
       <a href="/admin/report">报表</a>
+      <span id="pending-badge" class="pending" hidden></span>
       <button class="publish" id="publish-btn">发布（重建站点）</button>
       <a href="/admin/login" id="logout">退出</a>
     </header>
@@ -144,6 +147,21 @@ const SINGLETONS = [
         const me = await fetch('/api/admin/me').then((r) => r.json()).catch(() => ({ authed: false }));
         if (!me.authed) location.href = '/admin/login';
       }
+      async function refreshPending() {
+        try {
+          const j = await fetch('/api/content/pending').then((r) => r.json());
+          const badge = $('pending-badge');
+          if (!badge) return;
+          if (j.ok && Number(j.pending) > 0) {
+            badge.hidden = false;
+            badge.textContent = '待发布 ' + j.pending + ' 条';
+            badge.title = '已保存但尚未发布，点右侧「发布（重建站点）」一起上线';
+          } else {
+            badge.hidden = true;
+          }
+        } catch {}
+      }
+      window.addEventListener('focus', refreshPending);
       const allRows = { knowledge: [], scenario: [] };
 
       function relTime(ms) {
@@ -233,6 +251,7 @@ const SINGLETONS = [
         if (!(await confirmDialog('发布将触发重建，约 1–2 分钟后线上生效。继续？'))) return;
         const r = await fetch('/api/content/publish', { method: 'POST' }).then((x) => x.json()).catch(() => ({}));
         toast(r.message || r.error || '已触发', !!r.ok);
+        if (r.ok) refreshPending();
       };
       $('logout').onclick = async (e) => {
         e.preventDefault();
@@ -243,6 +262,7 @@ const SINGLETONS = [
         await checkAuth();
         renderList('list-knowledge', 'knowledge', 'knowledge');
         renderList('list-scenarios', 'scenario', 'scenarios');
+        refreshPending();
       })();
     </script>
   </body>
