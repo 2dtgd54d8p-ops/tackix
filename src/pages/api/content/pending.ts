@@ -31,6 +31,20 @@ export const GET: APIRoute = async (ctx) => {
     /* KV 未绑定或读取失败 → 视为 0 */
   }
 
+  // 首次使用（尚无发布记录）：以当前时间为基线，把现存内容视为「已发布」，
+  // 此后被保存的条目才计入待发布。避免一上来就把历史内容全报成待发布。
+  if (lastPublishAt <= 0) {
+    if (kv) {
+      lastPublishAt = Date.now();
+      try {
+        await kv.put(KEY, String(lastPublishAt));
+      } catch {
+        /* 写失败不影响本次返回 */
+      }
+    }
+    return new Response(JSON.stringify({ ok: true, pending: 0, lastPublishAt }), { status: 200, headers: JSON_HEADERS });
+  }
+
   let pending = 0;
   if (db && lastPublishAt > 0) {
     try {
