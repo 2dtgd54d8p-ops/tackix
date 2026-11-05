@@ -39,7 +39,8 @@
           "zh": "浴室选密封胶，先看三个硬指标。第一是**耐水性**：接缝长期浸水，必须选可长期浸水的产品，否则会乳化失效。第二是**防霉等级**：优先选明确标注防霉 0 级 / A 级并含防霉剂的中性硅酮胶。第三是**位移能力**：温湿度变化与轻微沉降需要 ≥20% 位移能力的柔性胶。\n\n淋浴房、浴缸、台盆、马桶底座等长期潮湿部位，统一用中性防霉硅酮密封胶；若接缝较宽或需上漆，再考虑改性硅烷（MS）类产品。施工前务必把旧胶彻底清除、基材干燥无尘，否则再好的胶也粘不牢。 需要针对你的工况选型或索取技术资料？查看[场景方案](/solutions/kitchen-bath-mould)，或用[选型工具](/selector)按基材与环境快速匹配。",
           "en": "Pick bathroom sealant on three hard criteria. First, **water resistance**: joints stay immersed, so choose a product rated for continuous water exposure or it will emulsify. Second, the **mould rating**: prefer a neutral silicone explicitly rated mould-resistant (Class 0 / Grade A) with an anti-mould additive. Third, **movement capability**: humidity swings and minor settling demand a flexible sealant with ≥20% movement. Use neutral mould-resistant silicone for showers, tubs, basins and toilet bases; consider MS polymer for wide or paintable joints. Always remove old sealant completely and keep the substrate clean and dry."
         },
-        "customSections": []
+        "customSections": [],
+        "cover": ""
       }
     },
     {
@@ -996,99 +997,30 @@
     }
   ],
   "singletons": {
-    "home": {
-      "content": {
-        "heroEyebrow": {
-          "zh": "工业胶粘剂与密封剂 · 选型 · 技术 · 询盘",
-          "en": "Industrial Adhesives & Sealants · Selection · Technology · Inquiry"
+    "categories": {
+      "items": [
+        {
+          "label": {
+            "zh": "选型指南",
+            "en": "Selection Guide"
+          },
+          "value": "selection-guide"
         },
-        "heroCta1": {
-          "zh": "探索场景方案",
-          "en": "Explore Scenario Solutions"
+        {
+          "label": {
+            "zh": "应用避坑",
+            "en": "Application Pitfalls"
+          },
+          "value": "application-pitfalls"
         },
-        "heroCta2": {
-          "zh": "联系我们报价",
-          "en": "Contact Us for Quotation"
-        },
-        "scenariosTitle": {
-          "zh": "场景方案",
-          "en": "Scenario Solutions"
-        },
-        "scenariosSub": {
-          "zh": "从场景选型到落地应用，一站式找到适合的胶粘剂方案。",
-          "en": "From scenario selection to real-world application — find the right adhesive solution in one place."
-        },
-        "knowledgeTitle": {
-          "zh": "知识库",
-          "en": "Knowledge Base"
-        },
-        "knowledgeSub": {
-          "zh": "面向真实工况的胶粘剂与密封剂选型指南、避坑与排障。",
-          "en": "Guides, pitfalls and troubleshooting for real-world adhesive & sealant jobs."
-        },
-        "bandTitle": {
-          "zh": "需要选型建议？",
-          "en": "Need a selection recommendation?"
-        },
-        "bandSub": {
-          "zh": "面向工业胶粘剂与密封剂行业的垂直平台，提供方案、选型、技术与案例。",
-          "en": "A vertical platform for the industrial adhesive & sealant industry — solutions, selection, technology and cases."
-        },
-        "bandCta1": {
-          "zh": "联系我们获取报价",
-          "en": "Contact Us for Quotation"
-        },
-        "bandCta2": {
-          "zh": "浏览知识库",
-          "en": "Browse the Knowledge Base"
+        {
+          "label": {
+            "zh": "故障排查",
+            "en": "Troubleshooting"
+          },
+          "value": "troubleshooting"
         }
-      }
-    },
-    "ui": {
-      "navItems": [
-        {
-          "label": {
-            "zh": "首页",
-            "en": "Home"
-          },
-          "href": "/"
-        },
-        {
-          "label": {
-            "zh": "场景方案",
-            "en": "Solutions"
-          },
-          "href": "/solutions",
-          "scenariosMenu": true
-        },
-        {
-          "label": {
-            "zh": "知识库",
-            "en": "Knowledge"
-          },
-          "href": "/knowledge"
-        },
-        {
-          "label": {
-            "zh": "选型工具",
-            "en": "Selector"
-          },
-          "href": "/selector"
-        },
-        {
-          "label": {
-            "zh": "联系我们",
-            "en": "Contact us"
-          },
-          "href": "/contact"
-        }
-      ],
-      "content": {
-        "footerText": {
-          "zh": "© 2026 Tackix · 工业胶粘剂与密封剂选型知识平台",
-          "en": "© 2026 Tackix · Industrial adhesive & sealant selection knowledge platform"
-        }
-      }
+      ]
     },
     "contact": {
       "content": {
@@ -1178,30 +1110,6 @@
         }
       ]
     },
-    "pages": {
-      "content": {
-        "knowledgeTitle": {
-          "zh": "知识库",
-          "en": "Knowledge Base"
-        },
-        "knowledgeSub": {
-          "zh": "共 {n} 篇 · 选型指南、应用避坑与故障排查",
-          "en": "{n} articles · selection guides, application pitfalls and troubleshooting"
-        },
-        "scenariosTitle": {
-          "zh": "场景方案",
-          "en": "Scenario Solutions"
-        },
-        "scenariosSub": {
-          "zh": "选择您的工况，获取明确推荐与可询盘的产品。",
-          "en": "Pick your job, get a clear recommendation and the products to ask about."
-        },
-        "searchPlaceholder": {
-          "zh": "搜索文章与方案…",
-          "en": "Search articles and solutions…"
-        }
-      }
-    },
     "detail": {
       "content": {
         "articleFaqTitle": {
@@ -1226,6 +1134,78 @@
         }
       }
     },
+    "home": {
+      "content": {
+        "heroEyebrow": {
+          "zh": "工业胶粘剂与密封剂 · 选型 · 技术 · 询盘",
+          "en": "Industrial Adhesives & Sealants · Selection · Technology · Inquiry"
+        },
+        "heroCta1": {
+          "zh": "探索场景方案",
+          "en": "Explore Scenario Solutions"
+        },
+        "heroCta2": {
+          "zh": "联系我们报价",
+          "en": "Contact Us for Quotation"
+        },
+        "scenariosTitle": {
+          "zh": "场景方案",
+          "en": "Scenario Solutions"
+        },
+        "scenariosSub": {
+          "zh": "从场景选型到落地应用，一站式找到适合的胶粘剂方案。",
+          "en": "From scenario selection to real-world application — find the right adhesive solution in one place."
+        },
+        "knowledgeTitle": {
+          "zh": "知识库",
+          "en": "Knowledge Base"
+        },
+        "knowledgeSub": {
+          "zh": "面向真实工况的胶粘剂与密封剂选型指南、避坑与排障。",
+          "en": "Guides, pitfalls and troubleshooting for real-world adhesive & sealant jobs."
+        },
+        "bandTitle": {
+          "zh": "需要选型建议？",
+          "en": "Need a selection recommendation?"
+        },
+        "bandSub": {
+          "zh": "面向工业胶粘剂与密封剂行业的垂直平台，提供方案、选型、技术与案例。",
+          "en": "A vertical platform for the industrial adhesive & sealant industry — solutions, selection, technology and cases."
+        },
+        "bandCta1": {
+          "zh": "联系我们获取报价",
+          "en": "Contact Us for Quotation"
+        },
+        "bandCta2": {
+          "zh": "浏览知识库",
+          "en": "Browse the Knowledge Base"
+        }
+      }
+    },
+    "pages": {
+      "content": {
+        "knowledgeTitle": {
+          "zh": "知识库",
+          "en": "Knowledge Base"
+        },
+        "knowledgeSub": {
+          "zh": "共 {n} 篇 · 选型指南、应用避坑与故障排查",
+          "en": "{n} articles · selection guides, application pitfalls and troubleshooting"
+        },
+        "scenariosTitle": {
+          "zh": "场景方案",
+          "en": "Scenario Solutions"
+        },
+        "scenariosSub": {
+          "zh": "选择您的工况，获取明确推荐与可询盘的产品。",
+          "en": "Pick your job, get a clear recommendation and the products to ask about."
+        },
+        "searchPlaceholder": {
+          "zh": "搜索文章与方案…",
+          "en": "Search articles and solutions…"
+        }
+      }
+    },
     "site": {
       "info": {
         "title": {
@@ -1240,13 +1220,18 @@
           "zh": "工业胶粘剂与密封剂 · 选型 · 技术 · 询盘",
           "en": "Industrial adhesives & sealants · selection · technology · inquiry"
         },
-        "email": "jccker@gmail.com",
+        "email": "",
         "company": "",
         "phone": "",
         "whatsapp": "",
         "address": "",
         "hours": "Mon-Fri 09:00-18:00 (GMT+8)",
-        "whatsappPrefill": "Hello, I would like a quotation for industrial adhesives. Could you share TDS/SDS and technical support?"
+        "whatsappPrefill": "Hello, I would like a quotation for industrial adhesives. Could you share TDS/SDS and technical support?",
+        "brandName": {
+          "zh": "",
+          "en": ""
+        },
+        "showWhatsappFloat": false
       },
       "trust": {
         "trustTitle": {
@@ -1259,31 +1244,6 @@
         }
       },
       "certBadges": []
-    },
-    "categories": {
-      "items": [
-        {
-          "label": {
-            "zh": "选型指南",
-            "en": "Selection Guide"
-          },
-          "value": "selection-guide"
-        },
-        {
-          "label": {
-            "zh": "应用避坑",
-            "en": "Application Pitfalls"
-          },
-          "value": "application-pitfalls"
-        },
-        {
-          "label": {
-            "zh": "故障排查",
-            "en": "Troubleshooting"
-          },
-          "value": "troubleshooting"
-        }
-      ]
     },
     "tags": {
       "items": [
@@ -1379,6 +1339,52 @@
           "value": "professional"
         }
       ]
+    },
+    "ui": {
+      "navItems": [
+        {
+          "label": {
+            "zh": "首页",
+            "en": "Home"
+          },
+          "href": "/"
+        },
+        {
+          "label": {
+            "zh": "场景方案",
+            "en": "Solutions"
+          },
+          "href": "/solutions",
+          "scenariosMenu": true
+        },
+        {
+          "label": {
+            "zh": "知识库",
+            "en": "Knowledge"
+          },
+          "href": "/knowledge"
+        },
+        {
+          "label": {
+            "zh": "选型工具",
+            "en": "Selector"
+          },
+          "href": "/selector"
+        },
+        {
+          "label": {
+            "zh": "联系我们",
+            "en": "Contact us"
+          },
+          "href": "/contact"
+        }
+      ],
+      "content": {
+        "footerText": {
+          "zh": "© 2026 Tackix · 工业胶粘剂与密封剂选型知识平台",
+          "en": "© 2026 Tackix · Industrial adhesive & sealant selection knowledge platform"
+        }
+      }
     }
   }
 }

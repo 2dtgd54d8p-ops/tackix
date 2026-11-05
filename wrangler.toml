@@ -39,3 +39,16 @@ id = "e959f2b9958b41aca9d038eb4fe4f704"
 # [[r2_buckets]]
 # binding = "MEDIA"
 # bucket_name = "tackix-media"
+
+# Vectorize：AI 问答 RAG 知识库索引（scripts/embed.mjs 灌入 embeddings，index 名 tackix-kb）。
+# 说明：本项目锁定 @astrojs/cloudflare v12（wrangler 3.114），其 pages deploy 暂不支持把
+# vectorize/ai 函数绑定写进 Pages deployment_config，故 src/pages/api/ask.ts 当前走「运行时
+# REST 兜底」（env.CF_API_TOKEN 直连 Cloudflare API）。下方声明保留为未来升级 wrangler 后
+# 直接启用函数绑定的兼容配置。
+[[vectorize]]
+binding = "VECTORIZE"
+index_name = "tackix-kb"
+
+# Workers AI：嵌入（@cf/baai/bge-base-en-v1.5）+ 生成（@cf/meta/llama-3.3-70b-instruct-fp8-fast）。
+[ai]
+binding = "AI"
