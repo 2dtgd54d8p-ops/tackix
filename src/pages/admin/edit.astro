@@ -28,6 +28,8 @@ import { SCHEMAS } from '../../lib/admin-schema';
       .field { background: #fff; border: 1px solid #e2e8f0; border-radius: 10px; padding: 12px 14px; margin-bottom: 12px; }
       .field > label { display: block; font-size: 13px; font-weight: 600; margin-bottom: 6px; color: #1e293b; }
       .field .desc { font-size: 12px; color: #64748b; margin: -4px 0 8px; }
+      .field.field-error { border-color: #dc2626; box-shadow: 0 0 0 1px #dc2626; }
+      .field .err-msg { font-size: 12px; color: #dc2626; margin-top: 6px; }
       .bi { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
       .bi small { display:block; color:#64748b; font-size:11px; margin-bottom:3px; }
       input[type=text], input[type=date], textarea, select { width: 100%; padding: 8px 10px; border: 1px solid #cbd5e1; border-radius: 8px; font-size: 13px; font-family: inherit; background: #fff; color: #0f172a; }
@@ -200,7 +202,12 @@ import { SCHEMAS } from '../../lib/admin-schema';
         const e = document.createElement(tag);
         for (const [k, v] of Object.entries(props)) {
           if (k === 'class') e.className = v;
-          else if (k.startsWith('on') && typeof v === 'function') e.addEventListener(k.slice(2), (ev) => { markDirty(); v(ev); });
+          else if (k.startsWith('on') && typeof v === 'function') e.addEventListener(k.slice(2), (ev) => {
+            markDirty();
+            const wrap = ev.target && ev.target.closest ? ev.target.closest('.field') : null;
+            if (wrap) { wrap.classList.remove('field-error'); const m = wrap.querySelector('.err-msg'); if (m) m.remove(); }
+            v(ev);
+          });
           else if (k === 'html') e.innerHTML = v;
           else e.setAttribute(k, v);
         }
@@ -214,6 +221,53 @@ import { SCHEMAS } from '../../lib/admin-schema';
       const data = {};
       let slugInput = null;
 
+      // —— 字段级校验：save 前按 schema 的 required/format 递归检查，失败字段高亮 + 聚焦首个 ——
+      function validateFields() {
+        const errs = [];
+        const isEmpty = (f, v) => {
+          if (f.type === 'bilingual') return !(v && (v.zh || v.en));
+          if (f.type === 'checkbox' || f.type === 'image') return false; // 布尔/图片无「必填空」语义
+          return v == null || String(v).trim() === '';
+        };
+        const walk = (fields, obj, path) => {
+          for (const f of fields) {
+            const fp = path ? path + '.' + f.key : f.key;
+            const v = obj && obj[f.key];
+            if (f.type === 'group') { walk(f.fields, v || {}, fp); continue; }
+            if (f.type === 'array') {
+              if (f.required && (!Array.isArray(v) || v.length === 0)) errs.push({ key: fp, msg: '「' + f.label + '」至少添加一项' });
+              (Array.isArray(v) ? v : []).forEach((item, i) => walk(f.fields, item, fp + '.' + i));
+              continue;
+            }
+            if (f.required && isEmpty(f, v)) errs.push({ key: fp, msg: '「' + f.label + '」为必填项' });
+            if (f.format && v != null && String(v).trim() !== '') {
+              const s = String(v).trim();
+              if (f.format === 'email' && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(s)) errs.push({ key: fp, msg: '邮箱格式不正确' });
+              else if (f.format === 'whatsapp' && !/^\d{8,15}$/.test(s)) errs.push({ key: fp, msg: 'WhatsApp 应为 8-15 位纯数字（含国家码）' });
+              else if (f.format === 'url' && !/^https?:\/\/.+/i.test(s)) errs.push({ key: fp, msg: '链接应以 http(s):// 开头' });
+            }
+          }
+        };
+        walk(schema.fields, data, '');
+        return errs;
+      }
+      function clearFieldErrors() {
+        document.querySelectorAll('#form-root .field-error').forEach((el) => el.classList.remove('field-error'));
+        document.querySelectorAll('#form-root .err-msg').forEach((el) => el.remove());
+      }
+      function showFieldErrors(errs) {
+        errs.forEach((e) => {
+          const el = document.querySelector('#form-root [data-fkey="' + e.key + '"]');
+          if (!el) return;
+          el.classList.add('field-error');
+          let m = el.querySelector('.err-msg');
+          if (!m) { m = h('div', { class: 'err-msg' }); el.appendChild(m); }
+          m.textContent = e.msg;
+        });
+        const first = document.querySelector('#form-root .field-error');
+        if (first) first.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      }
+
       // 「版本历史」入口：仅在编辑已存在条目（有 slug 或单例）时出现
       function syncHistoryLink() {
         const el = $('history-link');
@@ -225,15 +279,17 @@ import { SCHEMAS } from '../../lib/admin-schema';
           : '/admin/revisions?collection=' + encodeURIComponent(meta.collection) + '&slug=' + encodeURIComponent(meta.slug);
       }
 
-      function fieldShell(field, control) {
+      function fieldShell(field, control, fkey) {
         const wrap = h('div', { class: 'field' });
+        wrap.setAttribute('data-fkey', fkey);
         wrap.appendChild(h('label', {}, field.label));
         if (field.description) wrap.appendChild(h('div', { class: 'desc' }, field.description));
         wrap.appendChild(control);
         return wrap;
       }
 
-      function renderField(parent, field, data) {
+      function renderField(parent, field, data, path = '') {
+        const fkey = path ? path + '.' + field.key : field.key;
         switch (field.type) {
           case 'bilingual': {
             data[field.key] = data[field.key] || { zh: '', en: '' };
@@ -244,7 +300,7 @@ import { SCHEMAS } from '../../lib/admin-schema';
             en.value = data[field.key].en || '';
             if (!field.multiline) { zh.setAttribute('rows', '1'); en.setAttribute('rows', '1'); }
             const control = h('div', { class: 'bi' }, [h('div', {}, [h('small', {}, '中文'), zh]), h('div', {}, [h('small', {}, 'English'), en])]);
-            const wrap = fieldShell(field, control);
+            const wrap = fieldShell(field, control, fkey);
             if (field.multiline) {
               const pv = h('div', { class: 'md-preview' });
               pv.hidden = true;
@@ -261,7 +317,7 @@ import { SCHEMAS } from '../../lib/admin-schema';
           case 'textarea': {
             const ta = h('textarea', { oninput: (e) => (data[field.key] = e.target.value) });
             ta.value = data[field.key] || '';
-            const wrap = fieldShell(field, ta);
+            const wrap = fieldShell(field, ta, fkey);
             const pv = h('div', { class: 'md-preview' });
             pv.hidden = true;
             const btn = h('button', { type: 'button', class: 'md-preview-btn', onclick: () => {
@@ -276,13 +332,13 @@ import { SCHEMAS } from '../../lib/admin-schema';
           case 'text': {
             const inp = h('input', { type: 'text', oninput: (e) => (data[field.key] = e.target.value) });
             inp.value = data[field.key] || '';
-            parent.appendChild(fieldShell(field, inp));
+            parent.appendChild(fieldShell(field, inp, fkey));
             break;
           }
           case 'date': {
             const inp = h('input', { type: 'date', oninput: (e) => (data[field.key] = e.target.value) });
             inp.value = (data[field.key] || '').slice(0, 10);
-            parent.appendChild(fieldShell(field, inp));
+            parent.appendChild(fieldShell(field, inp, fkey));
             break;
           }
           case 'checkbox': {
@@ -290,7 +346,7 @@ import { SCHEMAS } from '../../lib/admin-schema';
             const inp = h('input', { type: 'checkbox', onchange: (e) => (data[field.key] = e.target.checked) });
             inp.checked = data[field.key];
             const control = h('label', { class: 'checks' }, [inp, field.description || '']);
-            parent.appendChild(fieldShell(field, control));
+            parent.appendChild(fieldShell(field, control, fkey));
             break;
           }
           case 'select': {
@@ -303,7 +359,7 @@ import { SCHEMAS } from '../../lib/admin-schema';
             if (!field.options.some((o) => o.value === data[field.key])) {
               sel.appendChild(h('option', { value: data[field.key] || '' }, data[field.key] || '(未列出)'));
             }
-            parent.appendChild(fieldShell(field, sel));
+            parent.appendChild(fieldShell(field, sel, fkey));
             break;
           }
           case 'multiselect': {
@@ -318,7 +374,7 @@ import { SCHEMAS } from '../../lib/admin-schema';
               if (data[field.key].includes(o.value)) cb.checked = true;
               box.appendChild(h('label', {}, [cb, o.label]));
             }
-            parent.appendChild(fieldShell(field, box));
+            parent.appendChild(fieldShell(field, box, fkey));
             break;
           }
           case 'image': {
@@ -354,7 +410,7 @@ import { SCHEMAS } from '../../lib/admin-schema';
             });
             const rmImg = h('button', { type: 'button', class: 'rm-img', onclick: () => { data[field.key] = ''; urlInp.value = ''; preview(); } }, '移除');
             const control = h('div', { class: 'img-row' }, [img, urlInp, file, rmImg]);
-            const wrap = fieldShell(field, control);
+            const wrap = fieldShell(field, control, fkey);
             wrap.appendChild(h('div', { class: 'desc' }, '可上传到本站存储（图片 / PDF），也可直接填外部链接 https://…。'));
             parent.appendChild(wrap);
             break;
@@ -363,7 +419,7 @@ import { SCHEMAS } from '../../lib/admin-schema';
             data[field.key] = data[field.key] || {};
             const fs = h('fieldset', {}, [h('legend', {}, field.label)]);
             if (field.description) fs.appendChild(h('div', { class: 'desc' }, field.description));
-            for (const sub of field.fields) renderField(fs, sub, data[field.key]);
+            for (const sub of field.fields) renderField(fs, sub, data[field.key], fkey);
             parent.appendChild(fs);
             break;
           }
@@ -376,7 +432,7 @@ import { SCHEMAS } from '../../lib/admin-schema';
                 const card = h('div', { class: 'arr-item' });
                 const rm = h('button', { class: 'rm', type: 'button', onclick: () => { data[field.key].splice(idx, 1); renderItems(); } }, '删除');
                 card.appendChild(rm);
-                for (const sub of field.fields) renderField(card, sub, item);
+                for (const sub of field.fields) renderField(card, sub, item, fkey + '.' + idx);
                 container.appendChild(card);
               });
             };
@@ -443,6 +499,14 @@ import { SCHEMAS } from '../../lib/admin-schema';
         let saving = false;
         async function save() {
           if (saving) return;
+          // —— 字段级校验：有错则字段高亮 + 聚焦首个，不提交 ——
+          const errs = validateFields();
+          clearFieldErrors();
+          if (errs.length) {
+            showFieldErrors(errs);
+            toast('有 ' + errs.length + ' 处未通过校验，请修正后重试', false);
+            return;
+          }
           // 单例的 entry id 是 singleton/<collection>，没有独立 slug —— 这里必须用 collection 键，
           // 否则 slug 为空串，/api/content/save 直接 400「参数缺失」。
           let s = meta.isSingleton ? meta.collection : meta.slug;

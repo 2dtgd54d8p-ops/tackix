@@ -53,6 +53,8 @@ const SINGLETONS = [
       .filterbar { display: flex; gap: 10px; margin-bottom: 6px; }
       .filterbar input { flex: 1; padding: 8px 12px; border: 1px solid #cbd5e1; border-radius: 8px; font-size: 13px; background: #fff; color: #0f172a; }
       .filterbar select { padding: 8px 12px; border: 1px solid #cbd5e1; border-radius: 8px; font-size: 13px; background: #fff; color: #0f172a; }
+      .count { font-size: 12px; color: #64748b; font-weight: 400; }
+      li .time { font-size: 12px; color: #94a3b8; min-width: 84px; text-align: right; white-space: nowrap; }
       .singletons a { display: block; padding: 12px; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 9px; text-decoration: none; color: #0f172a; font-size: 13px; }
       .singletons a:hover { border-color: #2563eb; }
       #toast { position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%); background: #0f172a; color: #fff; padding: 10px 16px; border-radius: 9px; font-size: 13px; opacity: 0; transition: opacity .2s; pointer-events: none; }
@@ -84,13 +86,17 @@ const SINGLETONS = [
           <option value="pub">已发布</option>
           <option value="draft">草稿</option>
         </select>
+        <select id="filter-sort" aria-label="排序方式">
+          <option value="updated">按更新时间</option>
+          <option value="title">按标题</option>
+        </select>
       </div>
       <section>
-        <h2>知识库文章 <a class="new" href="/admin/edit?collection=knowledge">+ 新建文章</a></h2>
+        <h2>知识库文章 <span class="count" id="count-knowledge"></span> <a class="new" href="/admin/edit?collection=knowledge">+ 新建文章</a></h2>
         <ul id="list-knowledge"><li><span class="name">加载中…</span></li></ul>
       </section>
       <section>
-        <h2>场景方案 <a class="new" href="/admin/edit?collection=scenarios">+ 新建场景</a></h2>
+        <h2>场景方案 <span class="count" id="count-scenarios"></span> <a class="new" href="/admin/edit?collection=scenarios">+ 新建场景</a></h2>
         <ul id="list-scenarios"><li><span class="name">加载中…</span></li></ul>
       </section>
       <section>
@@ -140,10 +146,24 @@ const SINGLETONS = [
       }
       const allRows = { knowledge: [], scenario: [] };
 
+      function relTime(ms) {
+        const d = Date.now() - Number(ms || 0);
+        if (!Number.isFinite(d) || d < 0) return '';
+        const m = Math.floor(d / 60000);
+        if (m < 1) return '刚刚';
+        if (m < 60) return m + ' 分钟前';
+        const h = Math.floor(m / 60);
+        if (h < 24) return h + ' 小时前';
+        const days = Math.floor(h / 24);
+        if (days < 30) return days + ' 天前';
+        return new Date(Number(ms)).toLocaleDateString('zh-CN');
+      }
+
       function filterRows(rows) {
         const q = ($('filter-q')?.value || '').trim().toLowerCase();
         const state = $('filter-state')?.value || 'all';
-        return rows.filter((row) => {
+        const sort = $('filter-sort')?.value || 'updated';
+        const out = rows.filter((row) => {
           if (state === 'pub' && !row.published) return false;
           if (state === 'draft' && row.published) return false;
           if (q) {
@@ -152,11 +172,20 @@ const SINGLETONS = [
           }
           return true;
         });
+        if (sort === 'title') {
+          out.sort((a, b) => (a.title_zh || a.title_en || a.slug || '').localeCompare(b.title_zh || b.title_en || b.slug || ''));
+        } else {
+          out.sort((a, b) => (Number(b.updated_at) || 0) - (Number(a.updated_at) || 0));
+        }
+        return out;
       }
 
       function renderFiltered(ulId, kind, collection) {
         const ul = $(ulId);
+        const total = (allRows[kind] || []).length;
         const rows = filterRows(allRows[kind] || []);
+        const countEl = kind === 'knowledge' ? $('count-knowledge') : $('count-scenarios');
+        if (countEl) countEl.textContent = rows.length === total ? `（${total} 条）` : `（${rows.length}/${total} 条）`;
         if (!rows.length) { ul.innerHTML = '<li><span class="name">（暂无匹配）</span></li>'; return; }
         ul.innerHTML = '';
         for (const row of rows) {
@@ -165,7 +194,7 @@ const SINGLETONS = [
           const badges =
             (row.published ? '<span class="badge on">已发布</span>' : '<span class="badge off">草稿</span>') +
             (row.featured ? '<span class="badge feat">首页</span>' : '');
-          li.innerHTML = `<span class="name">${name}<small>${row.slug}</small> ${badges}</span>`;
+          li.innerHTML = `<span class="name">${name}<small>${row.slug}</small> ${badges}</span><span class="time">${relTime(row.updated_at)}</span>`;
           const edit = document.createElement('a');
           edit.className = 'edit'; edit.href = `/admin/edit?collection=${collection}&slug=${row.slug}`; edit.textContent = '编辑';
           const del = document.createElement('button'); del.className = 'del'; del.textContent = '删除';
@@ -199,6 +228,7 @@ const SINGLETONS = [
       }
       $('filter-q')?.addEventListener('input', onFilterChange);
       $('filter-state')?.addEventListener('change', onFilterChange);
+      $('filter-sort')?.addEventListener('change', onFilterChange);
       $('publish-btn').onclick = async () => {
         if (!(await confirmDialog('发布将触发重建，约 1–2 分钟后线上生效。继续？'))) return;
         const r = await fetch('/api/content/publish', { method: 'POST' }).then((x) => x.json()).catch(() => ({}));

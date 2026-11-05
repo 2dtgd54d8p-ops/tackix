@@ -18,17 +18,18 @@ import {
   SCENARIO_OPTIONS as SCENARIO_VOCAB,
 } from '../generated/content-options';
 
+export type FieldFormat = 'email' | 'url' | 'whatsapp';
 export type FieldDef =
-  | { type: 'text'; key: string; label: string; description?: string; placeholder?: string }
-  | { type: 'bilingual'; key: string; label: string; multiline?: boolean; description?: string }
-  | { type: 'textarea'; key: string; label: string; description?: string }
-  | { type: 'date'; key: string; label: string; description?: string }
-  | { type: 'select'; key: string; label: string; options: { label: string; value: string }[]; description?: string }
-  | { type: 'multiselect'; key: string; label: string; options: { label: string; value: string }[]; description?: string }
-  | { type: 'checkbox'; key: string; label: string; description?: string }
-  | { type: 'image'; key: string; label: string; description?: string }
-  | { type: 'group'; key: string; label: string; fields: FieldDef[]; description?: string }
-  | { type: 'array'; key: string; label: string; fields: FieldDef[]; itemLabel?: string; description?: string };
+  | { type: 'text'; key: string; label: string; description?: string; placeholder?: string; required?: boolean; format?: FieldFormat }
+  | { type: 'bilingual'; key: string; label: string; multiline?: boolean; description?: string; required?: boolean }
+  | { type: 'textarea'; key: string; label: string; description?: string; required?: boolean }
+  | { type: 'date'; key: string; label: string; description?: string; required?: boolean }
+  | { type: 'select'; key: string; label: string; options: { label: string; value: string }[]; description?: string; required?: boolean }
+  | { type: 'multiselect'; key: string; label: string; options: { label: string; value: string }[]; description?: string; required?: boolean }
+  | { type: 'checkbox'; key: string; label: string; description?: string; required?: boolean }
+  | { type: 'image'; key: string; label: string; description?: string; required?: boolean }
+  | { type: 'group'; key: string; label: string; fields: FieldDef[]; description?: string; required?: boolean }
+  | { type: 'array'; key: string; label: string; fields: FieldDef[]; itemLabel?: string; description?: string; required?: boolean };
 
 export interface CollectionSchema {
   collection: string;
@@ -64,14 +65,16 @@ const CALLOUT_TONES = [
 ];
 
 // ── 构造小工具 ───────────────────────────────────────────────
-const bi = (key: string, label: string, opts: { multiline?: boolean; description?: string } = {}): FieldDef => ({
+const bi = (key: string, label: string, opts: { multiline?: boolean; description?: string; required?: boolean } = {}): FieldDef => ({
   type: 'bilingual',
   key,
   label,
   multiline: opts.multiline,
   description: opts.description,
+  required: opts.required,
 });
-const txt = (key: string, label: string, description?: string): FieldDef => ({ type: 'text', key, label, description });
+const txt = (key: string, label: string, description?: string, opts: { required?: boolean; format?: FieldFormat } = {}): FieldDef =>
+  ({ type: 'text', key, label, description, required: opts.required, format: opts.format });
 const area = (key: string, label: string, description?: string): FieldDef => ({ type: 'textarea', key, label, description });
 const chk = (key: string, label: string, description?: string): FieldDef => ({ type: 'checkbox', key, label, description });
 const img = (key: string, label: string, description?: string): FieldDef => ({ type: 'image', key, label, description });
@@ -88,7 +91,7 @@ const knowledgeSchema: CollectionSchema = {
   isSingleton: false,
   slugEditableOnCreate: true,
   fields: [
-    bi('name', '展示标题', { description: '卡片与详情页显示的中英双语标题' }),
+    bi('name', '展示标题', { description: '卡片与详情页显示的中英双语标题', required: true }),
     bi('excerpt', '一句话结论 / 摘要', { multiline: true }),
     sel('scenario', '所属场景（维度一）', SCENARIO_OPTIONS),
     sel('category', '分类（维度二）', CATEGORY_OPTIONS),
@@ -133,7 +136,7 @@ const scenarioSchema: CollectionSchema = {
   isSingleton: false,
   slugEditableOnCreate: true,
   fields: [
-    bi('name', '展示标题'),
+    bi('name', '展示标题', { required: true }),
     bi('excerpt', '摘要', { multiline: true }),
     chk('published', '已发布'),
     chk('featured', '在首页展示'),
@@ -291,10 +294,10 @@ const singletonSchemas: Record<string, CollectionSchema> = {
         bi('brandName', '页头品牌名'),
         bi('description', '站点描述', { multiline: true }),
         bi('tagline', '首页标语'),
-        txt('email', '商务邮箱'),
+        txt('email', '商务邮箱', undefined, { required: true, format: 'email' }),
         txt('company', '公司名称'),
         txt('phone', '电话'),
-        txt('whatsapp', 'WhatsApp 号码（仅数字+国家码）'),
+        txt('whatsapp', 'WhatsApp 号码（仅数字+国家码）', undefined, { format: 'whatsapp' }),
         area('address', '地址'),
         txt('hours', '营业时间'),
         txt('whatsappPrefill', 'WhatsApp 预填话术'),

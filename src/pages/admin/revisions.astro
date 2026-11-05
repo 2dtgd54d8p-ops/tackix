@@ -168,41 +168,70 @@ export const prerender = false;
         return b < 1024 ? b + ' B' : (b / 1024).toFixed(1) + ' KB';
       }
 
-      // 从快照 data 提取「关键字段摘要」（最多 12 行，值截断）
+      // 双语字段取值工具：{zh,en} 结构取中文优先，兼容字符串
+      function biText(v) {
+        if (v == null) return '';
+        if (typeof v === 'object') return String(v.zh || v.en || '').trim();
+        return String(v).trim();
+      }
+      function biZh(v) { return v && typeof v === 'object' ? String(v.zh || '').trim() : (v == null ? '' : String(v).trim()); }
+      function biEn(v) { return v && typeof v === 'object' ? String(v.en || '').trim() : (v == null ? '' : String(v).trim()); }
+      function trunc(s, n) { s = s == null ? '' : String(s); return s.length > n ? s.slice(0, n) + '…' : s; }
+
+      // 从快照 data 提取「关键字段摘要」（人类可读，双语取中文优先）
       function summarize(data) {
         if (!data || typeof data !== 'object') return [];
         const rows = [];
-        if (data.title_zh) rows.push(['标题(中)', data.title_zh]);
-        if (data.title_en) rows.push(['标题(英)', data.title_en]);
-        else if (data.title) rows.push(['标题', data.title]);
+        const title = biText(data.name != null ? data.name : data.title);
+        if (title) rows.push(['标题', trunc(title, 60)]);
+        const excerpt = biText(data.excerpt != null ? data.excerpt : data.conclusion);
+        if (excerpt) rows.push(['摘要', trunc(excerpt, 60)]);
         if (typeof data.published === 'boolean') rows.push(['状态', data.published ? '已发布' : '草稿']);
         if (typeof data.featured === 'boolean') rows.push(['首页', data.featured ? '是' : '否']);
-        const skip = new Set(['title_zh', 'title_en', 'title', 'published', 'featured']);
-        for (const [k, v] of Object.entries(data)) {
-          if (skip.has(k)) continue;
-          let s = typeof v === 'string' ? v : JSON.stringify(v);
-          if (s == null || s === '') continue;
-          if (s.length > 60) s = s.slice(0, 60) + '…';
-          rows.push([k, s]);
-          if (rows.length >= 12) break;
-        }
+        if (data.scenario && data.scenario !== 'none') rows.push(['场景', data.scenario]);
+        if (data.category && data.category !== 'uncategorized') rows.push(['分类', data.category]);
+        if (Array.isArray(data.tags) && data.tags.length) rows.push(['标签', data.tags.length + ' 项']);
+        if (Array.isArray(data.steps) && data.steps.length) rows.push(['步骤', data.steps.length + ' 项']);
+        if (Array.isArray(data.faq) && data.faq.length) rows.push(['FAQ', data.faq.length + ' 项']);
+        if (data.cover) rows.push(['封面', data.cover]);
+        if (data.publishedAt) rows.push(['发布日', data.publishedAt]);
         return rows;
       }
 
-      // 对比快照与当前线上内容的关键字段（标题/状态/首页）
+      // 语义级 diff：双语字段中英合并对比、标量字段、数组长度变化
       function diffFields(snap, current) {
         const diffs = [];
-        const labels = { title_zh: '标题(中)', title_en: '标题(英)', title: '标题', published: '状态', featured: '首页' };
-        const fmtVal = (k, v) => {
-          if (v === undefined || v === null) return '（空）';
-          if (k === 'published') return v ? '已发布' : '草稿';
-          if (k === 'featured') return v ? '是' : '否';
-          return String(v);
-        };
-        for (const k of ['title_zh', 'title_en', 'title', 'published', 'featured']) {
-          const a = snap?.[k];
-          const b = current?.[k];
-          if (a !== b) diffs.push({ label: labels[k] || k, from: fmtVal(k, a), to: fmtVal(k, b) });
+        const a = snap || {}, b = current || {};
+        const biFields = [['name', '标题'], ['title', '标题'], ['excerpt', '摘要'], ['conclusion', '结论'], ['body', '正文']];
+        for (const [key, label] of biFields) {
+          const azh = biZh(a[key]), aen = biEn(a[key]);
+          const bzh = biZh(b[key]), ben = biEn(b[key]);
+          if (azh === bzh && aen === ben) continue;
+          if (!azh && !aen && !bzh && !ben) continue;
+          const fromP = [], toP = [];
+          if (azh !== bzh) { fromP.push('中:' + (trunc(azh, 40) || '（空）')); toP.push('中:' + (trunc(bzh, 40) || '（空）')); }
+          if (aen !== ben) { fromP.push('英:' + (trunc(aen, 40) || '（空）')); toP.push('英:' + (trunc(ben, 40) || '（空）')); }
+          diffs.push({ label, from: fromP.join(' · '), to: toP.join(' · ') });
+        }
+        const scalars = [
+          ['published', '状态', (v) => (v ? '已发布' : '草稿')],
+          ['featured', '首页', (v) => (v ? '是' : '否')],
+          ['scenario', '场景', (v) => (v || '（空）')],
+          ['category', '分类', (v) => (v || '（空）')],
+          ['publishedAt', '发布日期', (v) => (v || '（空）')],
+          ['cover', '封面', (v) => (v || '（空）')],
+        ];
+        for (const [key, label, fmt] of scalars) {
+          const x = a[key], y = b[key];
+          if (x === y) continue;
+          if (x === undefined && y === undefined) continue;
+          diffs.push({ label, from: fmt(x), to: fmt(y) });
+        }
+        const arrs = [['tags', '标签'], ['steps', '步骤'], ['faq', 'FAQ'], ['customSections', '自定义区块'], ['certBadges', '徽章']];
+        for (const [key, label] of arrs) {
+          const x = Array.isArray(a[key]) ? a[key].length : 0;
+          const y = Array.isArray(b[key]) ? b[key].length : 0;
+          if (x !== y) diffs.push({ label, from: x + ' 项', to: y + ' 项' });
         }
         return diffs;
       }
