@@ -40,7 +40,21 @@ export const prerender = false;
       button.view { background: #e2e8f0; color: #334155; }
       button.roll { background: #2563eb; color: #fff; }
       button.roll:disabled { background: #cbd5e1; cursor: not-allowed; }
-      .snapshot { background: #0f172a; color: #e2e8f0; margin: 0; padding: 14px 16px; font-size: 12px; line-height: 1.55; max-height: 420px; overflow: auto; white-space: pre-wrap; word-break: break-word; font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; }
+      .snapshot { background: #fff; border: 1px solid #e2e8f0; border-top: 0; margin: 0; padding: 14px 16px; font-size: 13px; line-height: 1.6; }
+      .snapshot .sum-title, .snapshot .diff-title { font-weight: 700; font-size: 12px; color: #0f172a; margin-bottom: 8px; }
+      .snapshot .sum { border: 1px solid #e2e8f0; border-radius: 8px; padding: 10px 12px; margin-bottom: 10px; }
+      .snapshot .sum-row { display: flex; gap: 12px; padding: 3px 0; }
+      .snapshot .sum-row .k { color: #64748b; min-width: 80px; font-size: 12px; }
+      .snapshot .sum-row .v { color: #0f172a; word-break: break-word; }
+      .snapshot .diff { border: 1px solid #e2e8f0; border-radius: 8px; padding: 10px 12px; margin-bottom: 10px; }
+      .snapshot .diff-row { padding: 3px 0; color: #0f172a; }
+      .snapshot .diff-row .k { color: #64748b; font-size: 12px; margin-right: 8px; }
+      .snapshot .diff-row .from { color: #991b1b; text-decoration: line-through; margin-right: 6px; }
+      .snapshot .diff-row .to { color: #166534; font-weight: 600; }
+      .snapshot .diff-none { color: #64748b; font-size: 12.5px; }
+      .snapshot details { margin-top: 4px; }
+      .snapshot details summary { cursor: pointer; color: #2563eb; font-size: 12.5px; user-select: none; }
+      .snapshot pre.json { background: #0f172a; color: #e2e8f0; margin: 8px 0 0; padding: 12px 14px; font-size: 12px; line-height: 1.55; max-height: 360px; overflow: auto; white-space: pre-wrap; word-break: break-word; font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; border-radius: 8px; }
       .empty { padding: 34px 16px; text-align: center; color: #64748b; font-size: 13px; }
       #toast { position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%); background: #0f172a; color: #fff; padding: 10px 16px; border-radius: 9px; font-size: 13px; opacity: 0; transition: opacity .2s; pointer-events: none; z-index: 20; max-width: 80vw; }
       #toast.show { opacity: 1; }
@@ -154,9 +168,61 @@ export const prerender = false;
         return b < 1024 ? b + ' B' : (b / 1024).toFixed(1) + ' KB';
       }
 
+      // 从快照 data 提取「关键字段摘要」（最多 12 行，值截断）
+      function summarize(data) {
+        if (!data || typeof data !== 'object') return [];
+        const rows = [];
+        if (data.title_zh) rows.push(['标题(中)', data.title_zh]);
+        if (data.title_en) rows.push(['标题(英)', data.title_en]);
+        else if (data.title) rows.push(['标题', data.title]);
+        if (typeof data.published === 'boolean') rows.push(['状态', data.published ? '已发布' : '草稿']);
+        if (typeof data.featured === 'boolean') rows.push(['首页', data.featured ? '是' : '否']);
+        const skip = new Set(['title_zh', 'title_en', 'title', 'published', 'featured']);
+        for (const [k, v] of Object.entries(data)) {
+          if (skip.has(k)) continue;
+          let s = typeof v === 'string' ? v : JSON.stringify(v);
+          if (s == null || s === '') continue;
+          if (s.length > 60) s = s.slice(0, 60) + '…';
+          rows.push([k, s]);
+          if (rows.length >= 12) break;
+        }
+        return rows;
+      }
+
+      // 对比快照与当前线上内容的关键字段（标题/状态/首页）
+      function diffFields(snap, current) {
+        const diffs = [];
+        const labels = { title_zh: '标题(中)', title_en: '标题(英)', title: '标题', published: '状态', featured: '首页' };
+        const fmtVal = (k, v) => {
+          if (v === undefined || v === null) return '（空）';
+          if (k === 'published') return v ? '已发布' : '草稿';
+          if (k === 'featured') return v ? '是' : '否';
+          return String(v);
+        };
+        for (const k of ['title_zh', 'title_en', 'title', 'published', 'featured']) {
+          const a = snap?.[k];
+          const b = current?.[k];
+          if (a !== b) diffs.push({ label: labels[k] || k, from: fmtVal(k, a), to: fmtVal(k, b) });
+        }
+        return diffs;
+      }
+
+      function esc(s) {
+        return String(s == null ? '' : s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+      }
+
       async function load() {
         const box = $('list');
         let j;
+        // 当前线上内容（用于 diff 对比，读取失败不影响历史列表）
+        let currentData = null;
+        try {
+          const readQ = singleton
+            ? 'singleton=' + encodeURIComponent(coll)
+            : 'collection=' + encodeURIComponent(collection || '') + '&slug=' + encodeURIComponent(slug);
+          const cr = await fetch('/api/content/read?' + readQ, { headers: { accept: 'application/json' } }).then((x) => x.json());
+          if (cr.ok && cr.entry) currentData = cr.entry.data || {};
+        } catch (e) { /* 忽略 */ }
         try {
           j = await fetch('/api/content/revisions?id=' + encodeURIComponent(entryId) + '&limit=50', {
             headers: { accept: 'application/json' },
@@ -194,7 +260,7 @@ export const prerender = false;
 
           const grow = document.createElement('div');
           grow.className = 'grow';
-          grow.textContent = fmtBytes(row.bytes) + (idx === 0 ? ' · 最新一次' : '');
+          grow.textContent = fmtBytes(row.bytes);
 
           const viewBtn = document.createElement('button');
           viewBtn.className = 'act view';
@@ -210,13 +276,19 @@ export const prerender = false;
 
           line.appendChild(time);
           line.appendChild(badge);
+          if (idx === 0) {
+            const cur = document.createElement('span');
+            cur.className = 'badge cur';
+            cur.textContent = '当前';
+            line.appendChild(cur);
+          }
           line.appendChild(grow);
           line.appendChild(viewBtn);
           line.appendChild(rollBtn);
           box.appendChild(line);
 
           // 预览面板（懒加载，点开才请求）
-          const panel = document.createElement('pre');
+          const panel = document.createElement('div');
           panel.className = 'snapshot';
           panel.style.display = 'none';
           box.appendChild(panel);
@@ -228,20 +300,31 @@ export const prerender = false;
               viewBtn.textContent = '预览';
               return;
             }
+            panel.style.display = '';
             if (!loaded) {
-              panel.textContent = '加载中…';
-              panel.style.display = '';
+              panel.innerHTML = '<div class="diff-none" style="padding:8px 0">加载中…</div>';
               const r = await fetch('/api/content/revisions?revisionId=' + row.id, {
                 headers: { accept: 'application/json' },
               }).then((x) => x.json()).catch(() => null);
               if (!r || !r.ok) {
-                panel.textContent = (r && r.error) || '快照读取失败';
+                panel.innerHTML = '<div class="diff-none">' + esc((r && r.error) || '快照读取失败') + '</div>';
                 return;
               }
-              panel.textContent = JSON.stringify(r.revision.data, null, 2);
+              const data = r.revision.data || {};
+              const sumRows = summarize(data);
+              const diffs = diffFields(data, currentData);
+              const sumHtml = sumRows.length
+                ? sumRows.map(([k, v]) => '<div class="sum-row"><span class="k">' + esc(k) + '</span><span class="v">' + esc(v) + '</span></div>').join('')
+                : '<div class="diff-none">（无关键字段）</div>';
+              const diffHtml = diffs.length
+                ? diffs.map((d) => '<div class="diff-row"><span class="k">' + esc(d.label) + '</span><span class="from">' + esc(d.from) + '</span>→<span class="to">' + esc(d.to) + '</span></div>').join('')
+                : '<div class="diff-none">与当前线上内容一致</div>';
+              panel.innerHTML =
+                '<div class="sum"><div class="sum-title">快照摘要</div>' + sumHtml + '</div>' +
+                '<div class="diff"><div class="diff-title">与当前线上内容的差异</div>' + diffHtml + '</div>' +
+                '<details><summary>完整 JSON</summary><pre class="json">' + esc(JSON.stringify(data, null, 2)) + '</pre></details>';
               loaded = true;
             }
-            panel.style.display = '';
             viewBtn.textContent = '收起';
           };
 
