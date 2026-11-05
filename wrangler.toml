@@ -49,6 +49,6 @@ id = "e959f2b9958b41aca9d038eb4fe4f704"
 binding = "VECTORIZE"
 index_name = "tackix-kb"
 
-# Workers AI：嵌入（@cf/baai/bge-base-en-v1.5）+ 生成（@cf/meta/llama-3.3-70b-instruct-fp8-fast）。
+# Workers AI：嵌入（@cf/baai/bge-base-en-v1.5）+ 生成（@cf/qwen/qwen3-30b-a3b-fp8，中文强、省 neuron）。
 [ai]
 binding = "AI"

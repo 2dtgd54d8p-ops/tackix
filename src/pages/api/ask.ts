@@ -16,7 +16,9 @@ interface AskEnv {
 }
 
 const EMBED_MODEL = '@cf/baai/bge-base-en-v1.5';
-const GEN_MODEL = '@cf/meta/llama-3.3-70b-instruct-fp8-fast';
+// 生成模型：qwen3-30b-a3b-fp8（MoE，3B 激活）——中文强、neuron 成本低（输出约 70B 的 1/6.7），
+// 免费额度下可用量约为 70B 的 5~7 倍，适合当前不升级付费计划的场景。
+const GEN_MODEL = '@cf/qwen/qwen3-30b-a3b-fp8';
 const INDEX_NAME = 'tackix-kb';
 // 相关性阈值：命中分数低于此值视为资料无关，直接回退"不知道"，避免模型用无关内容硬凑。
 // 实测正常命中 0.79~0.88，明显离题的查询（如"天气"对胶粘剂库）通常在 0.5 以下。
@@ -53,14 +55,12 @@ async function restGenerate(prompt: string, acct: string, token: string): Promis
   const r = await fetch(`${CF_API}/${acct}/ai/run/${GEN_MODEL}`, {
     method: 'POST',
     headers: { Authorization: `Bearer ${token}`, 'content-type': 'application/json' },
-    // temperature=0 保证确定性（同样输入必得同样输出，便于回归与避免"偶发拒答"）；
-    // repetition_penalty 抑制"翻译短语无限重复"退化。
+    // temperature=0 保证确定性；repetition_penalty 抑制重复退化。
     body: JSON.stringify({
       prompt,
       temperature: 0,
       max_tokens: 800,
       repetition_penalty: 1.15,
-      frequency_penalty: 0.5,
     }),
   });
   const j = await r.json();
@@ -90,7 +90,9 @@ function cleanText(t: string): string {
 function cleanAnswer(raw: string, lang: 'zh' | 'en' = 'zh'): string {
   const noInfo = lang === 'en' ? 'No related information in the knowledge base.' : '资料中没有相关信息。';
   if (!raw) return raw;
-  let s = raw.replace(/^[\s\*\n]*(回答|答案|Answer|Response)[:：]\s*/i, '');
+  // 剥离 Qwen3 可能残留的思考链（如若 /no_think 未完全生效）
+  let s = raw.replace(/<think[\s\S]*?<\/think>/gi, '').replace(/^[\s\S]*?<\/think>/i, '');
+  s = s.replace(/^[\s\*\n]*(回答|答案|Answer|Response)[:：]\s*/i, '');
   s = s.replace(/^[\s\n]*[？?]+\s*/, '');
   // 模型判定无关时，可能夹带复述的问题片段，统一收敛为标准回退语。
   if (/资料中没有相关信息|资料不足|没有.*相关.*内容|info is limited|no related information/i.test(s)) {
@@ -188,6 +190,7 @@ function buildPrompt(question: string, context: string): string {
   const langRule =
     lang === 'zh' ? '必须用简体中文回答。' : 'You must answer in English.';
   return (
+    '/no_think\n\n' + // Qwen3：关闭思考链，直接作答
     '你是工业胶粘剂技术助手，正在为客户解答选型 / 施工 / 防水问题。\n' +
     '下面是从知识库检索到的相关资料。请依据资料回答用户的问题。\n' +
     '要求：\n' +
