@@ -206,7 +206,7 @@ async function publishNow() {
 |---|---|---|---|
 | P0（半天） ✅ 已落地 | ① 删除/回滚/发布统一确认层 + 改「不可撤销」文案 ② 编辑页脏保护 ③ 保存后「未发布」提示条 + 发布入口 | index/revisions/edit.astro | 低（纯前端交互） |
 | P1（1-2 天） ✅ 已落地 | ④ 仪表盘过滤条 ⑤ 留言/报表纳入会话鉴权 + 深色后台壳 + 仪表盘入口 ⑥ toast aria-live + 焦点可见 | index/messages/report/middleware/submissions/report.ts | 中（动鉴权，已回归） |
-| P2（增强） | ⑦ 版本历史字段摘要预览 + diff ⑧ 表单字段级校验 + Markdown 预览 + Cmd+S + 图片移除 | edit/revisions.astro | 中 |
+| P2（增强） ✅ 已落地 | ⑦ 版本历史字段摘要预览 + diff ⑧ Markdown 预览 + Cmd+S + 图片移除 + 保存禁用态（字段级校验留待后续） | edit/revisions.astro | 中 |
 
 > 建议先做 P0——它零风险、立即消除「误删恐慌」和「改了以为上线」两个最高频困惑；P1 里动鉴权那步（⑤）需要一次真机回归（可复用 `npm run smoke -- --cookie`）。
 
@@ -222,4 +222,8 @@ async function publishNow() {
   - `/api/submissions`、`/api/report` 改双鉴权：会话 cookie 优先，兼容旧 `ADMIN_TOKEN`（`x-admin-token`/`?token=`/`Bearer`）。
   - messages/report 独立成页：去站点 Base 壳、去 ADMIN_TOKEN 门控、统一深色顶栏；index 顶栏加「留言/报表」入口 + 关键词/状态过滤条。
   - 后台各页 toast 加 `role=status aria-live=polite`、按钮补 `:focus-visible`。
-- P2 尚未落地。需落地请说「直接干 P2」。
+- **P2 已于 2026-11-04 落地并真机回归通过**（15/15），涉及 `src/pages/admin/edit.astro`、`src/pages/admin/revisions.astro`。
+  - 版本历史：列表首行「当前」徽标；快照预览从裸 JSON 改为「关键字段摘要 + 与当前线上内容 diff + 可折叠 JSON」；新增 `summarize()`/`diffFields()`/`esc()` 纯函数，`load()` 先读当前线上内容作 diff 基准。
+  - 编辑页：image 字段加「移除」按钮（一键清空 URL）；`save()` 抽函数 + `saving` 禁用态（防连点）+ `Cmd/Ctrl+S` 快捷保存；textarea 与双语多行字段加 Markdown 预览（自制极简 `md2html()`，覆盖标题/列表/加粗/斜体/链接/行内代码，转义 XSS）。
+  - **字段级校验未落地**（P2 ⑧ 剩余项），与后台交互 P1 的「表单字段级校验 + 版本 diff（语义级）」一并留作后续增强。
+  - 验证说明：线上 `content_revisions` 表为空（内容经迁移导入、未走 save 留快照），故版本历史「徽标/摘要/diff」无法用真实快照点开验证，改为浏览器 context 直接调用 `summarize`/`diffFields` 纯函数 + 真机验证编辑页 DOM 交互。
