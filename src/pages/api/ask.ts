@@ -51,13 +51,25 @@ async function restQuery(
   if (!j.success) throw new Error('query failed: ' + JSON.stringify(j.errors || j));
   return (j.result?.matches || []) as Array<{ score?: number; metadata?: any }>;
 }
-async function restGenerate(prompt: string, acct: string, token: string): Promise<string> {
+async function restGenerate(
+  system: string,
+  user: string,
+  acct: string,
+  token: string
+): Promise<string> {
   const r = await fetch(`${CF_API}/${acct}/ai/run/${GEN_MODEL}`, {
     method: 'POST',
     headers: { Authorization: `Bearer ${token}`, 'content-type': 'application/json' },
-    // temperature=0 保证确定性；repetition_penalty 抑制重复退化。
+    // ⚠️ 必须用 messages（system + user），不能用单串 prompt：
+    // qwen3 的 chat template 会把整段「资料/问题/要求」当成多轮对话历史，
+    // 模型会不断续写 "Assistant:"、"A: B:" 问答列表与「按您的指示」等自我说明。
+    // 实测 messages 格式输出干净，且 response / choices[0].message.content 均为最终答案
+    // （思考链单独放在 reasoning_content，不取）。
     body: JSON.stringify({
-      prompt,
+      messages: [
+        { role: 'system', content: system },
+        { role: 'user', content: user },
+      ],
       temperature: 0,
       max_tokens: 800,
       repetition_penalty: 1.15,
@@ -65,12 +77,10 @@ async function restGenerate(prompt: string, acct: string, token: string): Promis
   });
   const j = await r.json();
   if (!j.success) throw new Error('gen failed: ' + JSON.stringify(j.errors || j));
-  // 兼容两代 Workers AI 响应：旧版 models 给 result.response，
-  // qwen3 等新版 chat 模型给 OpenAI 风格 result.choices[0].message.content（见官方 sync-output.json schema）。
   return (
     j.result?.response ||
-    j.result?.text ||
     j.result?.choices?.[0]?.message?.content ||
+    j.result?.text ||
     j.result?.choices?.[0]?.text ||
     ''
   );
@@ -83,38 +93,69 @@ function textOf(m: any): string {
   return m?.metadata?.text || m?.metadata?.content || '';
 }
 
-// 清理检索到的资料文本：去掉 markdown 标题、对齐标签等结构性噪音，避免模型照抄成"# 中英文对齐"循环。
+// 清理检索到的资料文本（仅生成端，不影响嵌入）：去 markdown 标题、对齐标签、
+// 以及"问题：X / 答案："这类问答提示词——它们会把 qwen3 带偏成无限 Q&A 续写。
 function cleanText(t: string): string {
   if (!t) return t;
   return t
-    .replace(/^#+\s*.+$/gm, '') // 删除整行 markdown 标题（# 简要回复 / # 中英文对齐 ...）
-    .replace(/\n{3,}/g, '\n\n') // 合并多余空行
+    .split('\n')
+    .filter((line) => {
+      const s = line.trim();
+      if (/^#+\s/.test(s)) return false;
+      if (/^中英文对齐/.test(s)) return false;
+      if (/^(问题|问|Q)\s*[:：]/i.test(s)) return false;
+      return true;
+    })
+    .join('\n')
+    .replace(/^答案\s*[:：]\s*/gm, '') // 只去前缀，保留答案正文
+    .replace(/\n{3,}/g, '\n\n')
     .replace(/[ \t]+\n/g, '\n')
     .trim();
 }
 
-// 清理模型输出：去掉开头引导语/标点残片、模型自加的 Markdown 标题与"新问题"续写，
-// 避免检索到的问答型资料把模型带偏成无限 Q&A 列表；若模型判定无关，统一收敛为规范回退语。
+// 清理模型输出：去角色标签/引导语、Markdown 标题与加粗、续写出的问答列表，
+// 以及模型自加的「按您的指示 / 模拟示例 / 最终版本」等元注释；无关时收敛为规范回退语。
+// 主防线是 restGenerate 的 messages 格式，这里是模型偶尔退化时的兜底。
 function cleanAnswer(raw: string, lang: 'zh' | 'en' = 'zh'): string {
   const noInfo = lang === 'en' ? 'No related information in the knowledge base.' : '资料中没有相关信息。';
   if (!raw) return raw;
-  // 剥离 Qwen3 可能残留的思考链（如若 /no_think 未完全生效）
   let s = raw.replace(/<think[\s\S]*?<\/think>/gi, '').replace(/^[\s\S]*?<\/think>/i, '');
-  s = s.replace(/^[\s\*\n]*(回答|答案|Answer|Response)[:：]\s*/i, '');
+  // 角色/引导前缀（qwen3 单串 prompt 模式下会带 "Assistant:"）
+  s = s.replace(/^[\s\*\n]*(Assistant|回答|答案|Answer|Response)\s*[:：]\s*/i, '');
   s = s.replace(/^[\s\n]*[？?]+\s*/, '');
-  // 模型判定无关时，可能夹带复述的问题片段，统一收敛为标准回退语。
-  if (/资料中没有相关信息|资料不足|没有.*相关.*内容|info is limited|no related information/i.test(s)) {
+  // 无关收敛：覆盖模型各种"无法回答"措辞。
+  if (
+    /资料中没有相关信息|资料不足|没有.*相关.*内容|无法回答该问题|未涉及.*(信息|内容)|资料中未|未能找到|info is limited|no related information|not mentioned in the (provided|given)/i.test(
+      s
+    )
+  ) {
     return noInfo;
   }
-  // 去掉模型自加的 Markdown 标题行（# 选择浴室密封胶...）
+  // 模型续写多个 assistant turn 时，只保留第一个。
+  const secondAssistant = s.search(/\n\s*Assistant\s*[:：]/i);
+  if (secondAssistant > 0) s = s.slice(0, secondAssistant);
+  // 删除元注释行（自我对话 / 模拟示例 / 版本说明 / 免责注）。
   s = s
     .split('\n')
     .filter((line) => !/^#+\s/.test(line.trim()))
+    .filter(
+      (line) =>
+        !/^(但按照|不过根据|但是为了|按照您的|注[:：]|（注意[:：]|（以上答案|（最终版本|（此为模拟|注意[:：]此为模拟|以上答案严格|不过为了|但为了|最终版本)/.test(
+          line.trim()
+        )
+    )
+    .filter(
+      (line) =>
+        !/您的指示|最新指示|模拟示例|最终版本|严格遵循了|为了符合.*限制|呈现的是.*片段|仅提供直接的专业回答/.test(
+          line
+        )
+    )
     .join('\n');
-  // 在模型"续写"出来的新问题/新标题处截断
-  const cut = s.search(/\n\s*(问题|Questions?|Q)[:：]\s*\S/im);
+  // 在续写出的新问题 / 选项问答列表（A: / B: / Q:）处截断。
+  const cut = s.search(/\n\s*(?:问题|Questions?|Q|[A-Z])\s*[:：]\s*\S/im);
   if (cut > 0) s = s.slice(0, cut);
-  return s.trim();
+  // 纯文本展示：去掉 Markdown 加粗，合并多余空行。
+  return s.replace(/\*\*/g, '').replace(/\n{3,}/g, '\n\n').trim();
 }
 
 export const POST: APIRoute = async ({ request, locals }) => {
@@ -176,7 +217,8 @@ export const POST: APIRoute = async ({ request, locals }) => {
     });
     const context = deduped.map((m) => cleanText(textOf(m))).join('\n\n');
     const sources = deduped.map((m) => slugOf(m)).filter(Boolean);
-    const raw = await restGenerate(buildPrompt(question, context), ACCOUNT_ID, token);
+    const { system, user } = buildMessages(question, context);
+    const raw = await restGenerate(system, user, ACCOUNT_ID, token);
     const answer = cleanAnswer(raw, qlang);
     return new Response(JSON.stringify({ answer, sources }), {
       headers: { 'content-type': 'application/json' },
@@ -193,22 +235,19 @@ function detectLang(q: string): 'zh' | 'en' {
   return /[一-鿿]/.test(q) ? 'zh' : 'en';
 }
 
-function buildPrompt(question: string, context: string): string {
+// 拆成 system / user 两条 messages（qwen3 chat template 要求）。
+// 单串 prompt 会让模型把「资料/问题/要求」当成多轮对话历史并无限续写，
+// 故不再拼接整段、也不再用 /no_think 前缀（思考链由 reasoning_content 单独返回）。
+function buildMessages(question: string, context: string): { system: string; user: string } {
   const lang = detectLang(question);
-  const langRule =
-    lang === 'zh' ? '必须用简体中文回答。' : 'You must answer in English.';
-  return (
-    '/no_think\n\n' + // Qwen3：关闭思考链，直接作答
-    '你是工业胶粘剂技术助手，正在为客户解答选型 / 施工 / 防水问题。\n' +
-    '下面是从知识库检索到的相关资料。请依据资料回答用户的问题。\n' +
+  const langRule = lang === 'zh' ? '必须用简体中文回答。' : 'You must answer in English.';
+  const system =
+    '你是工业胶粘剂技术助手，为客户解答选型 / 施工 / 防水问题。请依据用户提供的资料回答问题。\n' +
     '要求：\n' +
     '1. 直接给出 1-3 段专业、具体的回答，充分使用资料里的关键要点（产品类型、等级、步骤、注意事项），不要泛泛而谈，不要编造资料里没有的信息。\n' +
-    '2. 不要输出 Markdown 标题（#），不要复述或续写资料里的问答列表，不要自行提出新问题。\n' +
+    '2. 只输出答案本身：不要输出 Markdown 标题，不要输出 "Assistant:" 等角色标签，不要复述或续写资料里的问答列表，不要自行提出新问题，不要写「注」「说明」「模拟示例」等元注释，不要重复重写同一答案。\n' +
     `3. ${langRule}\n` +
-    '4. 只有当资料与用户问题确实完全无关时，才用一句话说明无法回答。\n\n' +
-    '资料：\n' +
-    (context || '（无相关素材）') +
-    '\n\n问题：' +
-    question
-  );
+    '4. 只有当资料与问题确实完全无关时，才用一句话说明无法回答。';
+  const user = '资料：\n' + (context || '（无相关素材）') + '\n\n问题：' + question;
+  return { system, user };
 }
