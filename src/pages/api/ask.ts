@@ -23,6 +23,13 @@ const INDEX_NAME = 'tackix-kb';
 // 相关性阈值：命中分数低于此值视为资料无关，直接回退"不知道"，避免模型用无关内容硬凑。
 // 实测正常命中 0.79~0.88，明显离题的查询（如"天气"对胶粘剂库）通常在 0.5 以下。
 const SCORE_THRESHOLD = 0.5;
+// 检索片段合并参数：embed.mjs 把 name / title / excerpt / body 各自切成独立向量，
+// 同一篇文档常同时命中多条。旧逻辑按 slug 去重只留首条，若首条恰是极短的 title 切片，
+// context 近乎为空 → 模型误判「资料里没有具体信息」（英文问高发）。
+const RETRIEVAL_TOP_K = 10;
+const MIN_BLOCK_LEN = 40; // 短于此视为标题 / slug 类无信息切片
+const MAX_BLOCKS_PER_DOC = 3;
+const MAX_CONTEXT_LEN = 2800; // 控制输入规模，避免推高 Workers AI neuron 消耗
 // 账号 ID 非敏感，硬编码；运行时仅需 CF_API_TOKEN 环境变量（含 Workers AI + Vectorize 权限）。
 const ACCOUNT_ID = 'b4f68b37b18c0891a0df46f3bf4d07f1';
 const CF_API = `https://api.cloudflare.com/client/v4/accounts`;
@@ -45,7 +52,7 @@ async function restQuery(
   const r = await fetch(`${CF_API}/${acct}/vectorize/v2/indexes/${INDEX_NAME}/query`, {
     method: 'POST',
     headers: { Authorization: `Bearer ${token}`, 'content-type': 'application/json' },
-    body: JSON.stringify({ vector, topK: 5, returnMetadata: 'all' }),
+    body: JSON.stringify({ vector, topK: RETRIEVAL_TOP_K, returnMetadata: 'all' }),
   });
   const j = await r.json();
   if (!j.success) throw new Error('query failed: ' + JSON.stringify(j.errors || j));
@@ -125,7 +132,7 @@ function cleanAnswer(raw: string, lang: 'zh' | 'en' = 'zh'): string {
   s = s.replace(/^[\s\n]*[？?]+\s*/, '');
   // 无关收敛：覆盖模型各种"无法回答"措辞。
   if (
-    /资料中没有相关信息|资料不足|没有.*相关.*内容|无法回答该问题|未涉及.*(信息|内容)|资料中未|未能找到|info is limited|no related information|not mentioned in the (provided|given)/i.test(
+    /资料中没有相关信息|资料不足|没有.*相关.*内容|无法回答该问题|未涉及.*(信息|内容)|资料中未|未能找到|info is limited|no related information|not mentioned in the (provided|given)|provided (materials|information|context) (do not|does not)|does not contain specific|do not include specific/i.test(
       s
     )
   ) {
@@ -156,6 +163,59 @@ function cleanAnswer(raw: string, lang: 'zh' | 'en' = 'zh'): string {
   if (cut > 0) s = s.slice(0, cut);
   // 纯文本展示：去掉 Markdown 加粗，合并多余空行。
   return s.replace(/\*\*/g, '').replace(/\n{3,}/g, '\n\n').trim();
+}
+
+// 把检索命中的切片合并成上下文：语言软过滤 → 按 slug 分组 → 组内按信息量降序合并 → 全局限长。
+// 修复（2026-11-06）：旧版按 slug 去重会丢掉同文档的 body / excerpt，只剩短 title 时模型答「没资料」。
+function buildContext(
+  matches: Array<{ score?: number; metadata?: any }>,
+  lang: 'zh' | 'en'
+): { context: string; sources: string[] } {
+  const items = matches
+    .map((m) => ({
+      slug: slugOf(m),
+      text: cleanText(textOf(m)),
+      lang: String(m?.metadata?.lang || ''),
+    }))
+    .filter((x) => Boolean(x.slug && x.text));
+  // 语言软过滤：优先同语言切片；整批都没有同语言时不过滤，避免开天窗。
+  const sameLang = items.filter((x) => x.lang === lang);
+  const pool = sameLang.length ? sameLang : items;
+  // matches 已按 score 降序，按首次出现顺序分组即保持相关性顺序。
+  const groups = new Map<string, typeof items>();
+  for (const x of pool) {
+    const g = groups.get(x.slug);
+    if (g) g.push(x);
+    else groups.set(x.slug, [x]);
+  }
+  const sources: string[] = [];
+  const blocks: string[] = [];
+  let total = 0;
+  for (const [slug, list] of groups) {
+    // 组内按信息量降序；短切片仅在该文档没有任何长切片时才兜底保留。
+    const long = list.filter((x) => x.text.length >= MIN_BLOCK_LEN);
+    const ranked = (long.length ? long : list)
+      .slice()
+      .sort((a, b) => b.text.length - a.text.length)
+      .slice(0, MAX_BLOCKS_PER_DOC);
+    const seen = new Set<string>();
+    const picked: string[] = [];
+    for (const x of ranked) {
+      const key = x.text.slice(0, 120); // 简单去重（excerpt / body 可能重合）
+      if (seen.has(key)) continue;
+      seen.add(key);
+      picked.push(x.text);
+    }
+    const merged = picked.join('\n');
+    if (!merged) continue;
+    const room = MAX_CONTEXT_LEN - total;
+    if (room < 80) break;
+    blocks.push(merged.length > room ? merged.slice(0, room) : merged);
+    sources.push(slug);
+    total += Math.min(merged.length, room);
+    if (total >= MAX_CONTEXT_LEN) break;
+  }
+  return { context: blocks.join('\n\n'), sources };
 }
 
 export const POST: APIRoute = async ({ request, locals }) => {
@@ -206,17 +266,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
         headers: { 'content-type': 'application/json' },
       });
     }
-    // 同一文档可能被切成多段、产生多个向量，topK 里会出现同一 slug 的重复片段；
-    // 按 slug 去重后再拼上下文，避免模型照着重复内容把答案也写两遍。
-    const seen = new Set<string>();
-    const deduped = matches.filter((m) => {
-      const s = slugOf(m);
-      if (!s || seen.has(s)) return false;
-      seen.add(s);
-      return true;
-    });
-    const context = deduped.map((m) => cleanText(textOf(m))).join('\n\n');
-    const sources = deduped.map((m) => slugOf(m)).filter(Boolean);
+    const { context, sources } = buildContext(matches, qlang);
     const { system, user } = buildMessages(question, context);
     const raw = await restGenerate(system, user, ACCOUNT_ID, token);
     const answer = cleanAnswer(raw, qlang);
@@ -248,6 +298,10 @@ function buildMessages(question: string, context: string): { system: string; use
     '2. 只输出答案本身：不要输出 Markdown 标题，不要输出 "Assistant:" 等角色标签，不要复述或续写资料里的问答列表，不要自行提出新问题，不要写「注」「说明」「模拟示例」等元注释，不要重复重写同一答案。\n' +
     `3. ${langRule}\n` +
     '4. 只有当资料与问题确实完全无关时，才用一句话说明无法回答。';
-  const user = '资料：\n' + (context || '（无相关素材）') + '\n\n问题：' + question;
+  // 标签也要跟问题语言一致：写死中文「资料：」会被 qwen3 照抄进英文答案。
+  const user =
+    lang === 'en'
+      ? 'Context:\n' + (context || '(no relevant material)') + '\n\nQuestion: ' + question
+      : '资料：\n' + (context || '（无相关素材）') + '\n\n问题：' + question;
   return { system, user };
 }
