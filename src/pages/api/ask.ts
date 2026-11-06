@@ -132,7 +132,7 @@ function cleanAnswer(raw: string, lang: 'zh' | 'en' = 'zh'): string {
   s = s.replace(/^[\s\n]*[？?]+\s*/, '');
   // 无关收敛：覆盖模型各种"无法回答"措辞。
   if (
-    /资料中没有相关信息|资料不足|没有.*相关.*内容|无法回答该问题|未涉及.*(信息|内容)|资料中未|未能找到|info is limited|no related information|not mentioned in the (provided|given)|provided (materials|information|context) (do not|does not)|does not contain specific|do not include specific/i.test(
+    /资料中没有相关信息|资料不足|没有.*相关.*内容|无法回答|资料中无相关|无相关信息|未涉及.*(信息|内容)|资料中未|未能找到|info is limited|no related information|not mentioned in the (provided|given)|provided (materials|information|context) (do not|does not)|does not contain specific|do not include specific/i.test(
       s
     )
   ) {
@@ -290,14 +290,17 @@ function detectLang(q: string): 'zh' | 'en' {
 // 故不再拼接整段、也不再用 /no_think 前缀（思考链由 reasoning_content 单独返回）。
 function buildMessages(question: string, context: string): { system: string; user: string } {
   const lang = detectLang(question);
-  const langRule = lang === 'zh' ? '必须用简体中文回答。' : 'You must answer in English.';
+  const langRule =
+    lang === 'zh'
+      ? '必须用简体中文回答。'
+      : 'You must answer in English. Never invent standards, certification codes or regulation numbers (GB/T, ASTM, JIS, ISO, EN, DIN and any numeric codes) unless they appear verbatim in the provided context.';
   const system =
     '你是工业胶粘剂技术助手，为客户解答选型 / 施工 / 防水问题。请依据用户提供的资料回答问题。\n' +
     '要求：\n' +
-    '1. 直接给出 1-3 段专业、具体的回答，充分使用资料里的关键要点（产品类型、等级、步骤、注意事项），不要泛泛而谈，不要编造资料里没有的信息。\n' +
+    '1. 直接给出 1-3 段专业、具体的回答，充分使用资料里的关键要点（产品类型、等级、步骤、注意事项），不要泛泛而谈。严禁编造资料里没有的信息，尤其禁止凭空写出任何标准号、认证编号、法规名称或检测代号（如 GB/T、GB、ASTM、JIS、ISO、EN、DIN 及随附数字编号）——除非资料原文明确写有该编号，否则一律不要出现。\n' +
     '2. 只输出答案本身：不要输出 Markdown 标题，不要输出 "Assistant:" 等角色标签，不要复述或续写资料里的问答列表，不要自行提出新问题，不要写「注」「说明」「模拟示例」等元注释，不要重复重写同一答案。\n' +
     `3. ${langRule}\n` +
-    '4. 只有当资料与问题确实完全无关时，才用一句话说明无法回答。';
+    '4. 只有当资料与问题确实完全无关时，才输出固定回退语，不要解释原因、不要复述问题：中文用「资料中没有相关信息。」，英文用 "No related information in the knowledge base."。';
   // 标签也要跟问题语言一致：写死中文「资料：」会被 qwen3 照抄进英文答案。
   const user =
     lang === 'en'
