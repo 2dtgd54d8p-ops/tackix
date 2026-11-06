@@ -65,7 +65,15 @@ async function restGenerate(prompt: string, acct: string, token: string): Promis
   });
   const j = await r.json();
   if (!j.success) throw new Error('gen failed: ' + JSON.stringify(j.errors || j));
-  return j.result?.response || j.result?.text || j.result?.choices?.[0]?.text || '';
+  // 兼容两代 Workers AI 响应：旧版 models 给 result.response，
+  // qwen3 等新版 chat 模型给 OpenAI 风格 result.choices[0].message.content（见官方 sync-output.json schema）。
+  return (
+    j.result?.response ||
+    j.result?.text ||
+    j.result?.choices?.[0]?.message?.content ||
+    j.result?.choices?.[0]?.text ||
+    ''
+  );
 }
 
 function slugOf(m: any): string {
